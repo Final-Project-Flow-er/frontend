@@ -1,69 +1,136 @@
-<script setup>
-import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-
-const router = useRouter()
-const route = useRoute()
-
-const isActive = (path) => computed(() => route.path.startsWith(path)).value
-
-const navigate = (path) => {
-  router.push(path)
-}
-</script>
-
 <template>
   <aside class="sidebar">
-    <div class="logo-area">
+    <div class="logo-area" @click="goHome" role="button" aria-label="홈으로 이동">
       <p class="logo-barcode">CHAIN-G</p>
     </div>
+
     <nav class="menu">
-      <div class="menu-group">판매/발주</div>
+      <div class="menu-group">메인 메뉴</div>
       <ul>
-        <!-- 판매(상품) 관리 -->
-        <li :class="{ active: isActive('/products') }" @click="navigate('/products')">
-          <span class="icon">📦</span> 판매 관리
-        </li>
-        <!-- 발주 관리 -->
-        <li :class="{ active: isActive('/orders') }" @click="navigate('/orders')">
-           <span class="icon">🚚</span> 발주 관리
+        <li
+            v-for="item in mainMenus"
+            :key="item"
+            :class="{ active: activeMenu === item }"
+            @click="setActive(item)"
+        >
+          {{ item }}
         </li>
       </ul>
 
-      <div class="menu-group">물류/재고</div>
+      <div class="menu-group">시스템</div>
       <ul>
-        <li :class="{ active: isActive('/inventory') }" @click="navigate('/inventory')">
-          <span class="icon">📊</span> 재고 조회
-        </li>
-         <!-- 반품 관리 -->
-        <li :class="{ active: isActive('/returns') }" @click="navigate('/returns')">
-          <span class="icon">↩️</span> 반품 관리
+        <li
+            v-for="item in systemMenus"
+            :key="item"
+            :class="{ active: activeMenu === item }"
+            @click="setActive(item)"
+        >
+          {{ item }}
         </li>
       </ul>
     </nav>
-    <div class="user-card">
-      <div class="user-avatar"></div>
-      <div class="user-detail">
-        <p class="u-name">관리자</p>
-        <p class="u-role">System Admin</p>
-      </div>
-    </div>
   </aside>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+
+const mainMenus = ['대시보드', '재고 현황', '입출고 관리', '분석 리포트']
+const systemMenus = ['직원 관리', '환경 설정']
+
+const activeMenu = ref('대시보드')
+
+const setActive = (menuName) => {
+  activeMenu.value = menuName
+}
+</script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39+Text&display=swap');
 
-.sidebar { width: var(--sidebar-w); height: 100%; background-color: #1e293b; color: #f8fafc; display: flex; flex-direction: column; padding-bottom: 2.5rem; flex-shrink: 0; }
-.logo-area { padding: 40px 20px; text-align: center; background: #0f172a; margin-bottom: 10px; }
-.logo-barcode { font-family: 'Libre Barcode 39 Text', system-ui; font-size: 48px; color: #ffffff; margin: 0; line-height: 1; }
+.sidebar {
+  width: var(--sidebar-w);
+  height: 100%;
+  background-color: #1e293b;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 2.5rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+}
+
+.logo-area {
+  padding: 40px 20px;
+  text-align: center;
+  background: #0f172a;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  overflow: hidden;
+}
+
+.logo-area:hover {
+  background: #1e293b;
+}
+
+.logo-area:hover .logo-barcode {
+  transform: scale(1.05);
+  color: #ffffff;
+}
+
+.logo-area:active {
+  transform: scale(0.95);
+  filter: brightness(0.8);
+}
+
+.logo-barcode {
+  font-family: 'Libre Barcode 39 Text', system-ui;
+  font-size: 48px;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1;
+  transition: all 0.2s ease; /* 텍스트 변화도 부드럽게 */
+}
+
 .menu { flex: 1; }
 .menu-group { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 0 1.5rem 0.5rem; margin-top: 1.5rem; }
+
 .menu ul { list-style: none; padding: 0; margin: 0; }
-.menu li { padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 12px; color: #94a3b8; cursor: pointer; transition: all 0.2s; font-weight: 500; }
-.menu li.active { background-color: #334155; color: white; border-left: 4px solid var(--primary); padding-left: calc(1.5rem - 4px); }
-.user-card { margin: 0 1.5rem; padding: 1rem; background-color: #334155; border-radius: 12px; display: flex; align-items: center; gap: 10px; }
-.user-avatar { width: 40px; height: 40px; background-color: #475569; border-radius: 50%; }
-.user-detail .u-name { margin: 0; font-weight: 600; font-size: 0.9rem; }
-.user-detail .u-role { margin: 0; font-size: 0.75rem; color: #94a3b8; }
+
+.menu li {
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  position: relative;
+}
+
+.menu li:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.menu li.active {
+  background-color: #334155;
+  color: white;
+  padding-left: 1.8rem;
+}
+
+.menu li.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background-color: #94a3b8;
+  border-radius: 0 4px 4px 0;
+}
 </style>
