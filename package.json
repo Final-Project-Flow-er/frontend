@@ -1,22 +1,17 @@
 {
-  "name": "untitled",
+  "name": "vite-vue-starter",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "serve": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.27"
+    "vue": "latest"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.3",
-    "vite": "^7.3.1",
-    "vite-plugin-vue-devtools": "^8.0.5"
-  },
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "vite": "^7.3.1"
   }
 }

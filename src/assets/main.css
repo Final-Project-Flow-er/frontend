@@ -1,0 +1,29 @@
+/* 공통 변수 및 초기화 */
+:root {
+  --sidebar-w: 260px;
+  --header-h: 70px;
+  --primary: #6366f1;
+  --bg-main: #f1f5f9;
+  --border-color: #e2e8f0;
+  --text-dark: #0f172a;
+  --text-light: #64748b;
+  --white: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#app {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+* { box-sizing: border-box; }
