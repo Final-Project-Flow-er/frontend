@@ -1,9 +1,7 @@
 <script setup>
 import { ref } from 'vue'
-// 상대 경로를 좀 더 명확하게 작성하거나 @/ 를 사용합니다.
 import Sidebar from './components/layout/Sidebar.vue'
 import Header from './components/layout/Header.vue'
-import InventoryView from './views/InventoryView.vue'
 
 const searchQuery = ref('')
 </script>
@@ -14,7 +12,7 @@ const searchQuery = ref('')
     <div class="main-container">
       <Header v-model="searchQuery" />
       <main class="content-scroll">
-        <InventoryView :searchQuery="searchQuery" />
+        <router-view :search-query="searchQuery" />
       </main>
     </div>
   </div>

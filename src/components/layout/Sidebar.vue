@@ -1,20 +1,44 @@
+<script setup>
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+
+const isActive = (path) => computed(() => route.path.startsWith(path)).value
+
+const navigate = (path) => {
+  router.push(path)
+}
+</script>
+
 <template>
   <aside class="sidebar">
     <div class="logo-area">
       <p class="logo-barcode">CHAIN-G</p>
     </div>
     <nav class="menu">
-      <div class="menu-group">메인 메뉴</div>
+      <div class="menu-group">판매/발주</div>
       <ul>
-        <li class="active">대시보드</li>
-        <li>재고 현황</li>
-        <li>입출고 관리</li>
-        <li>분석 리포트</li>
+        <!-- 판매(상품) 관리 -->
+        <li :class="{ active: isActive('/products') }" @click="navigate('/products')">
+          <span class="icon">📦</span> 판매 관리
+        </li>
+        <!-- 발주 관리 -->
+        <li :class="{ active: isActive('/orders') }" @click="navigate('/orders')">
+           <span class="icon">🚚</span> 발주 관리
+        </li>
       </ul>
-      <div class="menu-group">시스템</div>
+
+      <div class="menu-group">물류/재고</div>
       <ul>
-        <li>직원 관리</li>
-        <li>환경 설정</li>
+        <li :class="{ active: isActive('/inventory') }" @click="navigate('/inventory')">
+          <span class="icon">📊</span> 재고 조회
+        </li>
+         <!-- 반품 관리 -->
+        <li :class="{ active: isActive('/returns') }" @click="navigate('/returns')">
+          <span class="icon">↩️</span> 반품 관리
+        </li>
       </ul>
     </nav>
     <div class="user-card">
