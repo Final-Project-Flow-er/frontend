@@ -1,405 +1,619 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-const menuItems = [
-  { name: '대시보드', code: 'DB01' },
-  { name: '주문 관리', code: 'OR01' },
-  { name: '입/출고 관리', code: 'WH01' },
-  { name: '반품/교환', code: 'RT01' },
-  { name: '재고 현황', code: 'ST01' },
-  { name: '가맹점 관리', code: 'MS01' }
-]
+const userName = ref('관리자')
+const projectTitle = ref('CHAIN-G')
 
-const activeMenu = ref('대시보드')
-
-const stats = ref([
-  { label: '금일 미처리 주문', value: '124', unit: '건', color: '#d63031' },
-  { label: '공장 가동률', value: '85.2', unit: '%', color: '#2d3436' },
-  { label: '긴급 발주건', value: '12', unit: '건', color: '#e17055' },
-  { label: '품절 임박 품목', value: '5', unit: '종', color: '#636e72' }
+// 테스트용 재고 데이터
+const inventoryItems = ref([
+  { id: 'MK-001', name: '오리지널 떡볶이 밀키트', category: '밀키트', stock: 150, price: 12900, status: '정상' },
+  { id: 'MK-002', name: '마라 떡볶이 밀키트', category: '밀키트', stock: 85, price: 14900, status: '정상' },
+  { id: 'MK-003', name: '로제 떡볶이 밀키트', category: '밀키트', stock: 42, price: 13900, status: '정상' },
+  { id: 'MK-004', name: '오리지널 떡볶이 (대용량)', category: '밀키트', stock: 12, price: 22000, status: '정상' },
 ])
+
+const searchQuery = ref('')
+const selectedCategory = ref('전체')
+const categories = ['전체', '밀키트']
+
+// 필터링 된 아이템
+const filteredItems = computed(() => {
+  return inventoryItems.value.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                         item.id.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchesCategory = selectedCategory.value === '전체' || item.category === selectedCategory.value
+    return matchesSearch && matchesCategory
+  })
+})
+
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(price);
+}
+
+const getStatusClass = (status) => {
+  switch (status) {
+    case '정상': return 'status-ok'
+    case '품절임박': return 'status-warning'
+    case '품절': return 'status-danger'
+    default: return ''
+  }
+}
 </script>
 
 <template>
-  <div class="scm-system">
+  <div class="chain-g-app-root">
+    <!-- 왼쪽 사이드바 -->
     <aside class="sidebar">
-      <div class="logo-area">
-        <p class="logo-barcode">CHAIN-G</p>
-        <span class="system-ver">v1.2.0-stable</span>
+      <div class="brand">
+        <div class="barcode-container">
+          <!-- 이미지와 유사한 바코드 라인들 -->
+          <div class="barcode-visual">
+            <div class="b-line thick"></div>
+            <div class="b-line thin"></div>
+            <div class="b-line mid"></div>
+            <div class="b-line thick"></div>
+            <div class="b-line thin"></div>
+            <div class="b-line mid"></div>
+            <div class="b-line thin"></div>
+            <div class="b-line thick"></div>
+            <div class="b-line thin"></div>
+            <div class="b-line mid"></div>
+            <div class="b-line thick"></div>
+            <div class="b-line thin"></div>
+            <div class="b-line mid"></div>
+            <div class="b-line thick"></div>
+          </div>
+          <div class="barcode-text">C H A I N - G</div>
+        </div>
       </div>
       
-      <nav class="nav-container">
-        <div 
-          v-for="item in menuItems" 
-          :key="item.name"
-          :class="['nav-link', { active: activeMenu === item.name }]"
-          @click="activeMenu = item.name"
-        >
-          <span class="menu-code">{{ item.code }}</span>
-          {{ item.name }}
-        </div>
+      <nav class="menu">
+        <div class="menu-group">메인 메뉴</div>
+        <ul>
+          <li class="active"><span class="icon">📊</span> 대시보드</li>
+          <li><span class="icon">📦</span> 재고 현황</li>
+          <li><span class="icon">🚚</span> 입출고 관리</li>
+          <li><span class="icon">📈</span> 분석 리포트</li>
+        </ul>
+        
+        <div class="menu-group">시스템</div>
+        <ul>
+          <li><span class="icon">👥</span> 직원 관리</li>
+          <li><span class="icon">⚙️</span> 환경 설정</li>
+        </ul>
       </nav>
 
-      <div class="sidebar-footer">
-        <p>SYSTEM SERVER: ONLINE</p>
+      <div class="user-card">
+        <div class="user-avatar"></div>
+        <div class="user-detail">
+          <p class="u-name">{{ userName }}</p>
+          <p class="u-role">System Admin</p>
+        </div>
       </div>
     </aside>
 
-    <main class="viewport">
-      <header class="global-header">
-        <div class="breadcrumb">
-          <span class="root">SYSTEM</span> / <span class="current">{{ activeMenu }}</span>
+    <!-- 오른쪽 메인 영역 -->
+    <div class="main-container">
+      <!-- 상단 헤더 -->
+      <header class="header">
+        <div class="page-title">
+          <h2>재고 관리 현황</h2>
         </div>
         
-        <div class="admin-info">
-          <span class="server-time">2026-02-06 17:15:00</span>
-          
-          <div class="header-tools">
-            <div class="tool-chip noti">
-              <span class="chip-label">NOTIFICATIONS</span>
-              <span class="chip-count">3</span>
-            </div>
-
-            <div class="tool-chip my-page">
-              <span class="chip-label">MY PAGE</span>
-            </div>
+        <div class="header-tools">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" v-model="searchQuery" placeholder="SKU ID 또는 상품명으로 검색...">
           </div>
-
-          <div class="user-profile">
-            <div class="user-tag">
-              <span class="tag-role">SYSTEM ADMIN</span>
-              <span class="tag-name">홍길동</span>
-            </div>
-            <button class="action-btn">LOGOUT</button>
+          <div class="notification">
+            <span class="bell">🔔</span>
+            <span class="dot"></span>
           </div>
         </div>
       </header>
 
-      <div class="scroll-area">
-        <section class="summary-grid">
-          <div v-for="stat in stats" :key="stat.label" class="summary-card">
-            <div class="card-head">{{ stat.label }}</div>
-            <div class="card-body">
-              <span class="num" :style="{ color: stat.color }">{{ stat.value }}</span>
-              <span class="unit">{{ stat.unit }}</span>
+      <!-- 실제 컨텐츠 영역 (스크롤 가능) -->
+      <main class="content-scroll">
+        <div class="content-wrapper">
+          
+          <!-- 요약 대시보드 -->
+          <section class="summary-section">
+            <div class="summary-card">
+              <span class="s-label">총 재고 액 (전체 건 기준)</span>
+              <p class="s-value">₩ 5,280,000</p>
+              <span class="s-trend up">↑ 8% vs 지난주</span>
             </div>
-          </div>
-        </section>
+            <div class="summary-card">
+              <span class="s-label">전체 SKU</span>
+              <p class="s-value">{{ inventoryItems.length }}건</p>
+              <span class="s-trend">현재 등록 기준</span>
+            </div>
+            <div class="summary-card warn">
+              <span class="s-label">품절/부족</span>
+              <p class="s-value">2건</p>
+              <span class="s-trend">즉시 확인 필요</span>
+            </div>
+          </section>
 
-        <section class="data-wrapper">
-          <div class="section-title">
-            <h4>[ 최근 주문 처리 내역 ]</h4>
-            <div class="table-actions">
-              <button class="sub-btn">EXCEL 다운로드</button>
-              <button class="sub-btn">새로고침</button>
+          <!-- 컨트롤 바 -->
+          <div class="control-bar">
+            <div class="filter-tabs">
+              <button 
+                v-for="cat in categories" 
+                :key="cat"
+                :class="{ active: selectedCategory === cat }"
+                @click="selectedCategory = cat"
+              >
+                {{ cat }}
+              </button>
             </div>
+            <button class="add-btn">+ 신규 품목 등록</button>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>NO</th>
-                <th>주문번호</th>
-                <th>거래처</th>
-                <th>품목명</th>
-                <th>수량</th>
-                <th>등록일시</th>
-                <th>진행상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>1</td>
-                <td class="code">ORD-2026-001</td>
-                <td>가맹점(강남점)</td>
-                <td>오리지널 떡볶이 밀키트 외 2건</td>
-                <td class="right">50</td>
-                <td>2026-02-06 10:22</td>
-                <td><span class="state in-progress">운송중</span></td>
-              </tr>
-              <tr>
-                <td>2</td>
-                <td class="code">ORD-2026-002</td>
-                <td>가맹점(판교점)</td>
-                <td>마라 떡볶이 밀키트</td>
-                <td class="right">30</td>
-                <td>2026-02-06 11:45</td>
-                <td><span class="state hold">승인대기</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      </div>
-    </main>
+
+          <!-- 테이블 데이터 -->
+          <div class="data-table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SKU 번호</th>
+                  <th>상품 명칭</th>
+                  <th>카테고리</th>
+                  <th>현재 재고</th>
+                  <th>단가</th>
+                  <th>상태</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in filteredItems" :key="item.id">
+                  <td class="sku-cell">{{ item.id }}</td>
+                  <td class="name-cell">{{ item.name }}</td>
+                  <td>{{ item.category }}</td>
+                  <td :class="{ 'text-danger': item.stock < 5 }"><strong>{{ item.stock }}</strong> 개</td>
+                  <td>{{ formatPrice(item.price) }}</td>
+                  <td>
+                    <span :class="['status-tag', getStatusClass(item.status)]">
+                      {{ item.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="action-btn edit">관리</button>
+                  </td>
+                </tr>
+                <tr v-if="filteredItems.length === 0">
+                  <td colspan="7" class="no-data">조건에 맞는 검색 결과가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39+Text&display=swap');
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-
-.scm-system {
-  display: flex;
-  height: 100vh;
-  font-family: 'Pretendard', -apple-system, sans-serif;
-  background-color: #ebedf0;
-  color: #2d3436;
+<style>
+/* 
+  Reset & Force Layout 
+  기존 프로젝트의 main.css에서 설정된 #app 스타일을 강제로 덮어씁니다.
+*/
+#app {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
-/* --- SIDEBAR --- */
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+:root {
+  --sidebar-w: 260px;
+  --header-h: 70px;
+  --primary: #6366f1;
+  --bg-main: #f1f5f9;
+  --border-color: #e2e8f0;
+  --text-dark: #0f172a;
+  --text-light: #64748b;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.chain-g-app-root {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-main);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-dark);
+}
+
+/* Sidebar */
 .sidebar {
-  width: 220px;
-  background-color: #1e272e;
-  color: #d2dae2;
+  width: var(--sidebar-w);
+  height: 100%;
+  background-color: #1e293b;
+  color: #f8fafc;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #000;
+  padding: 2.5rem 0;
+  flex-shrink: 0;
 }
 
-.logo-area {
-  padding: 30px 15px;
-  text-align: center;
-  background: #0f1418;
+.brand {
+  padding: 0 1.5rem 3rem;
+  display: flex;
+  justify-content: center;
 }
 
-.logo-barcode {
-  font-family: 'Libre Barcode 39 Text', cursive;
-  font-size: 38px;
-  color: #fff;
+.barcode-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  width: 100%;
+}
+
+.barcode-visual {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
+}
+
+.b-line {
+  background-color: var(--primary); /* 테마 색상 적용 */
+  height: 100%;
+}
+
+.b-line.thick { width: 5px; }
+.b-line.mid { width: 2.5px; }
+.b-line.thin { width: 1px; }
+
+.barcode-text {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: white; /* 어두운 배경에 잘 보이도록 흰색 적용 */
+  letter-spacing: 5px;
+  margin-top: 4px;
+  white-space: nowrap; /* 글자가 밑으로 튀어나오지 않게 고정 */
+}
+
+.menu {
+  flex: 1;
+}
+
+.menu-group {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0 1.5rem 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.system-ver {
-  font-size: 10px;
-  color: #576574;
-  letter-spacing: 1px;
+.menu li {
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
 }
 
-.nav-link {
-  padding: 12px 20px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  border-bottom: 1px solid #2d3436;
+.menu li:hover {
+  background-color: #334155;
+  color: white;
+}
+
+.menu li.active {
+  background-color: #334155;
+  color: white;
+  border-left: 4px solid var(--primary);
+  padding-left: calc(1.5rem - 4px);
+}
+
+.user-card {
+  margin: 0 1.5rem;
+  padding: 1rem;
+  background-color: #334155;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.menu-code {
-  font-size: 11px;
-  color: #576574;
-  font-family: monospace;
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  background-color: #475569;
+  border-radius: 50%;
 }
 
-.nav-link:hover { background: #2f3542; color: #fff; }
-.nav-link.active { background: #0984e3; color: #fff; }
+.user-detail .u-name {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
 
-/* --- HEADER & ADMIN INFO --- */
-.viewport {
+.user-detail .u-role {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* Main Container */
+.main-container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
   overflow: hidden;
 }
 
-.global-header {
-  height: 50px;
-  background: #fff;
-  border-bottom: 1px solid #b2bec3;
+.header {
+  height: var(--header-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
+  padding: 0 2rem;
+  flex-shrink: 0;
 }
 
-.breadcrumb {
-  font-size: 12px;
-  font-weight: bold;
-  color: #636e72;
-}
-
-.admin-info {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.server-time {
-  font-size: 11px;
-  color: #b2bec3;
-  font-family: 'Courier New', Courier, monospace;
-  font-weight: bold;
+.page-title h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
 }
 
 .header-tools {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 2rem;
 }
 
-/* 리뉴얼된 도구 버튼 (칩 스타일) */
-.tool-chip {
+.search-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid #ced4da;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.1s ease-in-out;
 }
 
-.tool-chip:hover {
-  border-color: #2d3436;
-  background: #f8f9fa;
-  box-shadow: 2px 2px 0px #2d3436; /* 각진 입체감 */
-  transform: translate(-1px, -1px);
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-light);
 }
 
-.chip-label {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: #636e72;
+.search-wrapper input {
+  padding: 0.6rem 1rem 0.6rem 2.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  width: 320px;
+  font-size: 0.9rem;
+  background-color: #f8fafc;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
-.tool-chip:hover .chip-label { color: #2d3436; }
-
-.chip-count {
-  margin-left: 6px;
-  background: #d63031;
-  color: #fff;
-  padding: 0 4px;
-  font-size: 9px;
-  font-family: monospace;
-  font-weight: bold;
-  border-radius: 1px;
+.search-wrapper input:focus {
+  border-color: var(--primary);
 }
 
-/* 프로필 영역 */
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding-left: 20px;
-  border-left: 1px solid #dfe6e9;
-}
-
-.user-tag {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  line-height: 1.2;
-}
-
-.tag-role {
-  font-size: 9px;
-  font-weight: 900;
-  color: #0984e3;
-}
-
-.tag-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #2d3436;
-}
-
-.action-btn {
-  background: #2d3436;
-  color: #fff;
-  border: none;
-  padding: 4px 10px;
-  font-size: 10px;
-  font-weight: 800;
+.notification {
+  position: relative;
+  font-size: 1.2rem;
   cursor: pointer;
 }
 
-.action-btn:hover { background: #000; }
+.notification .dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  border: 2px solid white;
+}
 
-/* --- MAIN CONTENT --- */
-.scroll-area { padding: 20px; overflow-y: auto; }
+/* Content Area */
+.content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+}
 
-.summary-grid {
+.content-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Summary Section */
+.summary-section {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .summary-card {
-  background: #fff;
-  border: 1px solid #b2bec3;
-  padding: 15px;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-.card-head {
-  font-size: 12px;
-  color: #636e72;
-  font-weight: bold;
-  border-left: 3px solid #2d3436;
-  padding-left: 8px;
-  margin-bottom: 10px;
+.s-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
 }
 
-.card-body { text-align: right; }
-.num { font-size: 24px; font-weight: 800; font-family: 'Tahoma', sans-serif; }
-.unit { font-size: 13px; margin-left: 5px; color: #2d3436; }
-
-.data-wrapper {
-  background: #fff;
-  border: 1px solid #b2bec3;
-  padding: 20px;
+.s-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
 }
 
-.section-title {
+.s-trend {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.s-trend.up { color: #10b981; font-weight: 600; }
+.summary-card.warn .s-value { color: #ef4444; }
+
+/* Control Bar */
+.control-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 1.25rem;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-tabs button {
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: white;
+  color: var(--text-light);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tabs button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.filter-tabs button.active {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.add-btn {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+/* Table */
+.data-table-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
 }
 
 .data-table th {
-  background: #f1f2f6;
-  border: 1px solid #ced4da;
-  padding: 10px;
-  text-align: center;
+  text-align: left;
+  padding: 1.25rem 1.5rem;
+  background-color: #f8fafc;
+  color: var(--text-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.data-table td { border: 1px solid #ced4da; padding: 10px; }
-.data-table tr:nth-child(even) { background: #f8f9fa; }
-.code { font-family: monospace; font-weight: bold; color: #0984e3; }
-.right { text-align: right; }
-
-.state {
-  display: block;
-  text-align: center;
-  padding: 2px 0;
-  font-size: 11px;
-  border-radius: 2px;
-  color: white;
+.data-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.95rem;
 }
 
-.in-progress { background: #0984e3; }
-.hold { background: #636e72; }
+.sku-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--primary);
+}
 
-.sub-btn {
-  padding: 5px 10px;
-  font-size: 12px;
-  background: #fff;
-  border: 1px solid #b2bec3;
+.name-cell {
+  font-weight: 700;
+}
+
+.status-tag {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-ok { background-color: #d1fae5; color: #065f46; }
+.status-warning { background-color: #fef3c7; color: #92400e; }
+.status-danger { background-color: #fee2e2; color: #991b1b; }
+
+.text-danger { color: #ef4444; }
+
+.action-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
   cursor: pointer;
-  margin-left: 5px;
 }
 
-.sidebar-footer {
-  margin-top: auto;
-  padding: 15px;
-  font-size: 10px;
-  color: #2f3542;
-  border-top: 1px solid #2d3436;
+.action-btn:hover {
+  background-color: var(--bg-main);
+}
+
+.no-data {
+  text-align: center;
+  padding: 4rem !important;
+  color: var(--text-light);
+}
+
+/* Custom Scrollbar */
+.content-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.content-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
 }
 </style>
