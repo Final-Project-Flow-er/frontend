@@ -1,12 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import AccountSupportView from '../views/AccountSupportView.vue'
-import InventoryView from '../views/InventoryView.vue'
-import OrderListView from '../views/OrderListView.vue'
-import OrderCreateView from '../views/OrderCreateView.vue'
-import ReturnListView from '../views/ReturnListView.vue'
-import ReturnCreateView from '../views/ReturnCreateView.vue'
-import ProductListView from '../views/ProductListView.vue'
 import InventoryView from '../views/franchise/InventoryView.vue'
 import OrderListView from '../views/franchise/OrderListView.vue'
 import OrderCreateView from '../views/franchise/OrderCreateView.vue'
@@ -43,8 +37,6 @@ const router = createRouter({
             component: AccountSupportView
         },
         {
-            path: '/inventory',
-            name: 'inventory',
             path: '/franchise/inventory',
             name: 'franchise-inventory',
             component: InventoryView
