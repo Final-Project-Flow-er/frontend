@@ -7,13 +7,21 @@ import OrderCreateView from '../views/OrderCreateView.vue'
 import ReturnListView from '../views/ReturnListView.vue'
 import ReturnCreateView from '../views/ReturnCreateView.vue'
 import ProductListView from '../views/ProductListView.vue'
+import InventoryView from '../views/franchise/InventoryView.vue'
+import OrderListView from '../views/franchise/OrderListView.vue'
+import OrderCreateView from '../views/franchise/OrderCreateView.vue'
+import ReturnListView from '../views/franchise/ReturnListView.vue'
+import ReturnCreateView from '../views/franchise/ReturnCreateView.vue'
+import ProductListView from '../views/franchise/ProductListView.vue'
+import OrderDetailView from '../views/franchise/OrderDetailView.vue' // Import for head-office detail temporarily
+import HeadOfficeOrderListView from '../views/head-office/OrderListView.vue' // New import
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
             path: '/',
-            redirect: '/inventory'
+            redirect: '/franchise/inventory'
         },
         {
             path: '/login',
@@ -28,46 +36,48 @@ const router = createRouter({
         {
             path: '/inventory',
             name: 'inventory',
+            path: '/franchise/inventory',
+            name: 'franchise-inventory',
             component: InventoryView
         },
         {
-            path: '/orders',
-            name: 'order-list',
+            path: '/franchise/orders',
+            name: 'franchise-order-list',
             component: OrderListView
         },
         {
-            path: '/orders/create',
-            name: 'order-create',
+            path: '/franchise/orders/create',
+            name: 'franchise-order-create',
             component: OrderCreateView
         },
         {
-            path: '/returns',
-            name: 'return-list',
+            path: '/franchise/returns',
+            name: 'franchise-return-list',
             component: ReturnListView
         },
         {
-            path: '/returns/create',
-            name: 'return-create',
+            path: '/franchise/returns/create',
+            name: 'franchise-return-create',
             component: ReturnCreateView
         },
         {
-            path: '/returns/:id',
-            name: 'return-detail',
-            component: () => import('../views/ReturnDetailView.vue')
+            path: '/franchise/returns/:id',
+            name: 'franchise-return-detail',
+            component: () => import('../views/franchise/ReturnDetailView.vue')
         },
         {
-            path: '/orders/:id',
-            name: 'order-detail',
-            component: () => import('../views/OrderDetailView.vue')
+            path: '/franchise/orders/:id',
+            name: 'franchise-order-detail',
+            component: () => import('../views/franchise/OrderDetailView.vue')
         },
         {
-            path: '/products/sell',
-            name: 'product-sell',
-            component: () => import('../views/ProductSalesView.vue')
+            path: '/franchise/products/sell',
+            name: 'franchise-product-sell',
+            component: () => import('../views/franchise/ProductSalesView.vue')
         },
         {
-            path: '/products',
-            name: 'product-list',
+            path: '/franchise/products',
+            name: 'franchise-product-list',
             component: ProductListView
         },
         {
@@ -79,6 +89,22 @@ const router = createRouter({
             path: '/store/inventory/:productCode',
             name: 'store-inventory-detail',
             component: () => import('../views/StoreInventoryDetailView.vue')
+        },
+        // New head office routes
+        {
+            path: '/head-office/orders',
+            name: 'head-office-order-list',
+            component: HeadOfficeOrderListView
+        },
+        {
+            path: '/head-office/orders/:id',
+            name: 'head-office-order-detail',
+            component: OrderDetailView // Using franchise OrderDetailView temporarily
+        },
+        {
+            path: '/head-office/orders/:id/edit',
+            name: 'head-office-order-edit',
+            component: () => import('../views/head-office/OrderEditView.vue')
         }
     ]
 })

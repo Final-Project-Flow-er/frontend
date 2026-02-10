@@ -8,18 +8,18 @@ const filter = ref({
   status: '',
   orderDate: '',
   orderCode: '',
-  recipientName: '',
-  recipientPhone: '',
+  managerName: '',
+  managerPhone: '',
+  productCode: '',
   arrivalDate: '',
-  arrivalTime: '',
-  productCode: ''
+  arrivalTime: ''
 })
 
 const orders = ref([
-  { orderStatus: '대기', orderDate: '2023-10-25', orderCode: 'ORD-001', recipientName: '김철수', recipientPhone: '010-1234-5678', arrivalDate: '2023-10-27', arrivalTime: '14:00', productCode: 'P-001' },
-  { orderStatus: '배송중', orderDate: '2023-10-24', orderCode: 'ORD-002', recipientName: '이영희', recipientPhone: '010-9876-5432', arrivalDate: '2023-10-26', arrivalTime: '10:00', productCode: 'P-002' },
-  { orderStatus: '배송완료', orderDate: '2023-10-23', orderCode: 'ORD-003', recipientName: '박민수', recipientPhone: '010-5555-4444', arrivalDate: '2023-10-25', arrivalTime: '16:30', productCode: 'P-003' },
-  { orderStatus: '취소', orderDate: '2023-10-22', orderCode: 'ORD-004', recipientName: '최지원', recipientPhone: '010-1111-2222', arrivalDate: '-', arrivalTime: '-', productCode: 'P-004' },
+  { orderStatus: '대기', orderDate: '2023-10-25', orderCode: 'ORD-001', productCode: 'P-001', quantity: 100, totalAmount: 1000000, managerName: '홍길동', managerPhone: '010-1111-2222', stockInDate: '2023-10-27', arrivalDate: '2023-10-27', arrivalTime: '10:00' },
+  { orderStatus: '배송중', orderDate: '2023-10-24', orderCode: 'ORD-002', productCode: 'P-002', quantity: 50, totalAmount: 750000, managerName: '김철수', managerPhone: '010-3333-4444', stockInDate: '2023-10-26', arrivalDate: '2023-10-26', arrivalTime: '14:30' },
+  { orderStatus: '배송완료', orderDate: '2023-10-23', orderCode: 'ORD-003', productCode: 'P-003', quantity: 200, totalAmount: 2000000, managerName: '이영희', managerPhone: '010-5555-6666', stockInDate: '2023-10-25', arrivalDate: '2023-10-25', arrivalTime: '09:00' },
+  { orderStatus: '취소', orderDate: '2023-10-22', orderCode: 'ORD-004', productCode: 'P-004', quantity: 30, totalAmount: 150000, managerName: '박민수', managerPhone: '010-7777-8888', stockInDate: '-', arrivalDate: '2023-10-24', arrivalTime: '11:00' },
 ])
 
 const filteredOrders = computed(() => {
@@ -27,13 +27,13 @@ const filteredOrders = computed(() => {
     const matchStatus = !filter.value.status || item.orderStatus === filter.value.status
     const matchOrderDate = !filter.value.orderDate || item.orderDate.includes(filter.value.orderDate)
     const matchOrderCode = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
-    const matchRecipientName = !filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)
-    const matchRecipientPhone = !filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)
+    const matchManagerName = !filter.value.managerName || item.managerName.includes(filter.value.managerName)
+    const matchManagerPhone = !filter.value.managerPhone || item.managerPhone.includes(filter.value.managerPhone)
+    const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
     const matchArrivalTime = !filter.value.arrivalTime || item.arrivalTime.includes(filter.value.arrivalTime)
-    const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     
-    return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchRecipientPhone && matchArrivalDate && matchArrivalTime && matchProductCode
+    return matchStatus && matchOrderDate && matchOrderCode && matchManagerName && matchManagerPhone && matchProductCode && matchArrivalDate && matchArrivalTime
   })
 })
 
@@ -48,15 +48,19 @@ const getStatusClass = (s) => ({
 }[s] || '')
 
 const goToDetail = (item) => {
-  router.push(`/orders/${item.orderCode}`)
+  router.push({ name: 'head-office-order-detail', params: { id: item.orderCode } })
+}
+
+const goToEdit = (item) => {
+  router.push({ name: 'head-office-order-edit', params: { id: item.orderCode } })
 }
 </script>
 
 <template>
   <div class="content-wrapper">
     <div class="header-row">
-      <h2>발주 관리</h2>
-      <router-link to="/orders/create" class="add-btn">+ 발주 생성</router-link>
+      <h2>본사 발주 관리</h2>
+      <!-- '발주 생성' 버튼 제거 -->
     </div>
 
     <section class="summary-section">
@@ -89,12 +93,16 @@ const goToDetail = (item) => {
         <input type="date" v-model="filter.orderDate" />
       </div>
       <div class="filter-group">
-        <label>수령인 이름</label>
-        <input type="text" v-model="filter.recipientName" placeholder="이름" />
+        <label>담당자 이름</label>
+        <input type="text" v-model="filter.managerName" placeholder="이름" />
       </div>
       <div class="filter-group">
-        <label>수령인 번호</label>
-        <input type="text" v-model="filter.recipientPhone" placeholder="전화번호" />
+        <label>담당자 번호</label>
+        <input type="text" v-model="filter.managerPhone" placeholder="전화번호" />
+      </div>
+      <div class="filter-group">
+        <label>제품 코드</label>
+        <input type="text" v-model="filter.productCode" placeholder="P-000" />
       </div>
       <div class="filter-group">
         <label>도착 날짜</label>
@@ -104,10 +112,6 @@ const goToDetail = (item) => {
         <label>도착 시간</label>
         <input type="time" v-model="filter.arrivalTime" />
       </div>
-      <div class="filter-group">
-        <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="P-000" />
-      </div>
       <button class="search-btn">조회</button>
     </div>
 
@@ -115,27 +119,33 @@ const goToDetail = (item) => {
       <table class="data-table">
         <thead>
           <tr>
-            <th>발주 상태</th>
-            <th>발주일</th>
             <th>발주 코드</th>
-            <th>수령인 이름</th>
-            <th>수령인 전화번호</th>
+            <th>발주 상태</th>
+            <th>제품 코드</th>
+            <th>수량</th>
+            <th>총 금액</th>
+            <th>발주일</th>
+            <th>담당자 이름</th>
+            <th>담당자 전화번호</th>
+            <th>입고 날짜</th>
             <th>도착 날짜</th>
             <th>도착 시간</th>
-            <th>제품 코드</th>
             <th>관리</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in filteredOrders" :key="order.orderCode">
-            <td><span :class="['status-tag', getStatusClass(order.orderStatus)]">{{ order.orderStatus }}</span></td>
-            <td>{{ order.orderDate }}</td>
             <td class="sku-cell">{{ order.orderCode }}</td>
-            <td class="name-cell">{{ order.recipientName }}</td>
-            <td>{{ order.recipientPhone }}</td>
+            <td><span :class="['status-tag', getStatusClass(order.orderStatus)]">{{ order.orderStatus }}</span></td>
+            <td>{{ order.productCode }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>{{ order.totalAmount.toLocaleString() }}</td>
+            <td>{{ order.orderDate }}</td>
+            <td>{{ order.managerName }}</td>
+            <td>{{ order.managerPhone }}</td>
+            <td>{{ order.stockInDate }}</td>
             <td>{{ order.arrivalDate }}</td>
             <td>{{ order.arrivalTime }}</td>
-            <td>{{ order.productCode }}</td>
             <td><button class="action-btn" @click.stop="goToDetail(order)">상세</button></td>
           </tr>
         </tbody>
