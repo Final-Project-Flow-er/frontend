@@ -178,42 +178,42 @@ const router = createRouter({
         {
             path: '/store/settlement',
             name: 'store-settlement-summary',
-            component: () => import('../views/StoreSettlement/StoreSettlementSummaryView.vue')
+            component: () => import('@/views/store-settlement/StoreSettlementSummaryView.vue')
         },
         {
             path: '/store/settlement/items',
             name: 'store-settlement-items',
-            component: () => import('../views/StoreSettlement/StoreSettlementItemSummaryView.vue')
+            component: () => import('@/views/store-settlement/StoreSettlementItemSummaryView.vue')
         },
         {
             path: '/store/settlement/vouchers',
             name: 'store-settlement-vouchers',
-            component: () => import('../views/StoreSettlement/StoreSettlementVoucherListView.vue')
+            component: () => import('@/views/store-settlement/StoreSettlementVoucherListView.vue')
         },
         {
             path: '/hq/settlement',
             name: 'hq-settlement-list',
-            component: () => import('../views/HqSettlement/HqSettlementListView.vue')
+            component: () => import('@/views/hqSettlement/HqSettlementListView.vue')
         },
         {
             path: '/hq/settlement/confirm',
             name: 'hq-settlement-confirm',
-            component: () => import('../views/HqSettlement/HqSettlementConfirmView.vue')
+            component: () => import('@/views/hqSettlement/HqSettlementConfirmView.vue')
         },
         {
             path: '/hq/settlement/detail/:storeId',
             name: 'hq-settlement-detail',
-            component: () => import('../views/HqSettlement/HqSettlementDetailView.vue')
+            component: () => import('@/views/hqSettlement/HqSettlementDetailView.vue')
         },
         {
             path: '/hq/settlement/voucher-manage',
             name: 'hq-settlement-voucher-manage',
-            component: () => import('../views/HqSettlement/HqSettlementVoucherManageView.vue')
+            component: () => import('@/views/hqSettlement/HqSettlementVoucherManageView.vue')
         },
         {
             path: '/hq/settlement/logs',
             name: 'hq-settlement-logs',
-            component: () => import('../views/HqSettlement/HqSettlementLogView.vue')
+            component: () => import('@/views/hqSettlement/HqSettlementLogView.vue')
         }
     ]
 })
