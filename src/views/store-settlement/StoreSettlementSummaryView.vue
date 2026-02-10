@@ -109,11 +109,14 @@ const goToVoucherList = () => router.push('/store/settlement/vouchers')
       <p class="fs-amount">₩ {{ fmt(currentSettlement.finalAmount) }}</p>
     </div>
 
-    <!-- 정산 요약 카드 -->
     <section class="summary-grid">
       <div class="summary-card primary">
         <span class="s-label">총 매출 금액</span>
         <p class="s-value">₩ {{ fmt(currentSettlement.totalSales) }}</p>
+      </div>
+      <div class="summary-card refund">
+        <span class="s-label">반품 환급</span>
+        <p class="s-value positive">₩ {{ fmt(currentSettlement.returnRefund) }}</p>
       </div>
       <div class="summary-card">
         <span class="s-label">발주 대금</span>
@@ -124,16 +127,12 @@ const goToVoucherList = () => router.push('/store/settlement/vouchers')
         <p class="s-value negative">₩ {{ fmt(currentSettlement.shippingFee) }}</p>
       </div>
       <div class="summary-card">
-        <span class="s-label">수수료 (3%)</span>
-        <p class="s-value negative">₩ {{ fmt(currentSettlement.commission) }}</p>
-      </div>
-      <div class="summary-card refund">
-        <span class="s-label">반품 환급</span>
-        <p class="s-value positive">₩ {{ fmt(currentSettlement.returnRefund) }}</p>
-      </div>
-      <div class="summary-card">
         <span class="s-label">손실 금액</span>
         <p class="s-value negative">₩ {{ fmt(currentSettlement.loss) }}</p>
+      </div>
+      <div class="summary-card">
+        <span class="s-label">수수료 (3%)</span>
+        <p class="s-value negative">₩ {{ fmt(currentSettlement.commission) }}</p>
       </div>
     </section>
 
@@ -222,11 +221,13 @@ const goToVoucherList = () => router.push('/store/settlement/vouchers')
 .date-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; }
 
 /* ── 요약 카드 그리드 ── */
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.summary-grid .summary-card:nth-child(1),
+.summary-grid .summary-card:nth-child(2) { grid-column: span 2; }
 .summary-card { background: white; padding: 1.25rem 1.5rem; border-radius: 14px; border: 1px solid var(--border-color); transition: transform 0.15s, box-shadow 0.15s; }
 .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-.summary-card.primary { border-left: 4px solid var(--primary); }
-.summary-card.refund { border-left: 4px solid #10b981; }
+.summary-card.primary { }
+.summary-card.refund { }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.35rem; }
 .s-value { font-size: 1.5rem; font-weight: 700; margin: 0; color: var(--text-dark); }
 .s-value.negative { color: #ef4444; }

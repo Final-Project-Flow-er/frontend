@@ -130,11 +130,14 @@ const getStatusClass = (status) => ({
       <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
     </div>
 
-    <!-- 합계 카드 -->
     <section class="summary-grid">
       <div class="summary-card primary">
         <span class="s-label">총 매출</span>
         <p class="s-value">₩ {{ fmt(totals.sales) }}</p>
+      </div>
+      <div class="summary-card refund-card">
+        <span class="s-label">반품 환급</span>
+        <p class="s-value positive">₩ {{ fmt(totals.refund) }}</p>
       </div>
       <div class="summary-card">
         <span class="s-label">발주 대금</span>
@@ -145,16 +148,12 @@ const getStatusClass = (status) => ({
         <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
       </div>
       <div class="summary-card">
-        <span class="s-label">수수료</span>
-        <p class="s-value negative">₩ {{ fmt(totals.commission) }}</p>
-      </div>
-      <div class="summary-card refund-card">
-        <span class="s-label">반품 환급</span>
-        <p class="s-value positive">₩ {{ fmt(totals.refund) }}</p>
-      </div>
-      <div class="summary-card">
         <span class="s-label">손실</span>
         <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
+      </div>
+      <div class="summary-card">
+        <span class="s-label">수수료</span>
+        <p class="s-value negative">₩ {{ fmt(totals.commission) }}</p>
       </div>
     </section>
 
@@ -227,11 +226,13 @@ const getStatusClass = (status) => ({
 .search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); margin-bottom: 1.25rem; max-width: 300px; }
 .search-input { border: none; outline: none; font-size: 0.9rem; width: 100%; color: var(--text-dark); }
 
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.summary-grid .summary-card:nth-child(1),
+.summary-grid .summary-card:nth-child(2) { grid-column: span 2; }
 .summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); transition: transform 0.15s, box-shadow 0.15s; }
 .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-.summary-card.primary { border-left: 4px solid var(--primary); }
-.summary-card.refund-card { border-left: 4px solid #10b981; }
+.summary-card.primary { }
+.summary-card.refund-card { }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
 .s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); }
 .s-value.negative { color: #ef4444; }

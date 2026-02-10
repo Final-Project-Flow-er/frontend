@@ -193,27 +193,27 @@ const router = createRouter({
         {
             path: '/hq/settlement',
             name: 'hq-settlement-list',
-            component: () => import('@/views/hqSettlement/HqSettlementListView.vue')
+            component: () => import('@/views/hq-settlement/HqSettlementListView.vue')
         },
         {
             path: '/hq/settlement/confirm',
             name: 'hq-settlement-confirm',
-            component: () => import('@/views/hqSettlement/HqSettlementConfirmView.vue')
+            component: () => import('@/views/hq-settlement/HqSettlementConfirmView.vue')
         },
         {
             path: '/hq/settlement/detail/:storeId',
             name: 'hq-settlement-detail',
-            component: () => import('@/views/hqSettlement/HqSettlementDetailView.vue')
+            component: () => import('@/views/hq-settlement/HqSettlementDetailView.vue')
         },
         {
             path: '/hq/settlement/voucher-manage',
             name: 'hq-settlement-voucher-manage',
-            component: () => import('@/views/hqSettlement/HqSettlementVoucherManageView.vue')
+            component: () => import('@/views/hq-settlement/HqSettlementVoucherManageView.vue')
         },
         {
             path: '/hq/settlement/logs',
             name: 'hq-settlement-logs',
-            component: () => import('@/views/hqSettlement/HqSettlementLogView.vue')
+            component: () => import('@/views/hq-settlement/HqSettlementLogView.vue')
         }
     ]
 })

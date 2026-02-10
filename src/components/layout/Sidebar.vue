@@ -42,6 +42,7 @@ const sidebarItems = ref([
       { name: '발주 요청 접수', routeName: 'head-office-order-reception' },
       { name: '발주 요청 관리', routeName: 'head-office-order-request' },
       { name: '반품 요청 관리', routeName: 'head-office-return-list' },
+      { name: '정산 관리', routeName: 'hq-settlement-list' },
     ]
   },
   {
@@ -52,6 +53,7 @@ const sidebarItems = ref([
       { name: '반품 관리', routeName: 'franchise-return-list' },
       { name: '판매 관리', routeName: 'franchise-product-sell' },
       { name: '재고 관리', routeName: 'store-inventory' },
+      { name: '정산 관리', routeName: 'store-settlement-summary' },
     ]
   },
   {
