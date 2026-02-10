@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import LoginView from '../views/LoginView.vue'
+import AccountSupportView from '../views/AccountSupportView.vue'
 import InventoryView from '../views/InventoryView.vue'
 import OrderListView from '../views/OrderListView.vue'
 import OrderCreateView from '../views/OrderCreateView.vue'
@@ -12,6 +14,16 @@ const router = createRouter({
         {
             path: '/',
             redirect: '/inventory'
+        },
+        {
+            path: '/login',
+            name: 'Login',
+            component: LoginView
+        },
+        {
+            path: '/account',
+            name: 'AccountSupport',
+            component: AccountSupportView
         },
         {
             path: '/inventory',

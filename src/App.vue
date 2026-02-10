@@ -1,13 +1,9 @@
-<script setup>
-import { ref } from 'vue'
-import Sidebar from './components/layout/Sidebar.vue'
-import Header from './components/layout/Header.vue'
-
-const searchQuery = ref('')
-</script>
-
 <template>
-  <div class="chain-g-app-root">
+  <template v-if="['/login', '/account'].includes($route.path)">
+    <router-view />
+  </template>
+
+  <div v-else class="chain-g-app-root">
     <Sidebar />
     <div class="main-container">
       <Header v-model="searchQuery" />
@@ -18,8 +14,15 @@ const searchQuery = ref('')
   </div>
 </template>
 
+<script setup>
+import { ref } from 'vue'
+import Sidebar from './components/layout/Sidebar.vue'
+import Header from './components/layout/Header.vue'
+
+const searchQuery = ref('')
+</script>
+
 <style>
-/* 1. 경로 확인: assets 폴더가 src 바로 아래에 있는지 확인하세요 */
 @import "./assets/main.css";
 
 .chain-g-app-root {
