@@ -7,45 +7,42 @@ const router = useRouter()
 // Mock Data: Orders available for return
 const availableOrders = ref([
  { 
-   orderCode: 'ORD-001', 
+   orderCode: 'SE0120231026001', 
    recipientName: '김철수', 
    recipientPhone: '010-1234-5678', 
-   franchiseCode: 'FC-001',
+   franchiseCode: 'SE01',
    items: [
      { 
-       boxCode: 'BOX-A01', 
-       idCode: 'ID-8821', 
-       productCode: 'P-001', 
-       productName: '오리지널 떡볶이 밀키트', 
-       quantity: 5, 
-       amount: 12900,
-       totalAmount: 64500
+       boxCode: 'SE01FA0120231026OR0101001', 
+       idCode: 'SE01FA01AOR0101B001', 
+       productCode: 'OR0101', 
+       productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', 
+       quantity: 5,        amount: 5000,
+        totalAmount: 25000
      },
      { 
-       boxCode: 'BOX-A02', 
-       idCode: 'ID-8822', 
-       productCode: 'P-002', 
-       productName: '로제 떡볶이 밀키트', 
-       quantity: 3, 
-       amount: 14900,
-       totalAmount: 44700
+       boxCode: 'SE01FA0120231026RO0201002', 
+       idCode: 'SE01FA01ARO0201B002', 
+       productCode: 'RO0201', 
+       productName: '로제 떡볶이 밀키트 기본맛 1,2인분', 
+       quantity: 3,        amount: 7000,
+        totalAmount: 21000
      }
    ]
  },
  { 
-   orderCode: 'ORD-002', 
+   orderCode: 'SE0120231025005', 
    recipientName: '이영희', 
    recipientPhone: '010-9876-5432', 
-   franchiseCode: 'FC-002',
+   franchiseCode: 'SE01',
    items: [
      { 
-       boxCode: 'BOX-B05', 
-       idCode: 'ID-9932', 
-       productCode: 'P-002', 
-       productName: '로제 떡볶이 밀키트', 
-       quantity: 10, 
-       amount: 14900,
-       totalAmount: 149000
+       boxCode: 'SE01FA0120231025RO0201005', 
+       idCode: 'SE01FA01ARO0201B005', 
+       productCode: 'RO0201', 
+       productName: '로제 떡볶이 밀키트 기본맛 1,2인분', 
+       quantity: 10,        amount: 7000,
+        totalAmount: 70000
      }
    ]
  }

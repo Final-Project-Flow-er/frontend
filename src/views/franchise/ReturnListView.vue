@@ -17,60 +17,60 @@ const filter = ref({
 })
 
 const returns = ref([
- { 
-   orderCode: 'ORD-001', 
-   returnCode: 'RET-001',
-   boxCode: 'BOX-A01', 
-   idCode: 'ID-8821', 
-   productCode: 'P-001', 
-   productName: '오리지널 떡볶이 밀키트',
-   quantity: 1, 
-   amount: 12900,
-   totalAmount: 12900,
-   recipientName: '김철수', 
-   recipientPhone: '010-1234-5678', 
-   franchiseCode: 'FC-001', 
-   details: '박스 파손 심함',
-   reason: '파손', 
-   date: '2023-10-26', 
-   status: '대기'
- },
- { 
-   orderCode: 'ORD-002', 
-   returnCode: 'RET-002',
-   boxCode: 'BOX-B05', 
-   idCode: 'ID-9932', 
-   productCode: 'P-002', 
-   productName: '로제 떡볶이 밀키트',
-   quantity: 2, 
-   amount: 14900,
-   totalAmount: 29800,
-   recipientName: '이영희', 
-   recipientPhone: '010-9876-5432', 
-   franchiseCode: 'FC-002', 
-   details: '고객 반품 요청',
-   reason: '오배송', 
-   date: '2023-10-25', 
-   status: '접수'
- },
- { 
-   orderCode: 'ORD-003', 
-   returnCode: 'RET-003',
-   boxCode: 'BOX-C10', 
-   idCode: 'ID-7711', 
-   productCode: 'P-003', 
-   productName: '마라 떡볶이 밀키트',
-   quantity: 1, 
-   amount: 14900,
-   totalAmount: 14900,
-   recipientName: '박민수', 
-   recipientPhone: '010-5555-4444', 
-   franchiseCode: 'FC-001', 
-   details: '오배송 확인됨',
-   reason: '오배송', 
-   date: '2023-10-24', 
-   status: '배송중'
- }
+  { 
+    orderCode: 'SE0120231026001', 
+    returnCode: 'RESE0120231026001',
+    boxCode: 'SE01FA0120231026OR0101001', 
+    idCode: 'SE01FA01AOR0101B001', 
+    productCode: 'OR0101', 
+    productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
+    quantity: 1, 
+    amount: 5000,
+    totalAmount: 5000,
+    recipientName: '김철수', 
+    recipientPhone: '010-1234-5678', 
+    franchiseCode: 'SE01', 
+    details: '박스 파손 심함',
+    reason: '상품 하자', 
+    date: '2023-10-26', 
+    status: '대기'
+  },
+  { 
+    orderCode: 'SE0120231025005', 
+    returnCode: 'RESE0120231025005',
+    boxCode: 'SE01FA0120231025RO0201005', 
+    idCode: 'SE01FA01ARO0201B005', 
+    productCode: 'RO0201', 
+    productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
+    quantity: 2, 
+    amount: 7000,
+    totalAmount: 14000,
+    recipientName: '이영희', 
+    recipientPhone: '010-9876-5432', 
+    franchiseCode: 'SE01', 
+    details: '고객 반품 요청',
+    reason: '오발주', 
+    date: '2023-10-25', 
+    status: '접수'
+  },
+  {
+    orderCode: 'SE0120231024010',
+    returnCode: 'RESE0120231024010',
+    boxCode: 'SE01FA0120231024MA0301010',
+    idCode: 'SE01FA01AMA0301B010',
+    productCode: 'MA0301',
+    productName: '마라 떡볶이 밀키트 매운맛 1,2인분',
+    quantity: 1,
+    amount: 7000,
+    totalAmount: 7000,
+    recipientName: '박민수',
+    recipientPhone: '010-5555-4444',
+    franchiseCode: 'SE01',
+    details: '오배송 확인됨',
+    reason: '오발주', 
+    date: '2023-10-24', 
+    status: '배송중'
+  }
 ])
 
 const filteredReturns = computed(() => {
@@ -104,38 +104,38 @@ const getStatusClass = (s) => ({
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
 
 const goToDetail = (item) => {
-  router.push(`/returns/${item.returnCode}`)
+  router.push(`/franchise/returns/${item.returnCode}`)
 }
 </script>
 
 <template>
   <div class="content-wrapper">
     <div class="header-row">
-      <h2>반품 관리</h2>
-      <router-link to="/returns/create" class="add-btn">+ 반품 요청</router-link>
+      <h2>가맹점 반품 관리</h2>
+      <router-link :to="{ name: 'franchise-return-create' }" class="add-btn">+ 반품 요청</router-link>
     </div>
 
     <!-- Filter Section -->
     <div class="filter-section">
       <div class="filter-group">
         <label>발주 코드</label>
-        <input type="text" v-model="filter.orderCode" placeholder="ORD-000" />
+        <input type="text" v-model="filter.orderCode" placeholder="SE0120260210001" />
       </div>
       <div class="filter-group">
         <label>반품 코드</label>
-        <input type="text" v-model="filter.returnCode" placeholder="RET-000" />
+        <input type="text" v-model="filter.returnCode" placeholder="RESE0120260210001" />
       </div>
       <div class="filter-group">
         <label>박스 코드</label>
-        <input type="text" v-model="filter.boxCode" placeholder="BOX-000" />
+        <input type="text" v-model="filter.boxCode" placeholder="SE01FA0120260210OR0101001" />
       </div>
       <div class="filter-group">
         <label>제품 식별코드</label>
-        <input type="text" v-model="filter.idCode" placeholder="ID-0000" />
+        <input type="text" v-model="filter.idCode" placeholder="SE01FA01AOR0101B001" />
       </div>
       <div class="filter-group">
         <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="P-000" />
+        <input type="text" v-model="filter.productCode" placeholder="OR0101" />
       </div>
       <div class="filter-group">
         <label>제품명</label>
@@ -153,7 +153,6 @@ const goToDetail = (item) => {
         <label>총 금액</label>
         <input type="number" v-model="filter.totalAmount" />
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <div class="data-table-card">
@@ -176,7 +175,6 @@ const goToDetail = (item) => {
             <th>반품 사유</th>
             <th>반품 요청 일자</th>
             <th>반품 요청 상태</th>
-            <th>관리</th>
           </tr>
         </thead>
         <tbody>
@@ -186,10 +184,10 @@ const goToDetail = (item) => {
             <td>{{ item.boxCode }}</td>
             <td>{{ item.idCode }}</td>
             <td>{{ item.productCode }}</td>
-            <td class="name-cell">{{ item.productName }}</td>
+            <td>{{ item.productName }}</td>
             <td>{{ item.quantity }}</td>
-            <td>{{ formatPrice(item.amount) }}</td>
-            <td>{{ formatPrice(item.totalAmount) }}</td>
+            <td>{{ item.amount }}</td>
+            <td>{{ item.totalAmount }}</td>
             <td>{{ item.recipientName }}</td>
             <td>{{ item.recipientPhone }}</td>
             <td>{{ item.franchiseCode }}</td>
@@ -197,7 +195,6 @@ const goToDetail = (item) => {
             <td>{{ item.reason }}</td>
             <td>{{ item.date }}</td>
             <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
-            <td><button class="action-btn" @click.stop="goToDetail(item)">상세</button></td>
           </tr>
         </tbody>
       </table>
@@ -232,22 +229,12 @@ const goToDetail = (item) => {
   font-size: 0.9rem;
   min-width: 120px;
 }
-.search-btn {
-  background: var(--text-dark);
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  height: 40px;
-}
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-.data-table th { text-align: left; padding: 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
-.name-cell { font-weight: 600; }
+.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; }
+.name-cell { color: var(--text-dark); }
 .sku-cell { color: var(--primary); font-weight: 600; }
 .status-tag { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }

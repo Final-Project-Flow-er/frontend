@@ -6,10 +6,10 @@ const props = defineProps({
 })
 
 const inventoryItems = ref([
-  { id: 'MK-001', name: '오리지널 떡볶이 밀키트', category: '밀키트', stock: 150, price: 12900, status: '정상' },
-  { id: 'MK-002', name: '마라 떡볶이 밀키트', category: '밀키트', stock: 85, price: 14900, status: '정상' },
-  { id: 'MK-003', name: '로제 떡볶이 밀키트', category: '밀키트', stock: 42, price: 13900, status: '정상' },
-  { id: 'MK-004', name: '오리지널 떡볶이 (대용량)', category: '밀키트', stock: 12, price: 22000, status: '정상' },
+  { id: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', category: '밀키트', stock: 150, price: 10000, status: '정상' },
+  { id: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', category: '밀키트', stock: 85, price: 12000, status: '정상' },
+  { id: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', category: '밀키트', stock: 42, price: 12000, status: '정상' },
+  { id: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', category: '밀키트', stock: 12, price: 18000, status: '정상' },
 ])
 
 const selectedCategory = ref('전체')
@@ -31,7 +31,7 @@ const getStatusClass = (s) => ({ '정상': 'status-ok', '품절임박': 'status-
 <template>
   <div class="content-wrapper">
     <section class="summary-section">
-      <div class="summary-card"><span class="s-label">총 재고 액</span><p class="s-value">₩ 5,280,000</p></div>
+      <div class="summary-card"><span class="s-label">총 재고 액</span><p class="s-value">₩ 3,240,000</p></div>
       <div class="summary-card"><span class="s-label">전체 SKU</span><p class="s-value">{{ inventoryItems.length }}건</p></div>
       <div class="summary-card warn"><span class="s-label">품절/부족</span><p class="s-value">2건</p></div>
     </section>

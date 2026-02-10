@@ -104,60 +104,62 @@ const orders = [
   { 
     orderStatus: '대기', 
     orderDate: '2023-10-25', 
-    orderCode: 'ORD-001', 
-    recipientName: '김철수', 
-    recipientPhone: '010-1234-5678', 
+    orderCode: 'HEAD20231025001', 
+    recipientName: '김민기', 
+    recipientPhone: '010-1111-2222', 
     address: '서울시 강남구 테헤란로 123',
     arrivalDate: '2023-10-27', 
     arrivalTime: '14:00', 
     products: [
-      { productCode: 'P-001', productName: '오리지널 떡볶이 밀키트', quantity: 50, amount: 12900 },
-      { productCode: 'P-005', productName: '부산 어묵탕', quantity: 20, amount: 8000 }
+      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50, amount: 10000 },
+      { productCode: 'OR0103', productName: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 20, amount: 18000 }
     ],
-    totalAmount: 805000 
+    totalAmount: 860000 
   },
   { 
     orderStatus: '배송중', 
     orderDate: '2023-10-24', 
-    orderCode: 'ORD-002', 
-    recipientName: '이영희', 
-    recipientPhone: '010-9876-5432', 
-    address: '서울시 서초구 서초대로 456',
+    orderCode: 'HEAD20231024005', 
+    recipientName: '송지은', 
+    recipientPhone: '010-3333-4444', 
+    address: '경기도 성남시 분당구 판교로 789',
     arrivalDate: '2023-10-26', 
     arrivalTime: '10:00', 
     products: [
-      { productCode: 'P-002', productName: '로제 떡볶이 밀키트', quantity: 30, amount: 14900 }
+      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 30, amount: 12000 },
+      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 10, amount: 12000 }
     ],
-    totalAmount: 447000
+    totalAmount: 480000
   },
   { 
     orderStatus: '배송완료', 
     orderDate: '2023-10-23', 
-    orderCode: 'ORD-003', 
-    recipientName: '박민수', 
-    recipientPhone: '010-5555-4444', 
-    address: '경기도 성남시 분당구 판교로 789',
+    orderCode: 'HEAD20231023020', 
+    recipientName: '박원규', 
+    recipientPhone: '010-5555-6666', 
+    address: '부산시 해운대구 마린시티 456',
     arrivalDate: '2023-10-25', 
     arrivalTime: '16:30', 
     products: [
-      { productCode: 'P-003', productName: '마라 떡볶이 밀키트', quantity: 20, amount: 14900 },
-      { productCode: 'P-006', productName: '짜파게티', quantity: 10, amount: 2000 }
+      { productCode: 'MA0303', productName: '마라 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 200, amount: 22000 },
+      { productCode: 'RO0103', productName: '로제 떡볶이 밀키트 순한맛 3,4인분', quantity: 50, amount: 22000 }
     ],
-    totalAmount: 318000 
+    totalAmount: 5500000 
   },
   { 
     orderStatus: '취소', 
     orderDate: '2023-10-22', 
-    orderCode: 'ORD-004', 
-    recipientName: '최지원', 
-    recipientPhone: '010-1111-2222', 
-    address: '인천광역시 송도과학로 10',
-    arrivalDate: '-', 
-    arrivalTime: '-', 
+    orderCode: 'HEAD20231022030', 
+    recipientName: '김민수', 
+    recipientPhone: '010-7777-8888', 
+    address: '인천시 남동구 구월동 789',
+    arrivalDate: '2023-10-24', 
+    arrivalTime: '11:00', 
     products: [
-      { productCode: 'P-004', productName: '짜장 떡볶이 밀키트', quantity: 10, amount: 11900 }
+      { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 30, amount: 18000 },
+      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 10, amount: 10000 }
     ],
-    totalAmount: 119000
+    totalAmount: 640000
   },
 ]
 
