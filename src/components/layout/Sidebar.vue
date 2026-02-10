@@ -34,14 +34,19 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const mainMenus = ['대시보드', '재고 현황', '입출고 관리', '분석 리포트']
+const router = useRouter()
+const mainMenus = ['대시보드', '재고 관리', '재고 현황', '입출고 관리', '분석 리포트']
 const systemMenus = ['직원 관리', '환경 설정']
 
 const activeMenu = ref('대시보드')
 
 const setActive = (menuName) => {
   activeMenu.value = menuName
+  if (menuName === '재고 관리') {
+    router.push('/store/inventory')
+  }
 }
 </script>
 

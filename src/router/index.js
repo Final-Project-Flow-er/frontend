@@ -57,6 +57,16 @@ const router = createRouter({
             path: '/products',
             name: 'product-list',
             component: ProductListView
+        },
+        {
+            path: '/store/inventory',
+            name: 'store-inventory',
+            component: () => import('../views/StoreInventoryManagementView.vue')
+        },
+        {
+            path: '/store/inventory/:productCode',
+            name: 'store-inventory-detail',
+            component: () => import('../views/StoreInventoryDetailView.vue')
         }
     ]
 })
