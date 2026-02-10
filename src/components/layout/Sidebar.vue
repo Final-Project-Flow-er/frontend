@@ -31,7 +31,7 @@ const router = useRouter()
 const goHome = () => {
   router.push({ path: '/' })
 }
-
+// Updated sidebar items
 const sidebarItems = ref([
   {
     name: '본사',
@@ -45,6 +45,7 @@ const sidebarItems = ref([
   {
     name: '가맹점',
     children: [
+      { name: '입고 관리', routeName: 'franchise-inbound' },
       { name: '발주 관리', routeName: 'franchise-order-list' },
       { name: '반품 관리', routeName: 'franchise-return-list' },
       { name: '판매 관리', routeName: 'franchise-product-sell' },
@@ -54,6 +55,8 @@ const sidebarItems = ref([
   {
     name: '공장',
     children: [
+      { name: '입고 관리', routeName: 'factory-inbound' },
+      { name: '출고 관리', routeName: 'factory-outbound' },
       { name: '발주 요청 접수', routeName: 'factory-order-list' },
       { name: '발주 요청 관리', routeName: 'factory-order-request' },
     ]
@@ -111,7 +114,24 @@ const sidebarItems = ref([
   transition: all 0.2s ease;
 }
 
-.menu { flex: 1; }
+.menu { 
+  flex: 1; 
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar for sidebar */
+.menu::-webkit-scrollbar {
+  width: 4px;
+}
+.menu::-webkit-scrollbar-thumb {
+  background: #475569; 
+  border-radius: 4px;
+}
+.menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .menu-group { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 0 1.5rem 0.5rem; margin-top: 1.5rem; }
 
 .menu ul { list-style: none; padding: 0; margin: 0; }

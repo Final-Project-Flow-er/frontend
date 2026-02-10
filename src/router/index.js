@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import AccountSupportView from '../views/AccountSupportView.vue'
 import InventoryView from '../views/franchise/InventoryView.vue'
+import InboundView from '../views/franchise/InboundView.vue'
 import OrderListView from '../views/franchise/OrderListView.vue'
 import OrderCreateView from '../views/franchise/OrderCreateView.vue'
 import ReturnListView from '../views/franchise/ReturnListView.vue'
@@ -16,7 +17,10 @@ import HeadOfficeOrderRequestView from '../views/head-office/OrderRequestView.vu
 import HeadOfficeOrderDetailView from '../views/head-office/OrderDetailView.vue'
 import HeadOfficeReturnRequestListView from '../views/head-office/ReturnRequestListView.vue'
 import FactoryOrderListView from '../views/factory/OrderListView.vue'
+
 import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
+import FactoryInboundView from '../views/factory/InboundView.vue'
+import FactoryOutboundView from '../views/factory/OutboundView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,6 +44,11 @@ const router = createRouter({
             path: '/franchise/inventory',
             name: 'franchise-inventory',
             component: InventoryView
+        },
+        {
+            path: '/franchise/inbound',
+            name: 'franchise-inbound',
+            component: InboundView
         },
         {
             path: '/franchise/orders',
@@ -150,6 +159,16 @@ const router = createRouter({
             path: '/factory/orders',
             name: 'factory-order-list',
             component: FactoryOrderListView
+        },
+        {
+            path: '/factory/inbound',
+            name: 'factory-inbound',
+            component: FactoryInboundView
+        },
+        {
+            path: '/factory/outbound',
+            name: 'factory-outbound',
+            component: FactoryOutboundView
         },
         {
             path: '/factory/orders/request',
