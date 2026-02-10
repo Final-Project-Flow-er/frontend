@@ -174,6 +174,46 @@ const router = createRouter({
             path: '/factory/orders/request',
             name: 'factory-order-request',
             component: FactoryOrderRequestView
+        },
+        {
+            path: '/store/settlement',
+            name: 'store-settlement-summary',
+            component: () => import('../views/StoreSettlement/StoreSettlementSummaryView.vue')
+        },
+        {
+            path: '/store/settlement/items',
+            name: 'store-settlement-items',
+            component: () => import('../views/StoreSettlement/StoreSettlementItemSummaryView.vue')
+        },
+        {
+            path: '/store/settlement/vouchers',
+            name: 'store-settlement-vouchers',
+            component: () => import('../views/StoreSettlement/StoreSettlementVoucherListView.vue')
+        },
+        {
+            path: '/hq/settlement',
+            name: 'hq-settlement-list',
+            component: () => import('../views/HqSettlement/HqSettlementListView.vue')
+        },
+        {
+            path: '/hq/settlement/confirm',
+            name: 'hq-settlement-confirm',
+            component: () => import('../views/HqSettlement/HqSettlementConfirmView.vue')
+        },
+        {
+            path: '/hq/settlement/detail/:storeId',
+            name: 'hq-settlement-detail',
+            component: () => import('../views/HqSettlement/HqSettlementDetailView.vue')
+        },
+        {
+            path: '/hq/settlement/voucher-manage',
+            name: 'hq-settlement-voucher-manage',
+            component: () => import('../views/HqSettlement/HqSettlementVoucherManageView.vue')
+        },
+        {
+            path: '/hq/settlement/logs',
+            name: 'hq-settlement-logs',
+            component: () => import('../views/HqSettlement/HqSettlementLogView.vue')
         }
     ]
 })

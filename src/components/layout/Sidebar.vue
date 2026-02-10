@@ -27,6 +27,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const mainMenus = ['대시보드', '재고 관리', '재고 현황', '입출고 관리', '가맹점 정산', '본사 정산', '분석 리포트']
+const systemMenus = ['직원 관리', '환경 설정']
 
 const goHome = () => {
   router.push({ path: '/' })
@@ -62,6 +64,18 @@ const sidebarItems = ref([
     ]
   }
 ])
+const activeMenu = ref('대시보드')
+
+const setActive = (menuName) => {
+  activeMenu.value = menuName
+  if (menuName === '재고 관리') {
+    router.push('/store/inventory')
+  } else if (menuName === '가맹점 정산') {
+    router.push('/store/settlement')
+  } else if (menuName === '본사 정산') {
+    router.push('/hq/settlement')
+  }
+}
 </script>
 
 <style scoped>
@@ -114,8 +128,8 @@ const sidebarItems = ref([
   transition: all 0.2s ease;
 }
 
-.menu { 
-  flex: 1; 
+.menu {
+  flex: 1;
   overflow-y: auto; /* Enable vertical scrolling */
   overflow-x: hidden;
 }
@@ -125,7 +139,7 @@ const sidebarItems = ref([
   width: 4px;
 }
 .menu::-webkit-scrollbar-thumb {
-  background: #475569; 
+  background: #475569;
   border-radius: 4px;
 }
 .menu::-webkit-scrollbar-track {
