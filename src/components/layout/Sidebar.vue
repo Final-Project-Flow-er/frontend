@@ -101,7 +101,7 @@ const menuGroups = ref([
       },
       { name: '상품 관리', path: '/hq/products/manage' },
       {
-        name: '입출고 관리',
+        name: '로그 관리',
         path: '',
         isOpen: false,
         children: [
@@ -129,7 +129,7 @@ const menuGroups = ref([
     items: [
       { name: '재고 관리', path: '/store/inventory' },
       { name: '상품 정보', path: '/products/manage' },
-      { name: '입출고 관리', path: '/inventory/logs' },
+      { name: '로그 관리', path: '/inventory/logs' },
       { name: '입고 관리', path: '/franchise/inbound' },
       { name: '발주 관리', path: '/franchise/orders' },
       { name: '반품 관리', path: '/franchise/returns' },
@@ -143,7 +143,8 @@ const menuGroups = ref([
       { name: '입고 관리', path: '/factory/inbound' },
       { name: '출고 관리', path: '/factory/outbound' },
       { name: '발주 접수', path: '/factory/orders' },
-      { name: '발주 요청 관리', path: '/factory/orders/request' }
+      { name: '발주 요청 관리', path: '/factory/orders/request' },
+      { name: '로그 관리', path: '/hq/inventory/logs/factory' }
     ]
   },
   {

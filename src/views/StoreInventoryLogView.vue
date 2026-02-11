@@ -1,7 +1,7 @@
 <template>
   <div class="content-wrapper">
     <div class="header-row">
-      <h2>입출고 관리 (로그)</h2>
+      <h2>가맹점 입출고 관리(로그)</h2>
     </div>
 
     <!-- Filter Section -->
