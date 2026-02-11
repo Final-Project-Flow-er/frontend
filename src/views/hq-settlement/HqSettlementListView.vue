@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
 
 const router = useRouter()
 
@@ -80,6 +81,13 @@ const openMonthPicker = () => { monthRef.value?.showPicker() }
 /* ── 총 매출 모달 ── */
 const showSalesModal = ref(false)
 const showRefundModal = ref(false)
+const showReceiptModal = ref(false)
+const selectedReceiptStore = ref(null)
+
+const openReceipt = (store) => {
+  selectedReceiptStore.value = store
+  showReceiptModal.value = true
+}
 
 /* ── 범용 모달 ── */
 const detailModal = ref({ show: false, title: '', field: '' })
@@ -212,7 +220,12 @@ const getStatusClass = (status) => ({
             <td class="text-right negative">{{ fmt(s.loss) }}</td>
             <td class="text-right primary-color final-cell">{{ fmt(getFinal(s)) }}</td>
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ s.status }}</span></td>
-            <td class="text-center"><button class="detail-btn" @click="goToDetail(s.id)">상세</button></td>
+            <td class="text-center">
+              <button class="icon-btn" @click="openReceipt(s)" title="영수증 보기">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </button>
+              <button class="detail-btn" @click="goToDetail(s.id)">상세</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -299,6 +312,14 @@ const getStatusClass = (status) => ({
       </div>
     </div>
   </teleport>
+
+  <!-- 정산 영수증 모달 -->
+  <SettlementReceiptModal
+    :is-open="showReceiptModal"
+    :store="selectedReceiptStore"
+    :date="formatDate(selectedDate)"
+    @close="showReceiptModal = false"
+  />
 </template>
 
 <style scoped>
@@ -372,6 +393,8 @@ const getStatusClass = (status) => ({
 .status-confirmed { background: #ede9fe; color: #6366f1; }
 .detail-btn { padding: 0.35rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #475569; transition: all 0.2s; }
 .detail-btn:hover { background: #f1f5f9; border-color: #475569; }
+.icon-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: all 0.2s; margin-right: 8px; vertical-align: middle; }
+.icon-btn:hover { color: var(--primary); background: #f1f5f9; }
 
 /* ── 모달 ── */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; }
