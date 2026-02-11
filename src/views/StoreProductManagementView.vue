@@ -55,6 +55,9 @@
             <span class="info-label">맵기:</span> {{ getSpiceLabel(product.spiceLevel) }}
           </div>
           <div class="card-info-row">
+            <span class="info-label">칼로리:</span> {{ product.kcal }}kcal
+          </div>
+          <div class="card-info-row">
             <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
           </div>
 

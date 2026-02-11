@@ -59,6 +59,9 @@
             <span class="info-label">맵기:</span> {{ getSpiceLabel(product.spiceLevel) }}
           </div>
           <div class="card-info-row">
+            <span class="info-label">칼로리:</span> {{ product.kcal }}kcal
+          </div>
+          <div class="card-info-row">
             <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
           </div>
 
@@ -148,6 +151,10 @@
               <label>기준 안전재고 (공통)</label>
               <input type="number" v-model="form.baseSafeStock" min="0" />
             </div>
+            <div class="form-group">
+              <label>칼로리 (kcal)</label>
+              <input type="number" v-model="form.kcal" min="0" />
+            </div>
           </div>
           
           <!-- Row 4: Dates -->
@@ -206,9 +213,11 @@ const form = ref({
   description: '',
   imageUrl: '',
   price: 0,
+  supplyPrice: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
-  baseSafeStock: 10
+  baseSafeStock: 10,
+  kcal: 0
 })
 
 const products = ref([])
@@ -311,6 +320,9 @@ const updateCodeAndName = () => {
         form.value.price = (sz === '01') ? 12000 : 22000
     }
     form.value.supplyPrice = form.value.price - 5000 // Fixed logic
+
+    // Auto-set kcal
+    form.value.kcal = sz === '01' ? 1400 : 2800
 }
 
 const openAddModal = () => {
@@ -319,6 +331,7 @@ const openAddModal = () => {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
       productCode: '', name: '', description: '', imageUrl: '', 
       price: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
+      kcal: 0,
       startDate: '2024-01-01', endDate: '2025-12-31'
   }
   updateCodeAndName()
