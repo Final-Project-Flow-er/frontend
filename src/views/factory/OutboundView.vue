@@ -1,39 +1,41 @@
 <script setup>
 import { ref, computed } from 'vue'
+import Modal from '@/components/common/Modal.vue'
 
 // Mock Data for Left List (Outbound Boxes)
+// Mock Data for Left List (Outbound Boxes)
 const outboundBoxes = ref([
-  { boxCode: 'BX-OUT-20260210-001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20 },
-  { boxCode: 'BX-OUT-20260210-002', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15 },
-  { boxCode: 'BX-OUT-20260210-003', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10 },
-  { boxCode: 'BX-OUT-20260210-004', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5 },
+  { boxCode: 'SE01-FA01-A1-OR0101-001', orderCode: 'SE0120231026001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20 },
+  { boxCode: 'SE01-FA01-A1-MA0301-001', orderCode: 'SE0120231026001', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15 },
+  { boxCode: 'SE01-FA01-A1-RO0201-001', orderCode: 'SE0120231025005', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10 },
+  { boxCode: 'SE01-FA01-A1-OR0103-001', orderCode: 'SE0120231025005', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5 },
 ])
 
 // Mock Data for Right List (Details per box)
 const allBoxDetails = ref({
-  'BX-OUT-20260210-001': Array.from({ length: 20 }, (_, i) => ({
-    id: `ITEM-OR0101-${1000 + i}`,
+  'SE01-FA01-A1-OR0101-001': Array.from({ length: 20 }, (_, i) => ({
+    id: `SE01-FA01-A1-OR0101-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'OR0101',
     name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
     expiryDate: '2026-02-15',
-    picking: false // false = X, true = O
+    picking: false
   })),
-  'BX-OUT-20260210-002': Array.from({ length: 15 }, (_, i) => ({
-    id: `ITEM-MA0301-${2000 + i}`,
+  'SE01-FA01-A1-MA0301-001': Array.from({ length: 15 }, (_, i) => ({
+    id: `SE01-FA01-A1-MA0301-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'MA0301',
     name: '마라 떡볶이 밀키트 매운맛 1,2인분',
     expiryDate: '2026-02-16',
     picking: false
   })),
-  'BX-OUT-20260210-003': Array.from({ length: 10 }, (_, i) => ({
-    id: `ITEM-RO0201-${3000 + i}`,
+  'SE01-FA01-A1-RO0201-001': Array.from({ length: 10 }, (_, i) => ({
+    id: `SE01-FA01-A1-RO0201-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'RO0201',
     name: '로제 떡볶이 밀키트 기본맛 1,2인분',
     expiryDate: '2026-02-17',
     picking: false
   })),
-  'BX-OUT-20260210-004': Array.from({ length: 5 }, (_, i) => ({
-    id: `ITEM-OR0103-${4000 + i}`,
+  'SE01-FA01-A1-OR0103-001': Array.from({ length: 5 }, (_, i) => ({
+    id: `SE01-FA01-A1-OR0103-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'OR0103',
     name: '오리지널 떡볶이 밀키트 순한맛 3,4인분',
     expiryDate: '2026-02-18',
@@ -91,22 +93,14 @@ const toggleItem = (itemId) => {
 
 
 // Actions
-const deleteSelected = () => {
-  const boxCount = selectedBoxIds.value.size
-  const itemCount = selectedItemIds.value.size
-  
-  if (boxCount === 0 && itemCount === 0) {
-    alert('삭제할 항목을 선택해주세요.')
-    return
-  }
+
 
   // Determine what to delete based on active context or combined?
   // Requirement: "박스나 개별 목록들에서... 일괄적으로 삭제"
   // "버튼은 체크가 된 항목들이 버튼을 누르면 공통으로 적용"
   // So if boxes AND items are selected, we try to delete both?
   
-  const msg = `정말 ${boxCount + itemCount}개의 항목을 삭제하시겠습니까?`
-  if (!confirm(msg)) return
+  const performDelete = () => {
 
   // Delete Boxes
   if (boxCount > 0) {
@@ -139,17 +133,23 @@ const deleteSelected = () => {
      selectedItemIds.value.clear()
   }
   
-  alert('삭제되었습니다.')
+  openModal('알림', '삭제되었습니다.', null, false)
 }
 
-const confirmPicking = () => {
+const deleteSelected = () => {
+  const boxCount = selectedBoxIds.value.size
   const itemCount = selectedItemIds.value.size
-  if (itemCount === 0) {
-    alert('피킹할 개별 품목을 선택해주세요.')
+  
+  if (boxCount === 0 && itemCount === 0) {
+    openModal('알림', '삭제할 항목을 선택해주세요.', null, false)
     return
   }
 
-  if (!confirm('피킹을 확정지으시겠습니까?')) return
+  const msg = `정말 ${boxCount + itemCount}개의 항목을 삭제하시겠습니까?`
+  openModal('삭제 확인', msg, performDelete)
+}
+
+  const performPicking = () => {
 
   // Update picking status to true for selected items
   const items = allBoxDetails.value[selectedBoxCode.value]
@@ -161,13 +161,23 @@ const confirmPicking = () => {
   
   // Also clear selection?
   selectedItemIds.value.clear()
-  alert('피킹 완료되었습니다.')
+  openModal('알림', '피킹 완료되었습니다.', null, false)
+}
+
+const confirmPicking = () => {
+  const itemCount = selectedItemIds.value.size
+  if (itemCount === 0) {
+    openModal('알림', '피킹할 개별 품목을 선택해주세요.', null, false)
+    return
+  }
+
+  openModal('피킹 확인', '피킹을 확정지으시겠습니까?', performPicking)
 }
 
 const approveOutbound = () => {
    const itemCount = selectedItemIds.value.size
   if (itemCount === 0) {
-    alert('출고 승인할 품목을 선택해주세요.')
+    openModal('알림', '출고 승인할 품목을 선택해주세요.', null, false)
     return
   }
 
@@ -177,30 +187,59 @@ const approveOutbound = () => {
   const unpicked = selectedItems.filter(i => !i.picking)
 
   if (unpicked.length > 0) {
-    alert('피킹이 완료(O)된 항목만 출고 승인할 수 있습니다.')
+    openModal('알림', '피킹이 완료(O)된 항목만 출고 승인할 수 있습니다.', null, false)
     return
   }
 
   if (!confirm('선택된 제품들을 출고 승인하시겠습니까?')) return
 
-  // Remove approved items
-  const remainingItems = items.filter(i => !selectedItemIds.value.has(i.id))
-  allBoxDetails.value[selectedBoxCode.value] = remainingItems
-  
-  // Update Box Quantity
-  const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === selectedBoxCode.value)
-  if (boxIndex !== -1) {
-    outboundBoxes.value[boxIndex].quantity = remainingItems.length
-    // Remove box if empty
-    if (remainingItems.length === 0) {
-       outboundBoxes.value.splice(boxIndex, 1)
-       selectedBoxCode.value = null
+  const performApprove = () => {
+    // Remove approved items
+    const remainingItems = items.filter(i => !selectedItemIds.value.has(i.id))
+    allBoxDetails.value[selectedBoxCode.value] = remainingItems
+    
+    // Update Box Quantity
+    const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === selectedBoxCode.value)
+    if (boxIndex !== -1) {
+      outboundBoxes.value[boxIndex].quantity = remainingItems.length
+      // Remove box if empty
+      if (remainingItems.length === 0) {
+        outboundBoxes.value.splice(boxIndex, 1)
+        selectedBoxCode.value = null
+      }
     }
+
+    selectedItemIds.value.clear()
+    
+    openModal('알림', '출고 승인 완료되었습니다.', null, false)
   }
 
-  selectedItemIds.value.clear()
-  
-  alert('출고 승인 완료되었습니다.') 
+  openModal('출고 승인 확인', '선택된 제품들을 출고 승인하시겠습니까?', performApprove)
+}
+
+// Modal State
+const modalVisible = ref(false)
+const modalTitle = ref('')
+const modalMessage = ref('')
+const modalConfirmCallback = ref(null)
+const modalShowCancel = ref(true)
+
+const openModal = (title, message, callback, showCancel = true) => {
+  modalTitle.value = title
+  modalMessage.value = message
+  modalConfirmCallback.value = callback
+  modalShowCancel.value = showCancel
+  modalVisible.value = true
+}
+
+const handleModalConfirm = () => {
+  const callback = modalConfirmCallback.value
+  modalVisible.value = false
+  if (callback) callback()
+}
+
+const handleModalClose = () => {
+  modalVisible.value = false
 }
 
 </script>
@@ -224,6 +263,7 @@ const approveOutbound = () => {
                     <input type="checkbox" @change="toggleAllBoxes" :checked="outboundBoxes.length > 0 && selectedBoxIds.size === outboundBoxes.length">
                   </th>
                   <th>박스 코드</th>
+                  <th>발주 번호</th>
                   <th>제품 코드</th>
                   <th>이름</th>
                   <th>수량</th>
@@ -241,6 +281,7 @@ const approveOutbound = () => {
                     <input type="checkbox" :checked="selectedBoxIds.has(box.boxCode)" @change="toggleBox(box.boxCode)">
                   </td>
                   <td class="code-cell">{{ box.boxCode }}</td>
+                  <td class="code-cell">{{ box.orderCode }}</td>
                   <td>{{ box.productCode }}</td>
                   <td class="name-cell">{{ box.name }}</td>
                   <td class="text-right">{{ box.quantity }}</td>
@@ -300,6 +341,16 @@ const approveOutbound = () => {
       <button class="action-btn pick" @click="confirmPicking">피킹</button>
       <button class="action-btn approve" @click="approveOutbound">출고 승인</button>
     </div>
+
+
+    <Modal
+      :isOpen="modalVisible"
+      :title="modalTitle"
+      :message="modalMessage"
+      :showCancel="modalShowCancel"
+      @close="handleModalClose"
+      @confirm="handleModalConfirm"
+    />
   </div>
 </template>
 

@@ -1,39 +1,40 @@
 <script setup>
 import { ref, computed } from 'vue'
+import Modal from '@/components/common/Modal.vue'
 
 // Mock Data for Left List (Inbound Boxes) - Factory might have different data but structure is same
 const inboundBoxes = ref([
-  { boxCode: 'BX-FAC-20260210-001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50 },
-  { boxCode: 'BX-FAC-20260210-002', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 30 },
-  { boxCode: 'BX-FAC-20260210-003', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 25 },
-  { boxCode: 'BX-FAC-20260210-004', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 15 },
+  { boxCode: 'SE01-FA01-A1-OR0101-001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50 },
+  { boxCode: 'SE01-FA01-A1-MA0301-001', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 30 },
+  { boxCode: 'SE01-FA01-A1-RO0201-001', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 25 },
+  { boxCode: 'SE01-FA01-A1-OR0103-001', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 15 },
 ])
 
 // Mock Data for Right List (Details per box)
 const allBoxDetails = {
-  'BX-FAC-20260210-001': Array.from({ length: 50 }, (_, i) => ({
-    id: `ITEM-OR0101-${1000 + i}`,
+  'SE01-FA01-A1-OR0101-001': Array.from({ length: 50 }, (_, i) => ({
+    id: `SE01-FA01-A1-OR0101-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'OR0101',
     name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
     productionDate: '2026-02-01',
     expiryDate: '2026-02-15'
   })),
-  'BX-FAC-20260210-002': Array.from({ length: 30 }, (_, i) => ({
-    id: `ITEM-MA0301-${2000 + i}`,
+  'SE01-FA01-A1-MA0301-001': Array.from({ length: 30 }, (_, i) => ({
+    id: `SE01-FA01-A1-MA0301-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'MA0301',
     name: '마라 떡볶이 밀키트 매운맛 1,2인분',
     productionDate: '2026-02-02',
     expiryDate: '2026-02-16'
   })),
-  'BX-FAC-20260210-003': Array.from({ length: 25 }, (_, i) => ({
-    id: `ITEM-RO0201-${3000 + i}`,
+  'SE01-FA01-A1-RO0201-001': Array.from({ length: 25 }, (_, i) => ({
+    id: `SE01-FA01-A1-RO0201-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'RO0201',
     name: '로제 떡볶이 밀키트 기본맛 1,2인분',
     productionDate: '2026-02-03',
     expiryDate: '2026-02-17'
   })),
-  'BX-FAC-20260210-004': Array.from({ length: 15 }, (_, i) => ({
-    id: `ITEM-OR0103-${4000 + i}`,
+  'SE01-FA01-A1-OR0103-001': Array.from({ length: 15 }, (_, i) => ({
+    id: `SE01-FA01-A1-OR0103-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'OR0103',
     name: '오리지널 떡볶이 밀키트 순한맛 3,4인분',
     productionDate: '2026-02-04',
@@ -54,17 +55,47 @@ const selectBox = (boxCode) => {
 
 const approveInbound = () => {
   if (!selectedBoxCode.value) {
-    alert('입고 승인할 박스를 선택해주세요.')
+    openModal('알림', '입고 승인할 박스를 선택해주세요.', null, false)
     return
   }
-  const confirmResult = confirm(`${selectedBoxCode.value} 박스를 입고 승인하시겠습니까?`)
-  if (confirmResult) {
-    // Remove the approved box from the list
-    inboundBoxes.value = inboundBoxes.value.filter(box => box.boxCode !== selectedBoxCode.value)
-    // Clear selection
-    selectedBoxCode.value = null
-    alert('입고 승인 되었습니다.')
-  }
+  openModal(
+    '입고 승인 확인', 
+    `${selectedBoxCode.value} 박스를 입고 승인하시겠습니까?`, 
+    performApprove
+  )
+}
+
+const performApprove = () => {
+  // Remove the approved box from the list
+  inboundBoxes.value = inboundBoxes.value.filter(box => box.boxCode !== selectedBoxCode.value)
+  // Clear selection
+  selectedBoxCode.value = null
+  openModal('알림', '입고 승인 되었습니다.', null, false)
+}
+
+// Modal State
+const modalVisible = ref(false)
+const modalTitle = ref('')
+const modalMessage = ref('')
+const modalConfirmCallback = ref(null)
+const modalShowCancel = ref(true)
+
+const openModal = (title, message, callback, showCancel = true) => {
+  modalTitle.value = title
+  modalMessage.value = message
+  modalConfirmCallback.value = callback
+  modalShowCancel.value = showCancel
+  modalVisible.value = true
+}
+
+const handleModalConfirm = () => {
+  const callback = modalConfirmCallback.value
+  modalVisible.value = false
+  if (callback) callback()
+}
+
+const handleModalClose = () => {
+  modalVisible.value = false
 }
 </script>
 
@@ -148,6 +179,16 @@ const approveInbound = () => {
         </div>
       </section>
     </div>
+
+
+    <Modal
+      :isOpen="modalVisible"
+      :title="modalTitle"
+      :message="modalMessage"
+      :showCancel="modalShowCancel"
+      @close="handleModalClose"
+      @confirm="handleModalConfirm"
+    />
   </div>
 </template>
 

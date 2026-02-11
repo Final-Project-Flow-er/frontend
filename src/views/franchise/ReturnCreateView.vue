@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -47,6 +47,74 @@ const availableOrders = ref([
    ]
  }
 ])
+
+
+
+onMounted(() => {
+  const state = history.state
+  if (state && state.returnItems && state.returnItems.length > 0) {
+    // Assumption: All returned items belong to the same order.
+    // If mixed orders, we might need a different UI or restrict selection in InboundView.
+    // user said "existing page" which implies single order selection.
+    // Let's use the first item's orderCode.
+    const firstItem = state.returnItems[0]
+    const targetOrderCode = firstItem.orderCode
+    
+    // Check if order exists in mock data
+    // In real app, we might need to fetch it.
+    // For now, if not found, we can add a mock entry or alert.
+    let order = availableOrders.value.find(o => o.orderCode === targetOrderCode)
+    
+    if (!order) {
+        // If not in the list, maybe meaningful to add it to simulate "fetching"
+        order = {
+            orderCode: targetOrderCode,
+            recipientName: '김갑자', // Default as per requirement
+            recipientPhone: '010-0000-0000',
+            franchiseCode: 'SE01',
+            items: [] // Will start empty and we map state items? 
+                      // Or better: The page usually fetches order items.
+                      // Let's assume availableOrders has the data or we inject it.
+            // Let's try to map state items to the order structure
+        }
+        // Map returnItems to order items structure
+        order.items = state.returnItems.map((ri, idx) => ({
+             boxCode: ri.boxCode,
+             idCode: `ITEM-${idx}`, // dummy
+             productCode: ri.productCode,
+             productName: ri.productName,
+             quantity: ri.quantity,
+             amount: 12000,
+             totalAmount: ri.totalAmount
+        }))
+        availableOrders.value.push(order)
+    }
+
+    selectedOrderCode.value = targetOrderCode
+    
+    // Select the specific boxes passed
+    // We match by boxCode
+    const passedBoxCodes = new Set(state.returnItems.map(i => i.boxCode))
+    
+    // Wait for computed to update (nextTick) or manually trigger
+    // selectedOrder is computed from selectedOrderCode.
+    // We can select indices.
+    
+    // Since we potentially created the order object, selectedOrder.value should be valid immediately if sync.
+    // However, if we just pushed to availableOrders, computed will update.
+    
+    setTimeout(() => {
+        if (selectedOrder.value) {
+            selectedOrder.value.items.forEach((item, index) => {
+                if (passedBoxCodes.has(item.boxCode)) {
+                    selectedItemIndices.value.add(index)
+                    returnQuantities[index] = item.quantity
+                }
+            })
+        }
+    }, 0)
+  }
+})
 
 const selectedOrderCode = ref('')
 const selectedOrder = computed(() => availableOrders.value.find(o => o.orderCode === selectedOrderCode.value))

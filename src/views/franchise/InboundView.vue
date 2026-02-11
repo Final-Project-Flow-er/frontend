@@ -1,46 +1,51 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
 
 // Mock Data for Left List (Inbound Boxes)
 const inboundBoxes = ref([
-  { boxCode: 'BX-20260210-001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20 },
-  { boxCode: 'BX-20260210-002', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15 },
-  { boxCode: 'BX-20260210-003', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10 },
-  { boxCode: 'BX-20260210-004', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5 },
+  { boxCode: 'SE01-FA01-A1-OR0101-001', orderCode: 'SE0120231026001', recipient: '김갑자', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20 },
+  { boxCode: 'SE01-FA01-A1-MA0301-001', orderCode: 'SE0120231026001', recipient: '김갑자', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15 },
+  { boxCode: 'SE01-FA01-A1-RO0201-001', orderCode: 'SE0120231025005', recipient: '김갑자', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10 },
+  { boxCode: 'SE01-FA01-A1-OR0103-001', orderCode: 'SE0120231025005', recipient: '김갑자', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5 },
 ])
 
 // Mock Data for Right List (Details per box)
 const allBoxDetails = {
-  'BX-20260210-001': Array.from({ length: 20 }, (_, i) => ({
-    id: `ITEM-OR0101-${1000 + i}`,
+  'SE01-FA01-A1-OR0101-001': Array.from({ length: 20 }, (_, i) => ({
+    id: `SE01-FA01-A1-OR0101-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'OR0101',
     name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
     productionDate: '2026-02-01',
-    expiryDate: '2026-02-15'
+    expiryDate: '2026-02-15',
+    unitPrice: 12000
   })),
-  'BX-20260210-002': Array.from({ length: 15 }, (_, i) => ({
-    id: `ITEM-MA0301-${2000 + i}`,
+  'SE01-FA01-A1-MA0301-001': Array.from({ length: 15 }, (_, i) => ({
+    id: `SE01-FA01-A1-MA0301-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'MA0301',
     name: '마라 떡볶이 밀키트 매운맛 1,2인분',
     productionDate: '2026-02-02',
-    expiryDate: '2026-02-16'
+    expiryDate: '2026-02-16',
+    unitPrice: 12000
   })),
-  'BX-20260210-003': Array.from({ length: 10 }, (_, i) => ({
-    id: `ITEM-RO0201-${3000 + i}`,
+  'SE01-FA01-A1-RO0201-001': Array.from({ length: 10 }, (_, i) => ({
+    id: `SE01-FA01-A1-RO0201-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'RO0201',
     name: '로제 떡볶이 밀키트 기본맛 1,2인분',
     productionDate: '2026-02-03',
-    expiryDate: '2026-02-17'
+    expiryDate: '2026-02-17',
+    unitPrice: 12000
   })),
-  'BX-20260210-004': Array.from({ length: 5 }, (_, i) => ({
-    id: `ITEM-OR0103-${4000 + i}`,
+  'SE01-FA01-A1-OR0103-001': Array.from({ length: 5 }, (_, i) => ({
+    id: `SE01-FA01-A1-OR0103-001-${String(i + 1).padStart(2, '0')}`,
     productCode: 'OR0103',
     name: '오리지널 떡볶이 밀키트 순한맛 3,4인분',
     productionDate: '2026-02-04',
-    expiryDate: '2026-02-18'
+    expiryDate: '2026-02-18',
+    unitPrice: 12000
   })),
 }
 
@@ -85,23 +90,102 @@ const toggleItem = (itemId) => {
 }
 
 const goToReturnRequest = () => {
-    // Navigate to Return Management Page
-    router.push({ name: 'franchise-return-list' })
+  // If user selected individual items (right side) but NOT the box (left side),
+  // or checks strictly if "Box" selection is valid.
+  
+  // The user said: "If not box level, button shouldn't work and show popup..."
+  // And "It enters as individual units". 
+  
+  // Strict check: Must select at least one Box.
+  const boxCount = selectedBoxIds.value.size
+  
+  // Also check if they selected items *instead* of box? 
+  // If boxCount is 0, show the strict message.
+  if (boxCount === 0) {
+    // "반품 요청은 박스 단위로만 가능합니다."
+    openModal('알림', '반품 요청은 박스 단위로만 가능합니다.', null, false)
+    return
+  }
+  
+  // Requirement: "It enters as individual units" -> Fix this by passing Quantity 1 (Box unit)
+  // or maybe effectively treating it as a Box.
+  
+  openModal(
+    '반품 요청 확인', 
+    `선택된 ${boxCount}개의 박스에 대해 반품 요청하시겠습니까?`, 
+    performReturnRequest
+  )
+}
+
+const performReturnRequest = () => {
+    const selectedBoxes = inboundBoxes.value.filter(b => selectedBoxIds.value.has(b.boxCode))
+    
+    const returnItems = selectedBoxes.map(box => ({
+        boxCode: box.boxCode,
+        orderCode: box.orderCode,
+        productCode: box.productCode,
+        productName: box.name, // Keep name, maybe prepend [BOX]?
+        // "It enters as individual units" -> user wants Box unit.
+        // Set quantity to 1 for "1 Box"
+        quantity: 1, 
+        // Amount should be Total Amount of the box?
+        // If box has 20 items @ 12000, Box Price = 240000.
+        amount: 12000 * box.quantity, 
+        totalAmount: 12000 * box.quantity // 1 Box * BoxPrice
+    }))
+
+    router.push({ 
+        name: 'franchise-return-create', 
+        state: { 
+            returnItems: returnItems,
+            origin: 'InboundView'
+        } 
+    })
 }
 
 const approveInbound = () => {
   if (!selectedBoxCode.value) {
-    alert('입고 승인할 박스를 선택해주세요.')
+    openModal('알림', '입고 승인할 박스를 선택해주세요.', null, false)
     return
   }
-  const confirmResult = confirm(`${selectedBoxCode.value} 박스를 입고 승인하시겠습니까?`)
-  if (confirmResult) {
-    // Remove the approved box from the list
-    inboundBoxes.value = inboundBoxes.value.filter(box => box.boxCode !== selectedBoxCode.value)
-    // Clear selection or select next? Clearing for now.
-    selectedBoxCode.value = null
-    alert('입고 승인 되었습니다.')
-  }
+  openModal(
+    '입고 승인 확인', 
+    `${selectedBoxCode.value} 박스를 입고 승인하시겠습니까?`, 
+    performApprove
+  )
+}
+
+const performApprove = () => {
+  // Remove the approved box from the list
+  inboundBoxes.value = inboundBoxes.value.filter(box => box.boxCode !== selectedBoxCode.value)
+  // Clear selection
+  selectedBoxCode.value = null
+  openModal('알림', '입고 승인 되었습니다.', null, false)
+}
+
+// Modal State
+const modalVisible = ref(false)
+const modalTitle = ref('')
+const modalMessage = ref('')
+const modalConfirmCallback = ref(null)
+const modalShowCancel = ref(true)
+
+const openModal = (title, message, callback, showCancel = true) => {
+  modalTitle.value = title
+  modalMessage.value = message
+  modalConfirmCallback.value = callback
+  modalShowCancel.value = showCancel
+  modalVisible.value = true
+}
+
+const handleModalConfirm = () => {
+  const callback = modalConfirmCallback.value
+  modalVisible.value = false
+  if (callback) callback()
+}
+
+const handleModalClose = () => {
+  modalVisible.value = false
 }
 </script>
 
@@ -124,9 +208,12 @@ const approveInbound = () => {
                     <input type="checkbox" @change="toggleAllBoxes" :checked="inboundBoxes.length > 0 && selectedBoxIds.size === inboundBoxes.length">
                   </th>
                   <th>박스 코드</th>
+                  <th>발주 번호</th>
+                  <th>수령인</th>
                   <th>제품 코드</th>
                   <th>이름</th>
                   <th>수량</th>
+                  <th>총 금액</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,9 +228,12 @@ const approveInbound = () => {
                     <input type="checkbox" :checked="selectedBoxIds.has(box.boxCode)" @change="toggleBox(box.boxCode)">
                   </td>
                   <td class="code-cell">{{ box.boxCode }}</td>
+                  <td class="code-cell">{{ box.orderCode }}</td>
+                  <td>{{ box.recipient }}</td>
                   <td>{{ box.productCode }}</td>
                   <td class="name-cell">{{ box.name }}</td>
                   <td class="text-right">{{ box.quantity }}</td>
+                  <td class="text-right">{{ (box.quantity * 12000).toLocaleString() }}원</td>
                 </tr>
               </tbody>
             </table>
@@ -172,6 +262,7 @@ const approveInbound = () => {
                   <th>제품명</th>
                   <th>생산일</th>
                   <th>유통기한</th>
+                  <th>개별 금액</th>
                 </tr>
               </thead>
               <tbody>
@@ -184,6 +275,7 @@ const approveInbound = () => {
                   <td class="name-cell">{{ item.name }}</td>
                   <td>{{ item.productionDate }}</td>
                   <td>{{ item.expiryDate }}</td>
+                  <td class="text-right">{{ item.unitPrice.toLocaleString() }}원</td>
                 </tr>
               </tbody>
             </table>
@@ -200,6 +292,16 @@ const approveInbound = () => {
         </div>
       </section>
     </div>
+
+
+    <Modal
+      :isOpen="modalVisible"
+      :title="modalTitle"
+      :message="modalMessage"
+      :showCancel="modalShowCancel"
+      @close="handleModalClose"
+      @confirm="handleModalConfirm"
+    />
   </div>
 </template>
 
