@@ -124,19 +124,19 @@ const downloadExcel = () => {
     </div>
 
     <!-- 정산 요약 -->
-    <section class="summary-grid">
-      <div class="summary-card primary"><span class="s-label">총 매출</span><p class="s-value">₩ {{ fmt(settlement.totalSales) }}</p></div>
-      <div class="summary-card"><span class="s-label">발주 대금</span><p class="s-value neg">₩ {{ fmt(settlement.orderCost) }}</p></div>
-      <div class="summary-card"><span class="s-label">배송비</span><p class="s-value neg">₩ {{ fmt(settlement.shipping) }}</p></div>
-      <div class="summary-card"><span class="s-label">수수료</span><p class="s-value neg">₩ {{ fmt(settlement.commission) }}</p></div>
-      <div class="summary-card refund"><span class="s-label">반품 환급</span><p class="s-value pos">₩ {{ fmt(settlement.refund) }}</p></div>
-      <div class="summary-card"><span class="s-label">손실</span><p class="s-value neg">₩ {{ fmt(settlement.loss) }}</p></div>
-    </section>
-
     <div class="final-card">
       <span class="fc-label">최종 정산 금액</span>
       <p class="fc-amount">₩ {{ fmt(finalAmount) }}</p>
     </div>
+
+    <section class="summary-grid">
+      <div class="summary-card primary"><span class="s-label">총 매출</span><p class="s-value primary-color">₩ {{ fmt(settlement.totalSales) }}</p></div>
+      <div class="summary-card refund"><span class="s-label">반품 환급</span><p class="s-value primary-color">₩ {{ fmt(settlement.refund) }}</p></div>
+      <div class="summary-card"><span class="s-label">발주 대금</span><p class="s-value neg">₩ {{ fmt(settlement.orderCost) }}</p></div>
+      <div class="summary-card"><span class="s-label">배송비</span><p class="s-value neg">₩ {{ fmt(settlement.shipping) }}</p></div>
+      <div class="summary-card"><span class="s-label">손실</span><p class="s-value neg">₩ {{ fmt(settlement.loss) }}</p></div>
+      <div class="summary-card"><span class="s-label">수수료</span><p class="s-value neg">₩ {{ fmt(settlement.commission) }}</p></div>
+    </section>
 
     <!-- 필터 -->
     <div class="filter-bar">
@@ -216,16 +216,18 @@ const downloadExcel = () => {
 .date-label { font-size: 1rem; font-weight: 600; color: var(--text-dark); pointer-events: none; white-space: nowrap; }
 .date-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; }
 
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
-.summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); }
-.summary-card.primary { border-left: 4px solid var(--primary); }
-.summary-card.refund { border-left: 4px solid #10b981; }
-.s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
-.s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); }
-.s-value.neg { color: #ef4444; }
-.s-value.pos { color: #10b981; }
+.final-card { background: linear-gradient(135deg, #334155 0%, #475569 100%); color: white; padding: 1.25rem 2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; box-shadow: 0 4px 20px rgba(51,65,85,0.3); }
 
-.final-card { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 1.25rem 2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.summary-grid .summary-card:nth-child(1),
+.summary-grid .summary-card:nth-child(2) { grid-column: span 2; }
+.summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); }
+.summary-card.primary { }
+.summary-card.refund { }
+.s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
+.s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); text-align: right; }
+.s-value.neg { color: #ef4444; }
+.s-value.primary-color { color: var(--primary) !important; }
 .fc-label { font-size: 1rem; font-weight: 700; }
 .fc-amount { font-size: 1.85rem; font-weight: 800; margin: 0; }
 
