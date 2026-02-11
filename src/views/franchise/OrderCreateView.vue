@@ -15,10 +15,11 @@ const productFilter = ref({
 })
 
 const products = ref([
- { code: 'P-001', name: '오리지널 떡볶이 밀키트', status: '안전', flavor: '기본맛', stock: 500, safetyStock: 200, recommendedStock: 0, actualQuantity: 0 },
- { code: 'P-002', name: '마라 떡볶이 밀키트', status: '부족', flavor: '매운맛', stock: 50, safetyStock: 100, recommendedStock: 150, actualQuantity: 0 },
- { code: 'P-003', name: '로제 떡볶이 밀키트', status: '위험', flavor: '안매운맛', stock: 10, safetyStock: 100, recommendedStock: 200, actualQuantity: 0 },
- { code: 'P-004', name: '짜장 떡볶이 밀키트', status: '입고 예정', flavor: '안매운맛', stock: 0, safetyStock: 100, recommendedStock: 100, actualQuantity: 0 },
+ { code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', spiciness: '순한맛', size: '1,2인분', price: 5000, status: '품절임박' },
+ { code: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', spiciness: '기본맛', size: '1,2인분', price: 7000, status: '주문가능' },
+ { code: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', spiciness: '매운맛', size: '1,2인분', price: 7000, status: '주문가능' },
+ { code: 'OR0403', name: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', spiciness: '아주 매운맛', size: '3,4인분', price: 13000, status: '주문가능' },
+ { code: 'RO0103', name: '로제 떡볶이 밀키트 순한맛 3,4인분', spiciness: '순한맛', size: '3,4인분', price: 17000, status: '품절임박' }
 ])
 
 const filteredProducts = computed(() => {
@@ -125,10 +126,8 @@ const isFormValid = computed(() => {
           <option value="안전">안전</option>
         </select>
         <select v-model="productFilter.flavor">
-          <option value="">맛 전체</option>
-          <option value="기본맛">기본맛</option>
-          <option value="매운맛">매운맛</option>
-          <option value="안매운맛">안매운맛</option>
+          <option value="">매운맛 전체</option>
+          <option v-for="level in ['순한맛', '기본맛', '매운맛', '아주 매운맛']" :key="level" :value="level">{{ level }}</option>
         </select>
       </div>
 
@@ -138,7 +137,7 @@ const isFormValid = computed(() => {
             <th>제품 코드</th>
             <th>제품명</th>
             <th>제품 상태</th>
-            <th>맛</th>
+            <th>매운맛</th>
             <th>현 재고</th>
             <th>안전 재고</th>
             <th v-if="showRecommendation" class="rec-col">추천 재고</th>

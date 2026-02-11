@@ -16,10 +16,56 @@ const filter = ref({
 })
 
 const orders = ref([
-  { orderStatus: '대기', orderDate: '2023-10-25', orderCode: 'ORD-001', recipientName: '김철수', recipientPhone: '010-1234-5678', arrivalDate: '2023-10-27', arrivalTime: '14:00', productCode: 'P-001' },
-  { orderStatus: '배송중', orderDate: '2023-10-24', orderCode: 'ORD-002', recipientName: '이영희', recipientPhone: '010-9876-5432', arrivalDate: '2023-10-26', arrivalTime: '10:00', productCode: 'P-002' },
-  { orderStatus: '배송완료', orderDate: '2023-10-23', orderCode: 'ORD-003', recipientName: '박민수', recipientPhone: '010-5555-4444', arrivalDate: '2023-10-25', arrivalTime: '16:30', productCode: 'P-003' },
-  { orderStatus: '취소', orderDate: '2023-10-22', orderCode: 'ORD-004', recipientName: '최지원', recipientPhone: '010-1111-2222', arrivalDate: '-', arrivalTime: '-', productCode: 'P-004' },
+  { 
+    orderStatus: '대기', 
+    orderDate: '2023-10-25', 
+    orderCode: 'SE0120231025001', 
+    recipientName: '김철수', 
+    recipientPhone: '010-1234-5678', 
+    arrivalDate: '2023-10-27', 
+    arrivalTime: '14:00', 
+    products: [
+      { productCode: 'OR0101', quantity: 50, amount: 5000 },
+      { productCode: 'RO0201', quantity: 10, amount: 7000 }
+    ]
+  },
+  { 
+    orderStatus: '배송중', 
+    orderDate: '2023-10-24', 
+    orderCode: 'SE0120231024002', 
+    recipientName: '이영희', 
+    recipientPhone: '010-9876-5432', 
+    arrivalDate: '2023-10-26', 
+    arrivalTime: '10:00', 
+    products: [
+      { productCode: 'RO0201', quantity: 30, amount: 7000 }
+    ]
+  },
+  { 
+    orderStatus: '배송완료', 
+    orderDate: '2023-10-23', 
+    orderCode: 'SE0120231023003', 
+    recipientName: '박민수', 
+    recipientPhone: '010-5555-4444', 
+    arrivalDate: '2023-10-25', 
+    arrivalTime: '16:30', 
+    products: [
+      { productCode: 'MA0301', quantity: 20, amount: 7000 },
+      { productCode: 'OR0403', quantity: 5, amount: 13000 }
+    ]
+  },
+  { 
+    orderStatus: '취소', 
+    orderDate: '2023-10-22', 
+    orderCode: 'SE0120231022004', 
+    recipientName: '최지원', 
+    recipientPhone: '010-1111-2222', 
+    arrivalDate: '-', 
+    arrivalTime: '-', 
+    products: [
+      { productCode: 'OR0403', quantity: 10, amount: 13000 }
+    ]
+  },
 ])
 
 const filteredOrders = computed(() => {
@@ -31,7 +77,7 @@ const filteredOrders = computed(() => {
     const matchRecipientPhone = !filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)
     const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
     const matchArrivalTime = !filter.value.arrivalTime || item.arrivalTime.includes(filter.value.arrivalTime)
-    const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
+    const matchProductCode = !filter.value.productCode || item.products.some(p => p.productCode.includes(filter.value.productCode))
     
     return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchRecipientPhone && matchArrivalDate && matchArrivalTime && matchProductCode
   })
@@ -48,21 +94,20 @@ const getStatusClass = (s) => ({
 }[s] || '')
 
 const goToDetail = (item) => {
-  router.push(`/orders/${item.orderCode}`)
+  router.push({ name: 'franchise-order-detail', params: { id: item.orderCode } })
 }
 </script>
 
 <template>
   <div class="content-wrapper">
     <div class="header-row">
-      <h2>발주 관리</h2>
-      <router-link to="/orders/create" class="add-btn">+ 발주 생성</router-link>
+      <h2>가맹점 발주 관리</h2>
+      <router-link :to="{ name: 'franchise-order-create' }" class="add-btn">+ 발주 생성</router-link>
     </div>
 
     <section class="summary-section">
-      <div class="summary-card"><span class="s-label">금일 발주 건수</span><p class="s-value">15건</p></div>
-      <div class="summary-card"><span class="s-label">배송 준비중</span><p class="s-value">5건</p></div>
-      <div class="summary-card warn"><span class="s-label">취소 요청</span><p class="s-value">1건</p></div>
+      <div class="summary-card"><span class="s-label">금일 발주 건수</span><p class="s-value">1건</p></div>
+      <div class="summary-card"><span class="s-label">배송 준비중</span><p class="s-value">1건</p></div>
     </section>
 
     <!-- Filter Section -->
@@ -82,7 +127,7 @@ const goToDetail = (item) => {
       </div>
       <div class="filter-group">
         <label>발주 코드</label>
-        <input type="text" v-model="filter.orderCode" placeholder="ORD-000" />
+        <input type="text" v-model="filter.orderCode" placeholder="SE0120260210001" />
       </div>
       <div class="filter-group">
         <label>발주일</label>
@@ -106,37 +151,58 @@ const goToDetail = (item) => {
       </div>
       <div class="filter-group">
         <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="P-000" />
+        <input type="text" v-model="filter.productCode" placeholder="OR0101" />
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <div class="data-table-card">
       <table class="data-table">
         <thead>
           <tr>
-            <th>발주 상태</th>
-            <th>발주일</th>
             <th>발주 코드</th>
+            <th>발주 상태</th>
+             <th>제품 코드</th>
+            <th>수량</th>
+            <th>단위 총 금액</th>
+            <th>총 금액</th>
+            <th>발주일</th>
             <th>수령인 이름</th>
-            <th>수령인 전화번호</th>
             <th>도착 날짜</th>
             <th>도착 시간</th>
-            <th>제품 코드</th>
-            <th>관리</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filteredOrders" :key="order.orderCode">
-            <td><span :class="['status-tag', getStatusClass(order.orderStatus)]">{{ order.orderStatus }}</span></td>
-            <td>{{ order.orderDate }}</td>
+          <tr v-for="order in filteredOrders" :key="order.orderCode" @click="goToDetail(order)" class="clickable-row">
             <td class="sku-cell">{{ order.orderCode }}</td>
+            <td><span :class="['status-tag', getStatusClass(order.orderStatus)]">{{ order.orderStatus }}</span></td>
+            <td>
+              <div class="multi-line-cell">
+                <span v-for="p in order.products" :key="p.productCode" class="sku-cell small">
+                  {{ p.productCode }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="multi-line-cell">
+                <span v-for="p in order.products" :key="p.productCode">
+                  {{ p.quantity }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="multi-line-cell">
+                <span v-for="p in order.products" :key="p.productCode">
+                  {{ new Intl.NumberFormat('ko-KR').format(p.quantity * p.amount) }}
+                </span>
+              </div>
+            </td>
+            <td>
+              {{ new Intl.NumberFormat('ko-KR').format(order.products.reduce((acc, p) => acc + (p.quantity * p.amount), 0)) }}
+            </td>
+            <td>{{ order.orderDate }}</td>
             <td class="name-cell">{{ order.recipientName }}</td>
-            <td>{{ order.recipientPhone }}</td>
             <td>{{ order.arrivalDate }}</td>
             <td>{{ order.arrivalTime }}</td>
-            <td>{{ order.productCode }}</td>
-            <td><button class="action-btn" @click.stop="goToDetail(order)">상세</button></td>
           </tr>
         </tbody>
       </table>
@@ -178,16 +244,6 @@ const goToDetail = (item) => {
 }
 .date-range { display: flex; align-items: center; gap: 8px; }
 .date-range input { min-width: 140px; }
-.search-btn {
-  background: var(--text-dark);
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  height: 42px;
-}
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
@@ -201,4 +257,17 @@ const goToDetail = (item) => {
 .status-primary { background: #e0e7ff; color: #3730a3; }
 .status-danger { background: #fee2e2; color: #991b1b; }
 .action-btn { background: white; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
+.clickable-row { cursor: pointer; transition: background-color 0.2s; }
+.clickable-row:hover { background-color: #f8fafc; }
+
+.multi-line-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sku-cell.small {
+  font-size: 0.8rem;
+}
+.total-cell { font-weight: 700; color: var(--text-dark); }
 </style>

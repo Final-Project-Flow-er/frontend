@@ -12,62 +12,59 @@ const orders = [
   { 
     orderStatus: '대기', 
     orderDate: '2023-10-25', 
-    orderCode: 'ORD-001', 
+    orderCode: 'SE0120231025001', 
     recipientName: '김철수', 
     recipientPhone: '010-1234-5678', 
     address: '서울시 강남구 테헤란로 123',
     arrivalDate: '2023-10-27', 
     arrivalTime: '14:00', 
-    productCode: 'P-001',
-    productName: '오리지널 떡볶이 밀키트',
-    quantity: 50,
-    amount: 12900,
-    totalAmount: 645000
+    products: [
+      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50, amount: 5000 },
+      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 20, amount: 7000 }
+    ],
+    totalAmount: 390000
   },
   { 
     orderStatus: '배송중', 
     orderDate: '2023-10-24', 
-    orderCode: 'ORD-002', 
+    orderCode: 'SE0120231024002', 
     recipientName: '이영희', 
     recipientPhone: '010-9876-5432', 
     address: '서울시 서초구 서초대로 456',
     arrivalDate: '2023-10-26', 
     arrivalTime: '10:00', 
-    productCode: 'P-002',
-    productName: '로제 떡볶이 밀키트',
-    quantity: 30,
-    amount: 14900,
-    totalAmount: 447000
+    products: [
+      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 30, amount: 7000 }
+    ],
+    totalAmount: 210000
   },
   { 
     orderStatus: '배송완료', 
     orderDate: '2023-10-23', 
-    orderCode: 'ORD-003', 
+    orderCode: 'SE0120231023003', 
     recipientName: '박민수', 
     recipientPhone: '010-5555-4444', 
     address: '경기도 성남시 분당구 판교로 789',
     arrivalDate: '2023-10-25', 
     arrivalTime: '16:30', 
-    productCode: 'P-003',
-    productName: '마라 떡볶이 밀키트',
-    quantity: 20,
-    amount: 14900,
-    totalAmount: 298000
+    products: [
+      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 20, amount: 7000 }
+    ],
+    totalAmount: 140000
   },
   { 
     orderStatus: '취소', 
     orderDate: '2023-10-22', 
-    orderCode: 'ORD-004', 
+    orderCode: 'SE0120231022004', 
     recipientName: '최지원', 
     recipientPhone: '010-1111-2222', 
     address: '인천광역시 송도과학로 10',
     arrivalDate: '-', 
     arrivalTime: '-', 
-    productCode: 'P-004',
-    productName: '짜장 떡볶이 밀키트',
-    quantity: 10,
-    amount: 11900,
-    totalAmount: 119000
+    products: [
+      { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 10, amount: 13000 }
+    ],
+    totalAmount: 130000
   },
 ]
 
@@ -96,6 +93,10 @@ const cancelOrder = () => {
 }
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+
+const goToEdit = () => {
+  router.push({ name: 'head-office-order-edit', params: { id: orderId } })
+}
 </script>
 
 <template>
@@ -103,7 +104,8 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', c
     <div class="header-row">
       <h2>발주 상세 정보</h2>
       <div class="header-actions">
-        <button @click="cancelOrder" class="delete-btn">발주 취소</button>
+        <button v-if="orderItem.orderStatus === '대기'" @click="cancelOrder" class="delete-btn">발주 취소</button>
+        <button v-if="orderItem.orderStatus === '대기'" @click="goToEdit" class="edit-btn">수정</button>
         <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
       </div>
     </div>
@@ -154,27 +156,29 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', c
           <label>도착 예정 시간</label>
           <span>{{ orderItem.arrivalTime }}</span>
         </div>
-        <div class="info-item">
-          <label>상품 코드</label>
-          <span>{{ orderItem.productCode }}</span>
+      </div>
+
+      <div class="product-list-table">
+        <div class="product-list-header">
+          <span>상품 코드</span>
+          <span>상품명</span>
+          <span>수량</span>
+          <span>개당 금액</span>
+          <span>총 금액</span>
         </div>
-        <div class="info-item">
-          <label>상품명</label>
-          <span>{{ orderItem.productName }}</span>
+        <div v-for="(product, index) in orderItem.products" :key="index" class="product-list-item">
+          <span>{{ product.productCode }}</span>
+          <span>{{ product.productName }}</span>
+          <span>{{ product.quantity }}개</span>
+          <span>{{ formatPrice(product.amount) }}</span>
+          <span>{{ formatPrice(product.quantity * product.amount) }}</span>
         </div>
-        <div class="info-item">
-          <label>수량</label>
-          <span>{{ orderItem.quantity }}개</span>
-        </div>
-        <div class="info-item">
-          <label>개당 금액</label>
-          <span>{{ formatPrice(orderItem.amount) }}</span>
-        </div>
-        <div class="info-item">
-          <label>총 금액</label>
+        <div class="product-list-total">
+          <label>총 발주 금액</label>
           <span class="total-price">{{ formatPrice(orderItem.totalAmount) }}</span>
         </div>
       </div>
+
 
     </div>
   </div>
@@ -192,6 +196,9 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', c
 .back-btn:hover { border-color: var(--text-light); color: var(--text-dark); }
 .delete-btn { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
 .delete-btn:hover { background: #fecaca; }
+
+.edit-btn { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+.edit-btn:hover { background: #c7d2fe; }
 
 .detail-card { background: white; padding: 2.5rem; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
 
@@ -216,4 +223,52 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', c
 .status-danger { background: #fee2e2; color: #991b1b; }
 
 .loading { text-align: center; padding: 3rem; color: var(--text-light); }
+
+.product-list-table {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.product-list-header, .product-list-item {
+  display: grid;
+  grid-template-columns: 2fr 3fr 1fr 2fr 2fr; /* Adjust column widths as needed */
+  padding: 0.8rem 1.5rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.product-list-header {
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.product-list-item {
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.product-list-item:last-child {
+  border-bottom: none;
+}
+
+.product-list-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  font-weight: 700;
+  font-size: 1rem;
+  gap: 1rem;
+}
+
+.product-list-total .total-price {
+  color: var(--primary);
+  font-size: 1.2rem !important;
+}
+
 </style>

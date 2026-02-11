@@ -11,7 +11,7 @@
           <li
               v-for="item in group.items"
               :key="item.name"
-              :class="{ 
+              :class="{
                   active: activeMenu === item.name || (item.children && item.children.some(c => c.path === currentPath)),
                   'has-children': item.children
               }"
@@ -22,7 +22,7 @@
                 </div>
                 <span>{{ item.name }}</span>
             </div>
-            
+
             <!-- Children -->
             <ul v-if="item.children && item.isOpen" class="submenu">
                 <li
@@ -37,6 +37,19 @@
           </li>
         </ul>
       </template>
+      <template v-for="category in sidebarItems" :key="category.name">
+        <div class="menu-group">{{ category.name }}</div>
+        <ul>
+          <li
+            v-for="item in category.children"
+            :key="item.routeName"
+          >
+            <router-link :to="{ name: item.routeName }" active-class="active">
+              {{ item.name }}
+            </router-link>
+          </li>
+        </ul>
+      </template>
     </nav>
   </aside>
 </template>
@@ -46,6 +59,8 @@ import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const mainMenus = ['대시보드', '재고 관리', '재고 현황', '입출고 관리', '가맹점 정산', '본사 정산', '분석 리포트']
+const systemMenus = ['직원 관리', '환경 설정']
 const route = useRoute()
 
 const menuGroups = ref([
@@ -60,9 +75,9 @@ const menuGroups = ref([
   {
     title: '본사',
     items: [
-      { 
-        name: '재고 관리', 
-        path: '', 
+      {
+        name: '재고 관리',
+        path: '',
         isOpen: false, // Default closed
         children: [
             { name: '공장 재고관리', path: '/hq/inventory/factory' },
@@ -105,6 +120,42 @@ const menuGroups = ref([
   }
 ])
 
+const goHome = () => {
+  router.push({ path: '/' })
+}
+// Updated sidebar items
+const sidebarItems = ref([
+  {
+    name: '본사',
+    children: [
+      { name: '발주 관리', routeName: 'head-office-order-list' },
+      { name: '발주 요청 접수', routeName: 'head-office-order-reception' },
+      { name: '발주 요청 관리', routeName: 'head-office-order-request' },
+      { name: '반품 요청 관리', routeName: 'head-office-return-list' },
+      { name: '정산 관리', routeName: 'hq-settlement-list' },
+    ]
+  },
+  {
+    name: '가맹점',
+    children: [
+      { name: '입고 관리', routeName: 'franchise-inbound' },
+      { name: '발주 관리', routeName: 'franchise-order-list' },
+      { name: '반품 관리', routeName: 'franchise-return-list' },
+      { name: '판매 관리', routeName: 'franchise-product-sell' },
+      { name: '재고 관리', routeName: 'store-inventory' },
+      { name: '정산 관리', routeName: 'store-settlement-summary' },
+    ]
+  },
+  {
+    name: '공장',
+    children: [
+      { name: '입고 관리', routeName: 'factory-inbound' },
+      { name: '출고 관리', routeName: 'factory-outbound' },
+      { name: '발주 요청 접수', routeName: 'factory-order-list' },
+      { name: '발주 요청 관리', routeName: 'factory-order-request' },
+    ]
+  }
+])
 const activeMenu = ref('대시보드')
 const currentPath = ref(window.location.pathname)
 
@@ -128,6 +179,15 @@ const toggleItem = (item) => {
   }
 }
 
+const setActive = (menuName) => {
+  activeMenu.value = menuName
+  if (menuName === '재고 관리') {
+    router.push('/store/inventory')
+  } else if (menuName === '가맹점 정산') {
+    router.push('/store/settlement')
+  } else if (menuName === '본사 정산') {
+    router.push('/hq/settlement')
+  }
 const navigateTo = (path) => {
     router.push(path)
 }
@@ -188,10 +248,29 @@ const goHome = () => {
   transition: all 0.2s ease;
 }
 
+.menu {
+  flex: 1;
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar for sidebar */
+.menu::-webkit-scrollbar {
+  width: 4px;
+}
+.menu::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+.menu::-webkit-scrollbar-track {
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
 /* Scrollable Menu */
-.menu { 
-    flex: 1; 
-    overflow-y: auto; 
+.menu {
+    flex: 1;
+    overflow-y: auto;
     overflow-x: hidden;
 }
 
@@ -200,14 +279,14 @@ const goHome = () => {
   width: 6px;
 }
 .menu::-webkit-scrollbar-track {
-  background: transparent; 
+  background: transparent;
 }
 .menu::-webkit-scrollbar-thumb {
-  background: #334155; 
+  background: #334155;
   border-radius: 3px;
 }
 .menu::-webkit-scrollbar-thumb:hover {
-  background: #475569; 
+  background: #475569;
 }
 
 
@@ -218,6 +297,7 @@ const goHome = () => {
 .menu li {
   padding: 0;
   display: flex;
+  align-items: center;
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
@@ -228,6 +308,12 @@ const goHome = () => {
   position: relative;
 }
 
+.menu li:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.menu li:hover a {
+  color: #ffffff;
 .menu-item-row {
     display: flex;
     align-items: center;
@@ -255,6 +341,20 @@ const goHome = () => {
 }
 /* .no-arrow class removed as it's no longer needed */
 
+.menu li a {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  padding: 0.8rem 1.5rem;
+}
+
+.menu li a.active {
+  background-color: #334155;
+  color: white;
+  padding-left: 1.8rem;
 /* Submenu */
 .submenu {
     width: 100%;
@@ -268,6 +368,15 @@ const goHome = () => {
     color: #94a3b8;
     display: flex;
     align-items: center;
+.menu li a.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background-color: var(--primary, #94a3b8);
+  border-radius: 0 4px 4px 0;
 }
 .submenu-item:hover { background: rgba(255, 255, 255, 0.05) !important; color: white !important; }
 .submenu-item.active { color: #60a5fa !important; background: rgba(59, 130, 246, 0.1) !important; }
