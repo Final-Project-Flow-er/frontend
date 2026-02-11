@@ -19,7 +19,13 @@ const today = new Date().toLocaleString('ko-KR', {
 
 const finalAmount = computed(() => {
   if (!props.store) return 0
-  return props.store.sales - (props.store.orderCost + props.store.shipping + props.store.commission + props.store.loss) + props.store.refund
+  const sales = props.store.sales || 0
+  const orderCost = props.store.orderCost || 0
+  const shipping = props.store.shipping || 0
+  const commission = props.store.commission || 0
+  const loss = props.store.loss || 0
+  const refund = props.store.refund || 0
+  return sales - (orderCost + shipping + commission + loss) + refund
 })
 </script>
 

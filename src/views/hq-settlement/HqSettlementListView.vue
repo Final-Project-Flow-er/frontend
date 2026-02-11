@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
+import SettlementBatchReceiptModal from '@/components/settlement/SettlementBatchReceiptModal.vue'
 
 const router = useRouter()
 
@@ -78,23 +79,33 @@ const monthRef = ref(null)
 const openDatePicker = () => { dateRef.value?.showPicker() }
 const openMonthPicker = () => { monthRef.value?.showPicker() }
 
-/* ── 총 매출 모달 ── */
-const showSalesModal = ref(false)
-const showRefundModal = ref(false)
+/* ── 개별 영수증 모달 ── */
 const showReceiptModal = ref(false)
 const selectedReceiptStore = ref(null)
-
 const openReceipt = (store) => {
   selectedReceiptStore.value = store
   showReceiptModal.value = true
 }
 
-/* ── 범용 모달 ── */
-const detailModal = ref({ show: false, title: '', field: '' })
-const openDetail = (title, field) => { detailModal.value = { show: true, title, field } }
-const closeDetail = () => { detailModal.value.show = false }
+/* ── 전체 영수증 모달 ── */
+const showBatchModal = ref(false)
+const openBatchReceipt = () => {
+  showBatchModal.value = true
+}
 
 /* ── 상세 이동 ── */
+const goToSummaryDetail = (type) => {
+  router.push({
+    path: '/hq/settlement/summary-detail',
+    query: {
+      type,
+      date: selectedDate.value,
+      month: selectedMonth.value,
+      tab: activeTab.value
+    }
+  })
+}
+
 const goToDetail = (storeId) => {
   router.push({ path: `/hq/settlement/detail/${storeId}`, query: { date: selectedDate.value, month: selectedMonth.value, tab: activeTab.value } })
 }
@@ -103,7 +114,7 @@ const getStatusClass = (status) => ({
   '정산완료': 'status-done',
   '대기': 'status-wait',
   '확정': 'status-confirmed',
-}[status] || '')
+ }[status] || '')
 </script>
 
 <template>
@@ -122,6 +133,10 @@ const getStatusClass = (status) => ({
         <button class="action-btn voucher-btn" @click="$router.push('/hq/settlement/voucher-manage')">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
           조정 전표 등록
+        </button>
+        <button class="action-btn log-btn" @click="$router.push('/hq/settlement/logs')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+          이력 조회
         </button>
       </div>
     </div>
@@ -158,33 +173,33 @@ const getStatusClass = (status) => ({
         <span class="fc-label">전체 가맹점 최종 정산 합계</span>
         <span class="fc-count">{{ filteredStores.length }}개 가맹점</span>
       </div>
-      <p class="fc-amount">{{ fmt(totalFinal) }}</p>
+      <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
     </div>
 
     <section class="summary-grid">
-      <div class="summary-card primary clickable" @click="showSalesModal = true">
+      <div class="summary-card primary clickable" @click="goToSummaryDetail('sales')">
         <span class="s-label">총 매출</span>
-        <p class="s-value">{{ fmt(totals.sales) }}</p>
+        <p class="s-value">₩ {{ fmt(totals.sales) }}</p>
       </div>
-      <div class="summary-card refund-card clickable" @click="showRefundModal = true">
+      <div class="summary-card refund-card clickable" @click="goToSummaryDetail('refund')">
         <span class="s-label">반품 환급</span>
-        <p class="s-value primary-color">{{ fmt(totals.refund) }}</p>
+        <p class="s-value primary-color">₩ {{ fmt(totals.refund) }}</p>
       </div>
-      <div class="summary-card clickable" @click="openDetail('가맹점별 발주 대금', 'orderCost')">
+      <div class="summary-card clickable" @click="goToSummaryDetail('orderCost')">
         <span class="s-label">발주 대금</span>
-        <p class="s-value negative">{{ fmt(totals.orderCost) }}</p>
+        <p class="s-value negative">₩ {{ fmt(totals.orderCost) }}</p>
       </div>
-      <div class="summary-card clickable" @click="openDetail('가맹점별 배송비', 'shipping')">
+      <div class="summary-card clickable" @click="goToSummaryDetail('shipping')">
         <span class="s-label">배송비</span>
-        <p class="s-value negative">{{ fmt(totals.shipping) }}</p>
+        <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
       </div>
-      <div class="summary-card clickable" @click="openDetail('가맹점별 손실', 'loss')">
+      <div class="summary-card clickable" @click="goToSummaryDetail('loss')">
         <span class="s-label">손실</span>
-        <p class="s-value negative">{{ fmt(totals.loss) }}</p>
+        <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
       </div>
-      <div class="summary-card clickable" @click="openDetail('가맹점별 수수료', 'commission')">
+      <div class="summary-card clickable" @click="goToSummaryDetail('commission')">
         <span class="s-label">수수료</span>
-        <p class="s-value negative">{{ fmt(totals.commission) }}</p>
+        <p class="s-value negative">₩ {{ fmt(totals.commission) }}</p>
       </div>
     </section>
 
@@ -192,7 +207,13 @@ const getStatusClass = (status) => ({
     <div class="data-table-card">
       <div class="table-header">
         <h3>가맹점별 정산 목록</h3>
-        <span class="badge">{{ filteredStores.length }}개</span>
+        <div class="header-right-group">
+          <button class="all-pdf-btn" @click="openBatchReceipt">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            전체 가맹점 영수증 PDF
+          </button>
+          <span class="badge">{{ filteredStores.length }}개</span>
+        </div>
       </div>
       <table class="data-table">
         <thead>
@@ -212,18 +233,15 @@ const getStatusClass = (status) => ({
         <tbody>
           <tr v-for="s in filteredStores" :key="s.id">
             <td class="store-cell">{{ s.name }}</td>
-            <td class="text-right primary-color">{{ fmt(s.sales) }}</td>
-            <td class="text-right negative">{{ fmt(s.orderCost) }}</td>
-            <td class="text-right negative">{{ fmt(s.shipping) }}</td>
-            <td class="text-right negative">{{ fmt(s.commission) }}</td>
-            <td class="text-right primary-color">{{ fmt(s.refund) }}</td>
-            <td class="text-right negative">{{ fmt(s.loss) }}</td>
-            <td class="text-right primary-color final-cell">{{ fmt(getFinal(s)) }}</td>
+            <td class="text-right primary-color">₩ {{ fmt(s.sales) }}</td>
+            <td class="text-right negative">₩ {{ fmt(s.orderCost) }}</td>
+            <td class="text-right negative">₩ {{ fmt(s.shipping) }}</td>
+            <td class="text-right negative">₩ {{ fmt(s.commission) }}</td>
+            <td class="text-right primary-color">₩ {{ fmt(s.refund) }}</td>
+            <td class="text-right negative">₩ {{ fmt(s.loss) }}</td>
+            <td class="text-right primary-color final-cell">₩ {{ fmt(getFinal(s)) }}</td>
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ s.status }}</span></td>
             <td class="text-center">
-              <button class="icon-btn" @click="openReceipt(s)" title="영수증 보기">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              </button>
               <button class="detail-btn" @click="goToDetail(s.id)">상세</button>
             </td>
           </tr>
@@ -232,93 +250,20 @@ const getStatusClass = (status) => ({
     </div>
   </div>
 
-  <!-- 총 매출 모달 -->
-  <teleport to="body">
-    <div v-if="showSalesModal" class="modal-overlay" @click.self="showSalesModal = false">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>가맹점별 매출 현황</h3>
-          <button class="modal-close" @click="showSalesModal = false">&times;</button>
-        </div>
-        <table class="modal-table">
-          <thead>
-            <tr><th>가맹점</th><th class="text-right">매출액</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="s in filteredStores" :key="s.id">
-              <td>{{ s.name }}</td>
-              <td class="text-right">{{ fmt(s.sales) }}</td>
-            </tr>
-            <tr class="total-row">
-              <td>합계</td>
-              <td class="text-right">{{ fmt(totals.sales) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </teleport>
-
-  <!-- 반품 환급 모달 -->
-  <teleport to="body">
-    <div v-if="showRefundModal" class="modal-overlay" @click.self="showRefundModal = false">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>가맹점별 반품 환급 현황</h3>
-          <button class="modal-close" @click="showRefundModal = false">&times;</button>
-        </div>
-        <table class="modal-table">
-          <thead>
-            <tr><th>가맹점</th><th class="text-right">반품 환급액</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="s in filteredStores" :key="s.id">
-              <td>{{ s.name }}</td>
-              <td class="text-right">{{ fmt(s.refund) }}</td>
-            </tr>
-            <tr class="total-row">
-              <td>합계</td>
-              <td class="text-right">{{ fmt(totals.refund) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </teleport>
-
-  <!-- 범용 상세 모달 -->
-  <teleport to="body">
-    <div v-if="detailModal.show" class="modal-overlay" @click.self="closeDetail">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>{{ detailModal.title }}</h3>
-          <button class="modal-close" @click="closeDetail">&times;</button>
-        </div>
-        <table class="modal-table">
-          <thead>
-            <tr><th>가맹점</th><th class="text-right">금액</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="s in filteredStores" :key="s.id">
-              <td>{{ s.name }}</td>
-              <td class="text-right">{{ fmt(s[detailModal.field]) }}</td>
-            </tr>
-            <tr class="total-row">
-              <td>합계</td>
-              <td class="text-right">{{ fmt(totals[detailModal.field]) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </teleport>
-
-  <!-- 정산 영수증 모달 -->
+  <!-- 개별 정산 영수증 모달 -->
   <SettlementReceiptModal
     :is-open="showReceiptModal"
     :store="selectedReceiptStore"
-    :date="formatDate(selectedDate)"
+    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
     @close="showReceiptModal = false"
+  />
+
+  <!-- 전체 가맹점 영수증 모달 -->
+  <SettlementBatchReceiptModal
+    :is-open="showBatchModal"
+    :stores="filteredStores"
+    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
+    @close="showBatchModal = false"
   />
 </template>
 
@@ -362,7 +307,7 @@ const getStatusClass = (status) => ({
 .summary-card.primary .s-value { color: var(--primary); }
 .summary-card.refund-card .s-value { color: var(--primary); }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
-.s-value { font-size: 1.4rem; font-weight: normal; margin: 0; color: var(--text-dark); text-align: right; }
+.s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); text-align: right; }
 .s-value.negative { color: #ef4444; }
 .s-value.positive { color: #10b981; }
 
@@ -370,10 +315,13 @@ const getStatusClass = (status) => ({
 .fc-left { display: flex; align-items: center; gap: 1rem; }
 .fc-label { font-size: 1rem; font-weight: 700; }
 .fc-count { font-size: 0.8rem; opacity: 0.8; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 999px; }
-.fc-amount { font-size: 1.85rem; font-weight: normal; margin: 0; }
+.fc-amount { font-size: 1.85rem; font-weight: 800; margin: 0; }
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+.header-right-group { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+.all-pdf-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 8px; border: 1px solid #ef4444; background: white; color: #ef4444; cursor: pointer; font-size: 0.75rem; font-weight: 700; transition: all 0.2s; }
+.all-pdf-btn:hover { background: #ef4444; color: white; transform: translateY(-1px); }
 .table-header h3 { margin: 0; font-size: 1rem; font-weight: 700; }
 .badge { background: var(--primary); color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
 .data-table { width: 100%; border-collapse: collapse; }
@@ -382,29 +330,15 @@ const getStatusClass = (status) => ({
 .data-table tbody tr:hover { background: #f8fafc; }
 .text-right { text-align: right; }
 .text-center { text-align: center; }
-.store-cell { font-weight: normal; color: var(--text-dark); }
+.store-cell { font-weight: 700; color: var(--text-dark); }
 .negative { color: #ef4444 !important; }
 .positive { color: #10b981 !important; }
 .primary-color { color: var(--primary) !important; }
-.final-cell { font-weight: normal; color: var(--primary) !important; }
+.final-cell { font-weight: 800; color: var(--primary) !important; }
 .status-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
 .status-done { background: #d1fae5; color: #065f46; }
 .status-wait { background: #fef3c7; color: #92400e; }
 .status-confirmed { background: #ede9fe; color: #6366f1; }
 .detail-btn { padding: 0.35rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #475569; transition: all 0.2s; }
 .detail-btn:hover { background: #f1f5f9; border-color: #475569; }
-.icon-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: all 0.2s; margin-right: 8px; vertical-align: middle; }
-.icon-btn:hover { color: var(--primary); background: #f1f5f9; }
-
-/* ── 모달 ── */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-box { background: white; border-radius: 16px; width: 520px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
-.modal-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-light); line-height: 1; }
-.modal-table { width: 100%; border-collapse: collapse; }
-.modal-table th { text-align: left; padding: 0.85rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; font-weight: 600; }
-.modal-table td { padding: 0.85rem 1.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
-.modal-table .total-row { background: #f1f5f9; }
-.modal-table .total-row td { border-bottom: none; color: var(--primary); }
 </style>

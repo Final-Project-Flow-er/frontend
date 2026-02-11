@@ -302,6 +302,11 @@ const router = createRouter({
             component: () => import('@/views/hq-settlement/HqSettlementDetailView.vue')
         },
         {
+            path: '/hq/settlement/summary-detail',
+            name: 'hq-settlement-summary-detail',
+            component: () => import('@/views/hq-settlement/HqSettlementSummaryDetailView.vue')
+        },
+        {
             path: '/hq/settlement/voucher-manage',
             name: 'hq-settlement-voucher-manage',
             component: () => import('@/views/hq-settlement/HqSettlementVoucherManageView.vue')
