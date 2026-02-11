@@ -287,7 +287,7 @@ const finishWithRejection = () => {
           </div>
           <div class="info-item">
             <span class="label">반품 수량 / 금액</span>
-            <span class="value">{{ formatNumber(returnItem.quantity) }}개 / <span class="price-text">{{ formatNumber(returnItem.amount) }}원</span></span>
+            <span class="value">{{ formatNumber(returnItem.quantity) }}개 / <span class="price-text">{{ formatNumber(returnItem.amount) }}</span></span>
           </div>
         </div>
       </div>

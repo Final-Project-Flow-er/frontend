@@ -15,11 +15,36 @@ const productFilter = ref({
 })
 
 const products = ref([
- { code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', spiciness: '순한맛', size: '1,2인분', price: 5000, status: '품절임박' },
- { code: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', spiciness: '기본맛', size: '1,2인분', price: 7000, status: '주문가능' },
- { code: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', spiciness: '매운맛', size: '1,2인분', price: 7000, status: '주문가능' },
- { code: 'OR0403', name: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', spiciness: '아주 매운맛', size: '3,4인분', price: 13000, status: '주문가능' },
- { code: 'RO0103', name: '로제 떡볶이 밀키트 순한맛 3,4인분', spiciness: '순한맛', size: '3,4인분', price: 17000, status: '품절임박' }
+  // 오리지널 1,2인분
+  { code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', spiciness: '순한맛', size: '1,2인분', flavor: '순한맛', price: 10000, stock: 5, safetyStock: 10, recommendedStock: 15, status: '부족', actualQuantity: 0 },
+  { code: 'OR0201', name: '오리지널 떡볶이 밀키트 기본맛 1,2인분', spiciness: '기본맛', size: '1,2인분', flavor: '기본맛', price: 10000, stock: 22, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'OR0301', name: '오리지널 떡볶이 밀키트 매운맛 1,2인분', spiciness: '매운맛', size: '1,2인분', flavor: '매운맛', price: 10000, stock: 8, safetyStock: 10, recommendedStock: 12, status: '부족', actualQuantity: 0 },
+  { code: 'OR0401', name: '오리지널 떡볶이 밀키트 아주 매운맛 1,2인분', spiciness: '아주 매운맛', size: '1,2인분', flavor: '아주 매운맛', price: 10000, stock: 0, safetyStock: 10, recommendedStock: 20, status: '위험', actualQuantity: 0 },
+  // 오리지널 3,4인분
+  { code: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', spiciness: '순한맛', size: '3,4인분', flavor: '순한맛', price: 18000, stock: 12, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'OR0203', name: '오리지널 떡볶이 밀키트 기본맛 3,4인분', spiciness: '기본맛', size: '3,4인분', flavor: '기본맛', price: 18000, stock: 3, safetyStock: 10, recommendedStock: 17, status: '위험', actualQuantity: 0 },
+  { code: 'OR0303', name: '오리지널 떡볶이 밀키트 매운맛 3,4인분', spiciness: '매운맛', size: '3,4인분', flavor: '매운맛', price: 18000, stock: 15, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'OR0403', name: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', spiciness: '아주 매운맛', size: '3,4인분', flavor: '아주 매운맛', price: 18000, stock: 7, safetyStock: 10, recommendedStock: 13, status: '부족', actualQuantity: 0 },
+  // 로제 1,2인분
+  { code: 'RO0101', name: '로제 떡볶이 밀키트 순한맛 1,2인분', spiciness: '순한맛', size: '1,2인분', flavor: '순한맛', price: 12000, stock: 18, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', spiciness: '기본맛', size: '1,2인분', flavor: '기본맛', price: 12000, stock: 25, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'RO0301', name: '로제 떡볶이 밀키트 매운맛 1,2인분', spiciness: '매운맛', size: '1,2인분', flavor: '매운맛', price: 12000, stock: 2, safetyStock: 10, recommendedStock: 18, status: '위험', actualQuantity: 0 },
+  { code: 'RO0401', name: '로제 떡볶이 밀키트 아주 매운맛 1,2인분', spiciness: '아주 매운맛', size: '1,2인분', flavor: '아주 매운맛', price: 12000, stock: 9, safetyStock: 10, recommendedStock: 11, status: '부족', actualQuantity: 0 },
+  // 로제 3,4인분
+  { code: 'RO0103', name: '로제 떡볶이 밀키트 순한맛 3,4인분', spiciness: '순한맛', size: '3,4인분', flavor: '순한맛', price: 22000, stock: 14, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'RO0203', name: '로제 떡볶이 밀키트 기본맛 3,4인분', spiciness: '기본맛', size: '3,4인분', flavor: '기본맛', price: 22000, stock: 6, safetyStock: 10, recommendedStock: 14, status: '부족', actualQuantity: 0 },
+  { code: 'RO0303', name: '로제 떡볶이 밀키트 매운맛 3,4인분', spiciness: '매운맛', size: '3,4인분', flavor: '매운맛', price: 22000, stock: 20, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'RO0403', name: '로제 떡볶이 밀키트 아주 매운맛 3,4인분', spiciness: '아주 매운맛', size: '3,4인분', flavor: '아주 매운맛', price: 22000, stock: 1, safetyStock: 10, recommendedStock: 19, status: '위험', actualQuantity: 0 },
+  // 마라 1,2인분
+  { code: 'MA0101', name: '마라 떡볶이 밀키트 순한맛 1,2인분', spiciness: '순한맛', size: '1,2인분', flavor: '순한맛', price: 12000, stock: 30, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'MA0201', name: '마라 떡볶이 밀키트 기본맛 1,2인분', spiciness: '기본맛', size: '1,2인분', flavor: '기본맛', price: 12000, stock: 4, safetyStock: 10, recommendedStock: 16, status: '위험', actualQuantity: 0 },
+  { code: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', spiciness: '매운맛', size: '1,2인분', flavor: '매운맛', price: 12000, stock: 11, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'MA0401', name: '마라 떡볶이 밀키트 아주 매운맛 1,2인분', spiciness: '아주 매운맛', size: '1,2인분', flavor: '아주 매운맛', price: 12000, stock: 10, safetyStock: 10, recommendedStock: 10, status: '부족', actualQuantity: 0 },
+  // 마라 3,4인분
+  { code: 'MA0103', name: '마라 떡볶이 밀키트 순한맛 3,4인분', spiciness: '순한맛', size: '3,4인분', flavor: '순한맛', price: 22000, stock: 16, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'MA0203', name: '마라 떡볶이 밀키트 기본맛 3,4인분', spiciness: '기본맛', size: '3,4인분', flavor: '기본맛', price: 22000, stock: 0, safetyStock: 10, recommendedStock: 20, status: '위험', actualQuantity: 0 },
+  { code: 'MA0303', name: '마라 떡볶이 밀키트 매운맛 3,4인분', spiciness: '매운맛', size: '3,4인분', flavor: '매운맛', price: 22000, stock: 13, safetyStock: 10, recommendedStock: 0, status: '안전', actualQuantity: 0 },
+  { code: 'MA0403', name: '마라 떡볶이 밀키트 아주 매운맛 3,4인분', spiciness: '아주 매운맛', size: '3,4인분', flavor: '아주 매운맛', price: 22000, stock: 8, safetyStock: 10, recommendedStock: 12, status: '부족', actualQuantity: 0 },
 ])
 
 const filteredProducts = computed(() => {
@@ -149,7 +174,7 @@ const isFormValid = computed(() => {
             <td class="code-cell">{{ p.code }}</td>
             <td class="name-cell">{{ p.name }}</td>
             <td><span :class="['status-tag', getStatusClass(p.status)]">{{ p.status }}</span></td>
-            <td>{{ p.flavor }}</td>
+            <td>{{ p.spiciness }}</td>
             <td>{{ p.stock }}</td>
             <td>{{ p.safetyStock }}</td>
             <td v-if="showRecommendation" class="rec-col">{{ p.recommendedStock }}</td>

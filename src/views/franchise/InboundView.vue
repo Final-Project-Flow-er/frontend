@@ -233,7 +233,7 @@ const handleModalClose = () => {
                   <td>{{ box.productCode }}</td>
                   <td class="name-cell">{{ box.name }}</td>
                   <td class="text-right">{{ box.quantity }}</td>
-                  <td class="text-right">{{ (box.quantity * 12000).toLocaleString() }}원</td>
+                  <td class="text-right">{{ (box.quantity * 12000).toLocaleString() }}</td>
                 </tr>
               </tbody>
             </table>
@@ -275,7 +275,7 @@ const handleModalClose = () => {
                   <td class="name-cell">{{ item.name }}</td>
                   <td>{{ item.productionDate }}</td>
                   <td>{{ item.expiryDate }}</td>
-                  <td class="text-right">{{ item.unitPrice.toLocaleString() }}원</td>
+                  <td class="text-right">{{ item.unitPrice.toLocaleString() }}</td>
                 </tr>
               </tbody>
             </table>
@@ -322,7 +322,7 @@ const handleModalClose = () => {
 
 .page-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: normal;
   color: var(--text-dark, #1e293b);
   margin: 0;
 }
@@ -355,7 +355,7 @@ const handleModalClose = () => {
 
 .panel-title {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: normal;
   margin-bottom: 0.75rem;
   color: var(--text-dark, #334155);
   flex-shrink: 0;
@@ -398,7 +398,7 @@ const handleModalClose = () => {
   background: #f8fafc;
   color: #64748b;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: normal;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
@@ -427,12 +427,12 @@ const handleModalClose = () => {
 
 .code-cell {
   font-family: monospace;
-  font-weight: 600;
+  font-weight: normal;
   color: #475569;
 }
 
 .name-cell {
-  font-weight: 500;
+  font-weight: normal;
 }
 
 .text-right {
@@ -463,7 +463,7 @@ const handleModalClose = () => {
 .action-btn {
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: normal;
   font-size: 1rem;
   cursor: pointer;
   border: none;

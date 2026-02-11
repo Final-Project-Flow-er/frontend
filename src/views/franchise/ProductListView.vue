@@ -47,7 +47,7 @@ const groupedSales = computed(() => {
   return Object.values(groups)
 })
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const cancelSale = () => {
   alert('취소 완료')

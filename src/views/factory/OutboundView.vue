@@ -371,7 +371,7 @@ const handleModalClose = () => {
 
 .page-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: normal;
   color: var(--text-dark, #1e293b);
   margin: 0;
 }
@@ -387,7 +387,7 @@ const handleModalClose = () => {
 .action-btn {
   padding: 0.75rem 2rem; 
   border-radius: 8px; 
-  font-weight: 600; 
+  font-weight: normal; 
   cursor: pointer; 
   border: none;
   color: white;
@@ -430,7 +430,7 @@ const handleModalClose = () => {
 
 .panel-title {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: normal;
   margin-bottom: 0.75rem;
   color: var(--text-dark, #334155);
   flex-shrink: 0;
@@ -473,7 +473,7 @@ const handleModalClose = () => {
   background: #f8fafc;
   color: #64748b;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: normal;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
@@ -507,11 +507,11 @@ const handleModalClose = () => {
 
 .code-cell {
   font-family: monospace;
-  font-weight: 600;
+  font-weight: normal;
   color: #475569;
 }
 
-.name-cell { font-weight: 500; }
+.name-cell { font-weight: normal; }
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 
@@ -519,7 +519,7 @@ const handleModalClose = () => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-weight: 700;
+  font-weight: normal;
   font-size: 0.8rem;
 }
 

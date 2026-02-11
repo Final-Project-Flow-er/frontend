@@ -145,7 +145,7 @@ const formatDate = (dateString) => {
     return date.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const getLogTypeLabel = (type) => {
     switch (type) {
@@ -211,8 +211,8 @@ const getChangeClass = (qty) => {
 
 <style scoped>
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); }
-.content-wrapper { max-width: 1400px; margin: 0 auto; }
+.header-row h2 { margin: 0; font-size: 1.5rem; font-weight: normal; color: var(--text-dark); }
+.content-wrapper { max-width: 1400px; margin: 0 auto; overflow-x: hidden; }
 
 /* Filter Styles */
 .filter-section {
@@ -239,25 +239,26 @@ const getChangeClass = (qty) => {
   background: white; border: 1px solid var(--border-color); border-radius: 12px; 
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   width: 100%;
+  overflow-x: auto;
 }
 table { width: 100%; border-collapse: collapse; text-align: left; }
-th { background: #f8fafc; padding: 0.75rem 0.5rem; font-weight: 600; color: #64748b; font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+th { background: #f8fafc; padding: 0.75rem 0.5rem; font-weight: normal; color: #64748b; font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
 td { padding: 0.75rem 0.5rem; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.85rem; vertical-align: middle; white-space: nowrap; }
 tr:last-child td { border-bottom: none; }
 tr:hover { background: #f8fafc; }
 
 .code-cell { font-family: monospace; color: #475569; font-size: 0.75rem; letter-spacing: -0.02em; }
-.name-cell { font-weight: 600; color: var(--text-dark); white-space: normal; min-width: 150px; }
+.name-cell { font-weight: normal; color: var(--text-dark); white-space: nowrap; min-width: 150px; }
 .number-cell { font-variant-numeric: tabular-nums; }
 
 /* Badges */
-.type-badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; min-width: 60px; text-align: center; }
+.type-badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: normal; display: inline-block; min-width: 60px; text-align: center; }
 .type-badge.inbound { background: #dbeafe; color: #1e40af; } /* Blue */
 .type-badge.outbound { background: #fee2e2; color: #991b1b; } /* Red */
 .type-badge.return-in { background: #dcfce7; color: #166534; } /* Green */
 .type-badge.refund { background: #f3e8ff; color: #6b21a8; } /* Purple */
 
-.plus { color: #166534; font-weight: 700; }
-.minus { color: #991b1b; font-weight: 700; }
+.plus { color: #166534; font-weight: normal; }
+.minus { color: #991b1b; font-weight: normal; }
 
 </style>

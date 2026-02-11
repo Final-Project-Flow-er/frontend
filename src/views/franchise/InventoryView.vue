@@ -24,7 +24,7 @@ const filteredItems = computed(() => {
   })
 })
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 const getStatusClass = (s) => ({ '정상': 'status-ok', '품절임박': 'status-warning', '품절': 'status-danger' }[s] || '')
 </script>
 

@@ -74,7 +74,7 @@ const cancelReturnRequest = () => {
   router.back() // Use router.back() for consistency
 }
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const startEditing = () => {
   editableItem.value = { ...returnItem.value }

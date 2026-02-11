@@ -101,7 +101,7 @@ const getStatusClass = (s) => ({
   '대금 차감 거절': 'status-danger'
 }[s] || '')
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const goToDetail = (item) => {
   router.push(`/franchise/returns/${item.returnCode}`)

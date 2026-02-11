@@ -126,16 +126,16 @@ const downloadExcel = () => {
     <!-- 정산 요약 -->
     <div class="final-card">
       <span class="fc-label">최종 정산 금액</span>
-      <p class="fc-amount">₩ {{ fmt(finalAmount) }}</p>
+      <p class="fc-amount">{{ fmt(finalAmount) }}</p>
     </div>
 
     <section class="summary-grid">
-      <div class="summary-card primary"><span class="s-label">총 매출</span><p class="s-value primary-color">₩ {{ fmt(settlement.totalSales) }}</p></div>
-      <div class="summary-card refund"><span class="s-label">반품 환급</span><p class="s-value primary-color">₩ {{ fmt(settlement.refund) }}</p></div>
-      <div class="summary-card"><span class="s-label">발주 대금</span><p class="s-value neg">₩ {{ fmt(settlement.orderCost) }}</p></div>
-      <div class="summary-card"><span class="s-label">배송비</span><p class="s-value neg">₩ {{ fmt(settlement.shipping) }}</p></div>
-      <div class="summary-card"><span class="s-label">손실</span><p class="s-value neg">₩ {{ fmt(settlement.loss) }}</p></div>
-      <div class="summary-card"><span class="s-label">수수료</span><p class="s-value neg">₩ {{ fmt(settlement.commission) }}</p></div>
+      <div class="summary-card primary"><span class="s-label">총 매출</span><p class="s-value primary-color">{{ fmt(settlement.totalSales) }}</p></div>
+      <div class="summary-card refund"><span class="s-label">반품 환급</span><p class="s-value primary-color">{{ fmt(settlement.refund) }}</p></div>
+      <div class="summary-card"><span class="s-label">발주 대금</span><p class="s-value neg">{{ fmt(settlement.orderCost) }}</p></div>
+      <div class="summary-card"><span class="s-label">배송비</span><p class="s-value neg">{{ fmt(settlement.shipping) }}</p></div>
+      <div class="summary-card"><span class="s-label">손실</span><p class="s-value neg">{{ fmt(settlement.loss) }}</p></div>
+      <div class="summary-card"><span class="s-label">수수료</span><p class="s-value neg">{{ fmt(settlement.commission) }}</p></div>
     </section>
 
     <!-- 필터 -->
@@ -159,8 +159,9 @@ const downloadExcel = () => {
             <td><span :class="['type-tag', getTypeClass(v.type)]">{{ v.typeName }}</span></td>
             <td>{{ v.product }}</td>
             <td class="text-right">{{ v.qty != null ? v.qty : '−' }}</td>
-            <td class="text-right">{{ v.unitPrice != null ? '₩ ' + fmt(v.unitPrice) : '−' }}</td>
-            <td class="text-right fw700">₩ {{ fmt(v.amount) }}</td>
+            <td class="text-right">{{ v.unitPrice != null ? fmt(v.unitPrice) : '−' }}</td>
+            <td class="text-right fw700">
+              {{ fmt(v.amount) }}</td>
             <td class="time-cell">{{ v.date }}</td>
           </tr>
           <tr v-if="filteredVouchers.length === 0"><td colspan="7" class="empty-cell">전표가 없습니다</td></tr>
@@ -178,7 +179,7 @@ const downloadExcel = () => {
         <div class="chart-bars">
           <div v-for="(d, idx) in graphData" :key="idx" class="bar-col">
             <div class="bar-wrapper">
-              <div class="bar" :style="{ height: (d.sales / maxSales * 100) + '%' }" :title="'₩ ' + fmt(d.sales)">
+              <div class="bar" :style="{ height: (d.sales / maxSales * 100) + '%' }" :title="fmt(d.sales)">
                 <span v-if="d.sales > 0" class="bar-label">{{ fmt(d.sales) }}</span>
               </div>
             </div>
@@ -225,11 +226,11 @@ const downloadExcel = () => {
 .summary-card.primary { }
 .summary-card.refund { }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
-.s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); text-align: right; }
+.s-value { font-size: 1.4rem; font-weight: normal; margin: 0; color: var(--text-dark); text-align: right; }
 .s-value.neg { color: #ef4444; }
 .s-value.primary-color { color: var(--primary) !important; }
-.fc-label { font-size: 1rem; font-weight: 700; }
-.fc-amount { font-size: 1.85rem; font-weight: 800; margin: 0; }
+.fc-label { font-size: 1rem; font-weight: normal; }
+.fc-amount { font-size: 1.85rem; font-weight: normal; margin: 0; }
 
 .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .filter-chip { padding: 0.4rem 1rem; border-radius: 999px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: var(--text-light); transition: all 0.15s; }
@@ -246,7 +247,7 @@ const downloadExcel = () => {
 .data-table tbody tr:hover { background: #f8fafc; }
 .text-right { text-align: right; }
 .id-cell { color: var(--primary); font-weight: 600; font-size: 0.8rem; }
-.fw700 { font-weight: 700; }
+.fw700 { font-weight: normal; }
 .time-cell { color: var(--text-light); font-size: 0.8rem; }
 .empty-cell { text-align: center; color: var(--text-light); padding: 3rem !important; }
 .type-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }

@@ -23,7 +23,6 @@
           <option value="DANGER">위험 (DANGER)</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <!-- Safety Stock Alert Section -->
@@ -238,7 +237,7 @@ const lowStockItems = computed(() => {
 
 // Actions
 const createOrder = () => {
-  alert('발주 생성 페이지로 이동합니다 (구현 예정)')
+  router.push({ name: 'franchise-order-create' })
 }
 
 const goToDetail = (code) => {
@@ -284,7 +283,7 @@ const saveSettings = () => {
 
 <style scoped>
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); }
+.header-row h2 { margin: 0; font-size: 1.5rem; font-weight: normal; color: var(--text-dark); }
 .content-wrapper { max-width: 1400px; margin: 0 auto; }
 
 /* Filter Styles */
@@ -332,7 +331,7 @@ const saveSettings = () => {
   border-color: #c6f6d5;
 }
 .alert-title {
-  font-weight: 700;
+  font-weight: normal;
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
   color: #c53030;
@@ -340,7 +339,7 @@ const saveSettings = () => {
 .safe .alert-title { color: #2f855a; margin-bottom: 0; }
 .alert-section ul { margin: 0; padding-left: 1.5rem; }
 .alert-section li { margin-bottom: 0.25rem; color: #742a2a; }
-.danger-text { color: #e53e3e; font-weight: 800; }
+.danger-text { color: #e53e3e; font-weight: normal; }
 
 /* Data Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
@@ -350,14 +349,14 @@ const saveSettings = () => {
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
-.name-cell { font-weight: 600; }
+.sku-cell { color: var(--primary); font-weight: normal; }
+.name-cell { font-weight: normal; }
 
 .status-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: normal;
 }
 .status-badge.safe { background: #e6fffa; color: #2c7a7b; }
 .status-badge.warning { background: #fffaf0; color: #dd6b20; }
@@ -369,7 +368,7 @@ const saveSettings = () => {
 }
 
 .action-btn.primary {
-  background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer;
+  background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: normal; cursor: pointer;
 }
 
 /* Modal/Popup Styles */

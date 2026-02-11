@@ -26,4 +26,19 @@ body {
   height: 100vh !important;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
+/* 전역: 모든 테이블 셀 한 줄 출력 */
+th,
+td {
+  white-space: nowrap;
+}
+
+/* 전역: 모든 리스트(테이블) 가로 스크롤 */
+.data-table-card,
+.table-container,
+.data-table-scroll-wrapper {
+  overflow-x: auto;
+}

@@ -34,7 +34,7 @@
         </select>
       </div>
       <div class="filter-actions">
-           <button class="search-btn">조회</button>
+
       </div>
    
     </div>

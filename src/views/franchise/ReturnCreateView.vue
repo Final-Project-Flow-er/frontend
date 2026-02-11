@@ -165,7 +165,7 @@ const submitReturn = () => {
   router.push('/returns')
 }
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 </script>
 
 <template>

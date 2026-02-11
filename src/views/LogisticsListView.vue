@@ -95,7 +95,7 @@
                 <span class="sub-text">{{ company.phone }}</span>
               </div>
             </td>
-            <td class="cost-cell">{{ company.cost.toLocaleString() }}원</td>
+            <td class="cost-cell">{{ company.cost.toLocaleString() }}</td>
             <td>{{ company.region }}</td>
             <td>{{ company.vehicleCount }}대</td>
             <td>{{ company.contractEnd }}</td>

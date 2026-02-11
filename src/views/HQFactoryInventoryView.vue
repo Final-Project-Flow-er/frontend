@@ -23,7 +23,7 @@
           <option value="DANGER">위험 (DANGER)</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
+
     </div>
 
     <!-- Safety Stock Alert Section -->

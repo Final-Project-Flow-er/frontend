@@ -17,7 +17,7 @@ const grandTotal = computed(() => {
   return salesItems.value.reduce((sum, item) => sum + item.totalPrice, 0)
 })
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const submitSale = () => {
   alert('결제 완료')

@@ -92,7 +92,7 @@ const cancelOrder = () => {
   router.push('/orders')
 }
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const goToEdit = () => {
   router.push({ name: 'head-office-order-edit', params: { id: orderId } })

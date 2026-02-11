@@ -6,11 +6,36 @@ const router = useRouter()
 
 // Mock Stock Data
 const stocks = ref([
-  { id: 1, code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', status: '안전', spiciness: '순한맛', current: 500, safety: 100, recommended: 200, inputQty: 0 },
-  { id: 2, code: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', status: '부족', spiciness: '기본맛', current: 50, safety: 150, recommended: 250, inputQty: 0 },
-  { id: 3, code: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', status: '위험', spiciness: '매운맛', current: 10, safety: 80, recommended: 120, inputQty: 0 },
-  { id: 4, code: 'OR0403', name: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', status: '입고 예정', spiciness: '아주 매운맛', current: 30, safety: 100, recommended: 150, inputQty: 0 },
-  { id: 5, code: 'RO0103', name: '로제 떡볶이 밀키트 순한맛 3,4인분', status: '안전', spiciness: '순한맛', current: 300, safety: 50, recommended: 100, inputQty: 0 },
+  // 오리지널 1,2인분 (10,000원)
+  { id: 1, code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', status: '안전', spiciness: '순한맛', current: 500, safety: 100, recommended: 0, inputQty: 0 },
+  { id: 2, code: 'OR0201', name: '오리지널 떡볶이 밀키트 기본맛 1,2인분', status: '부족', spiciness: '기본맛', current: 80, safety: 100, recommended: 120, inputQty: 0 },
+  { id: 3, code: 'OR0301', name: '오리지널 떡볶이 밀키트 매운맛 1,2인분', status: '안전', spiciness: '매운맛', current: 350, safety: 100, recommended: 0, inputQty: 0 },
+  { id: 4, code: 'OR0401', name: '오리지널 떡볶이 밀키트 아주 매운맛 1,2인분', status: '위험', spiciness: '아주 매운맛', current: 20, safety: 100, recommended: 180, inputQty: 0 },
+  // 오리지널 3,4인분 (18,000원)
+  { id: 5, code: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', status: '안전', spiciness: '순한맛', current: 300, safety: 80, recommended: 0, inputQty: 0 },
+  { id: 6, code: 'OR0203', name: '오리지널 떡볶이 밀키트 기본맛 3,4인분', status: '위험', spiciness: '기본맛', current: 15, safety: 80, recommended: 165, inputQty: 0 },
+  { id: 7, code: 'OR0303', name: '오리지널 떡볶이 밀키트 매운맛 3,4인분', status: '안전', spiciness: '매운맛', current: 200, safety: 80, recommended: 0, inputQty: 0 },
+  { id: 8, code: 'OR0403', name: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', status: '입고 예정', spiciness: '아주 매운맛', current: 30, safety: 80, recommended: 150, inputQty: 0 },
+  // 로제 1,2인분 (12,000원)
+  { id: 9, code: 'RO0101', name: '로제 떡볶이 밀키트 순한맛 1,2인분', status: '안전', spiciness: '순한맛', current: 420, safety: 100, recommended: 0, inputQty: 0 },
+  { id: 10, code: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', status: '부족', spiciness: '기본맛', current: 50, safety: 100, recommended: 150, inputQty: 0 },
+  { id: 11, code: 'RO0301', name: '로제 떡볶이 밀키트 매운맛 1,2인분', status: '위험', spiciness: '매운맛', current: 10, safety: 100, recommended: 190, inputQty: 0 },
+  { id: 12, code: 'RO0401', name: '로제 떡볶이 밀키트 아주 매운맛 1,2인분', status: '안전', spiciness: '아주 매운맛', current: 280, safety: 100, recommended: 0, inputQty: 0 },
+  // 로제 3,4인분 (22,000원)
+  { id: 13, code: 'RO0103', name: '로제 떡볶이 밀키트 순한맛 3,4인분', status: '안전', spiciness: '순한맛', current: 300, safety: 80, recommended: 0, inputQty: 0 },
+  { id: 14, code: 'RO0203', name: '로제 떡볶이 밀키트 기본맛 3,4인분', status: '부족', spiciness: '기본맛', current: 60, safety: 80, recommended: 120, inputQty: 0 },
+  { id: 15, code: 'RO0303', name: '로제 떡볶이 밀키트 매운맛 3,4인분', status: '안전', spiciness: '매운맛', current: 250, safety: 80, recommended: 0, inputQty: 0 },
+  { id: 16, code: 'RO0403', name: '로제 떡볶이 밀키트 아주 매운맛 3,4인분', status: '위험', spiciness: '아주 매운맛', current: 5, safety: 80, recommended: 175, inputQty: 0 },
+  // 마라 1,2인분 (12,000원)
+  { id: 17, code: 'MA0101', name: '마라 떡볶이 밀키트 순한맛 1,2인분', status: '안전', spiciness: '순한맛', current: 400, safety: 100, recommended: 0, inputQty: 0 },
+  { id: 18, code: 'MA0201', name: '마라 떡볶이 밀키트 기본맛 1,2인분', status: '입고 예정', spiciness: '기본맛', current: 40, safety: 100, recommended: 160, inputQty: 0 },
+  { id: 19, code: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', status: '안전', spiciness: '매운맛', current: 320, safety: 100, recommended: 0, inputQty: 0 },
+  { id: 20, code: 'MA0401', name: '마라 떡볶이 밀키트 아주 매운맛 1,2인분', status: '부족', spiciness: '아주 매운맛', current: 70, safety: 100, recommended: 130, inputQty: 0 },
+  // 마라 3,4인분 (22,000원)
+  { id: 21, code: 'MA0103', name: '마라 떡볶이 밀키트 순한맛 3,4인분', status: '안전', spiciness: '순한맛', current: 260, safety: 80, recommended: 0, inputQty: 0 },
+  { id: 22, code: 'MA0203', name: '마라 떡볶이 밀키트 기본맛 3,4인분', status: '위험', spiciness: '기본맛', current: 0, safety: 80, recommended: 200, inputQty: 0 },
+  { id: 23, code: 'MA0303', name: '마라 떡볶이 밀키트 매운맛 3,4인분', status: '안전', spiciness: '매운맛', current: 180, safety: 80, recommended: 0, inputQty: 0 },
+  { id: 24, code: 'MA0403', name: '마라 떡볶이 밀키트 아주 매운맛 3,4인분', status: '부족', spiciness: '아주 매운맛', current: 55, safety: 80, recommended: 125, inputQty: 0 },
 ])
 
 const filter = ref({

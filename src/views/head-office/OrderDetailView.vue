@@ -83,7 +83,7 @@ const getStatusClass = (s) => ({
   '반려': 'status-danger'
 }[s] || '')
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const goToEdit = () => {
   router.push({ name: 'head-office-order-edit', params: { id: orderItem.value.orderCode } })

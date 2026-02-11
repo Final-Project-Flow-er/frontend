@@ -36,7 +36,7 @@
           <option value="03">3~4인분</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
+
     </div>
 
     <!-- Product Card Grid -->
@@ -296,7 +296,7 @@ const getSpiceLabel = (code) => {
     return map[code] || code
 }
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 // Modal Logic
 const updateCodeAndName = () => {

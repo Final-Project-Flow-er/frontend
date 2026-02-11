@@ -183,7 +183,7 @@ const getStatusClass = (s) => ({
   '반려': 'status-danger'
 }[s] || '')
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const calculateTotalAmount = computed(() => {
   if (!editedProducts.value) return 0
