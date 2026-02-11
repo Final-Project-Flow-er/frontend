@@ -14,6 +14,8 @@ const handleLogin = () => {
     alert('아이디와 비밀번호를 입력해주세요.')
     return
   }
+  // 로그인 성공 시 세션 저장소에 로그인 상태 저장
+  sessionStorage.setItem('isLoggedIn', 'true')
   router.push('/')
 }
 </script>

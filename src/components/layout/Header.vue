@@ -3,7 +3,7 @@
     <div class="page-title"><h2>재고 관리 현황</h2></div>
 
     <div class="header-tools">
-      <div class="notification">
+      <div class="notification" @click="$router.push('/notice')">
         <img src="@/assets/notification.png" alt="알림" class="notif-img">
         <span class="dot"></span>
       </div>
@@ -13,8 +13,8 @@
         </div>
 
         <div class="user-detail">
-          <p class="u-name">관리자</p>
-          <p class="u-role">System Admin</p>
+          <p class="u-name">유저</p>
+          <p class="u-role">가맹점주</p>
         </div>
 
         <div class="divider"></div>
@@ -32,12 +32,17 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
 defineProps(['modelValue'])
 defineEmits(['update:modelValue'])
 
+const router = useRouter()
+
 const handleLogout = () => {
   if(confirm('로그아웃 하시겠습니까?')) {
-    console.log('Logout');
+    sessionStorage.removeItem('isLoggedIn')
+    router.push('/login')
   }
 }
 </script>

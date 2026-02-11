@@ -37,19 +37,6 @@
           </li>
         </ul>
       </template>
-      <template v-for="category in sidebarItems" :key="category.name">
-        <div class="menu-group">{{ category.name }}</div>
-        <ul>
-          <li
-            v-for="item in category.children"
-            :key="item.routeName"
-          >
-            <router-link :to="{ name: item.routeName }" active-class="active">
-              {{ item.name }}
-            </router-link>
-          </li>
-        </ul>
-      </template>
     </nav>
   </aside>
 </template>
@@ -76,15 +63,43 @@ const menuGroups = ref([
     title: '본사',
     items: [
       {
+        name: '조직 관리',
+        path: '',
+        isOpen: false,
+        children: [
+            { name: '조직 등록', path: '/registration' },
+            { name: '조직 조회', path: '/organizations' }
+        ]
+      },
+      {
+        name: '회원 관리',
+        path: '',
+        isOpen: false,
+        children: [
+            { name: '회원 등록', path: '/admin/member-registration' },
+            { name: '회원 조회', path: '/admin/members' },
+            { name: '회원 로그', path: '/admin/member-logs' }
+        ]
+      },
+      {
+        name: '운송 관리',
+        path: '',
+        isOpen: false,
+        children: [
+            { name: '업체 및 차량 등록', path: '/admin/logistics-registration' },
+            { name: '업체 및 차량 조회', path: '/admin/logistics' }
+        ]
+      },
+      {
         name: '재고 관리',
         path: '',
-        isOpen: false, // Default closed
+        isOpen: false,
         children: [
             { name: '공장 재고관리', path: '/hq/inventory/factory' },
             { name: '가맹점 재고 관리', path: '/hq/inventory/franchise' }
         ]
       },
-      { name: '본사 상품 관리', path: '/hq/products/manage' },
+      { name: '상품 관리', path: '/hq/products/manage' },
       {
         name: '입출고 관리',
         path: '',
@@ -94,6 +109,18 @@ const menuGroups = ref([
             { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
             { name: '공장 로그', path: '/hq/inventory/logs/factory' }
         ]
+      },
+      {
+        name: '유통 및 정산',
+        path: '',
+        isOpen: false,
+        children: [
+            { name: '발주 관리', path: '/head-office/orders' },
+            { name: '발주 요청 접수', path: '/head-office/orders/reception' },
+            { name: '발주 요청 관리', path: '/head-office/orders/request' },
+            { name: '반품 요청 관리', path: '/head-office/returns' },
+            { name: '정산 관리', path: '/hq/settlement' }
+        ]
       }
     ]
   },
@@ -102,13 +129,21 @@ const menuGroups = ref([
     items: [
       { name: '재고 관리', path: '/store/inventory' },
       { name: '상품 정보', path: '/products/manage' },
-      { name: '입출고 관리', path: '/inventory/logs' }
+      { name: '입출고 관리', path: '/inventory/logs' },
+      { name: '입고 관리', path: '/franchise/inbound' },
+      { name: '발주 관리', path: '/franchise/orders' },
+      { name: '반품 관리', path: '/franchise/returns' },
+      { name: '판매 관리', path: '/franchise/products' },
+      { name: '정산 내역', path: '/store/settlement' }
     ]
   },
   {
     title: '공장',
     items: [
-      { name: '입출고 관리', path: '/hq/inventory/logs/factory' }
+      { name: '입고 관리', path: '/factory/inbound' },
+      { name: '출고 관리', path: '/factory/outbound' },
+      { name: '발주 접수', path: '/factory/orders' },
+      { name: '발주 요청 관리', path: '/factory/orders/request' }
     ]
   },
   {
@@ -123,39 +158,6 @@ const menuGroups = ref([
 const goHome = () => {
   router.push({ path: '/' })
 }
-// Updated sidebar items
-const sidebarItems = ref([
-  {
-    name: '본사',
-    children: [
-      { name: '발주 관리', routeName: 'head-office-order-list' },
-      { name: '발주 요청 접수', routeName: 'head-office-order-reception' },
-      { name: '발주 요청 관리', routeName: 'head-office-order-request' },
-      { name: '반품 요청 관리', routeName: 'head-office-return-list' },
-      { name: '정산 관리', routeName: 'hq-settlement-list' },
-    ]
-  },
-  {
-    name: '가맹점',
-    children: [
-      { name: '입고 관리', routeName: 'franchise-inbound' },
-      { name: '발주 관리', routeName: 'franchise-order-list' },
-      { name: '반품 관리', routeName: 'franchise-return-list' },
-      { name: '판매 관리', routeName: 'franchise-product-sell' },
-      { name: '재고 관리', routeName: 'store-inventory' },
-      { name: '정산 관리', routeName: 'store-settlement-summary' },
-    ]
-  },
-  {
-    name: '공장',
-    children: [
-      { name: '입고 관리', routeName: 'factory-inbound' },
-      { name: '출고 관리', routeName: 'factory-outbound' },
-      { name: '발주 요청 접수', routeName: 'factory-order-list' },
-      { name: '발주 요청 관리', routeName: 'factory-order-request' },
-    ]
-  }
-])
 const activeMenu = ref('대시보드')
 const currentPath = ref(window.location.pathname)
 

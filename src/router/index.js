@@ -17,17 +17,30 @@ import HeadOfficeOrderRequestView from '../views/head-office/OrderRequestView.vu
 import HeadOfficeOrderDetailView from '../views/head-office/OrderDetailView.vue'
 import HeadOfficeReturnRequestListView from '../views/head-office/ReturnRequestListView.vue'
 import FactoryOrderListView from '../views/factory/OrderListView.vue'
-
 import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
 import FactoryInboundView from '../views/factory/InboundView.vue'
 import FactoryOutboundView from '../views/factory/OutboundView.vue'
+import MyPageView from '../views/MyPageView.vue'
+import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
+import OrganizationListView from '../views/OrganizationListView.vue'
+import OrganizationDetailView from '../views/OrganizationDetailView.vue'
+import MemberListView from '../views/MemberListView.vue'
+import MemberDetailView from '../views/MemberDetailView.vue'
+import NoticeListView from '../views/NoticeListView.vue'
+import NoticeRegistrationView from '../views/NoticeRegistrationView.vue'
+import NoticeDetailView from '../views/NoticeDetailView.vue'
+import LogisticsRegistrationView from '../views/LogisticsRegistrationView.vue'
+import LogisticsListView from '../views/LogisticsListView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
             path: '/',
-            redirect: '/franchise/inventory'
+            redirect: () => {
+                const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true'
+                return isLoggedIn ? '/franchise/inventory' : '/login'
+            }
         },
         // --- Franchise Routes ---
         {
@@ -89,6 +102,76 @@ const router = createRouter({
             path: '/franchise/products',
             name: 'franchise-product-list',
             component: ProductListView
+        },
+        {
+            path: '/mypage',
+            name: 'mypage',
+            component: MyPageView
+        },
+        {
+            path: '/registration',
+            name: 'store-factory-registration',
+            component: StoreFactoryRegistrationView
+        },
+        {
+            path: '/organizations',
+            name: 'organization-list',
+            component: OrganizationListView
+        },
+        {
+            path: '/organization/:code',
+            name: 'organization-detail',
+            component: OrganizationDetailView
+        },
+        {
+            path: '/admin/member-registration',
+            name: 'MemberRegistration',
+            component: () => import('../views/MemberRegistrationView.vue')
+        },
+        {
+            path: '/admin/member-logs',
+            name: 'MemberLogs',
+            component: () => import('../views/MemberLogView.vue')
+        },
+        {
+            path: '/admin/members',
+            name: 'member-list',
+            component: MemberListView
+        },
+        {
+            path: '/admin/members/:employeeNumber',
+            name: 'member-detail',
+            component: MemberDetailView
+        },
+        {
+            path: '/notice',
+            name: 'notice-list',
+            component: NoticeListView
+        },
+        {
+            path: '/notice/register',
+            name: 'notice-register',
+            component: NoticeRegistrationView
+        },
+        {
+            path: '/notice/edit/:id',
+            name: 'notice-edit',
+            component: NoticeRegistrationView
+        },
+        {
+            path: '/notice/:id',
+            name: 'notice-detail',
+            component: NoticeDetailView
+        },
+        {
+            path: '/admin/logistics-registration',
+            name: 'logistics-registration',
+            component: LogisticsRegistrationView
+        },
+        {
+            path: '/admin/logistics',
+            name: 'logistics-list',
+            component: LogisticsListView
         },
         {
             path: '/store/inventory',
