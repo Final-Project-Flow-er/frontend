@@ -45,8 +45,8 @@
         <thead>
           <tr>
             <th class="checkbox-cell"><input type="checkbox" v-model="selectAll" @change="toggleAll" /></th>
+            <th>식별 코드</th>
             <th>박스 코드</th>
-            <th>일련번호</th>
             <th>유통기한</th>
             <th>제조일자</th>
             <th>배송완료 일자</th>
@@ -57,8 +57,8 @@
         <tbody>
           <tr v-for="item in filteredItems" :key="item.serialCode">
             <td class="checkbox-cell"><input type="checkbox" v-model="selectedItems" :value="item.serialCode" /></td>
-            <td>{{ item.boxCode }}</td>
             <td class="sku-cell">{{ item.serialCode }}</td>
+            <td>{{ item.boxCode }}</td>
             <td>{{ item.expireDate }}</td>
             <td>{{ item.manufactureDate }}</td>
             <td>{{ item.deliveryCompleteDate }}</td>
@@ -104,22 +104,33 @@ const items = ref([])
 
 onMounted(() => {
   // Generate dummy items based on productCode
-  // Box Code format: SEO001{YYYYMMDD}{ProductCodePrefix}00100
-  // Serial Code format: SEO001A1{ProductCodePrefix}00101...
+  // Box Code format: UL01{YYYYMMDD}{ProductCodeWithPadd}{Seq}
+  // User Req: UL01 + Factory Numbering ? For now assume UL01 is fixed prefix.
+  // Actually regex-like: UL01 + Date + Product Code + Box Code
   
-  const prefix = productCode.value.substring(0, 4) // e.g. RO01
-  const baseBoxCode = `SEO00120260209${prefix}00100` 
+  const today = '20260209'
+  const prefix = productCode.value 
   
-  for (let i = 1; i <= 20; i++) {
-    items.value.push({
-      boxCode: baseBoxCode,
-      serialCode: `SEO001A1${prefix}0010${i < 10 ? '0' + i : i}`,
-      expireDate: '2026-08-09',
-      manufactureDate: '2026-02-09',
-      deliveryCompleteDate: '2026-02-10 14:00:00',
-      inboundCompleteDate: '2026-02-10 15:30:00',
-      status: i > 15 ? 'RETURN_WAIT' : 'AVAILABLE' // Some mock return wait
-    })
+  for (let b = 1; b <= 5; b++) { // 5 boxes
+    const boxSeq = b < 10 ? '0' + b : b
+    // Box Code ends in '00'
+    const boxCode = `SEO001${today}${prefix}${boxSeq}00`
+    
+    for (let i = 1; i <= 20; i++) { // 20 items per box
+      const itemSeq = i < 10 ? '0' + i : i
+      // Identification Code ends in 01~20
+      const serialCode = `SEO001${today}${prefix}${boxSeq}${itemSeq}`
+      
+      items.value.push({
+        boxCode: boxCode,
+        serialCode: serialCode, 
+        expireDate: '2026-08-09',
+        manufactureDate: '2026-02-09',
+        deliveryCompleteDate: '2026-02-10 14:00:00',
+        inboundCompleteDate: '2026-02-10 15:30:00',
+        status: (b * i) > 90 ? 'RETURN_WAIT' : 'AVAILABLE'
+      })
+    }
   }
 })
 

@@ -214,6 +214,46 @@ const router = createRouter({
             path: '/hq/settlement/logs',
             name: 'hq-settlement-logs',
             component: () => import('@/views/hq-settlement/HqSettlementLogView.vue')
+        },
+        {
+            path: '/products/manage',
+            name: 'product-manage',
+            component: () => import('../views/StoreProductManagementView.vue')
+        },
+        {
+            path: '/inventory/logs',
+            name: 'inventory-logs',
+            component: () => import('../views/StoreInventoryLogView.vue')
+        },
+        {
+            path: '/hq/products/manage',
+            name: 'hq-product-manage',
+            component: () => import('../views/HQProductManagementView.vue')
+        },
+        {
+            path: '/hq/inventory/factory',
+            name: 'hq-inventory-factory',
+            component: () => import('../views/HQFactoryInventoryView.vue')
+        },
+        {
+            path: '/hq/inventory/franchise',
+            name: 'hq-inventory-franchise',
+            component: () => import('../views/HQFranchiseInventoryView.vue')
+        },
+        {
+            path: '/hq/inventory/logs/hq',
+            name: 'hq-log-hq',
+            component: () => import('../views/HQInventoryLogView.vue')
+        },
+        {
+            path: '/hq/inventory/logs/franchise',
+            name: 'hq-log-franchise',
+            component: () => import('../views/HQFranchiseInventoryLogView.vue')
+        },
+        {
+            path: '/hq/inventory/logs/factory',
+            name: 'hq-log-factory',
+            component: () => import('../views/HQFactoryInventoryLogView.vue')
         }
     ]
 })
