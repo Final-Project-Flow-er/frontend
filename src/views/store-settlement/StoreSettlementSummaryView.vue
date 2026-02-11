@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import * as XLSX from 'xlsx'
+import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
 
 const router = useRouter()
 
@@ -87,6 +89,11 @@ const orderHistory = computed(() => {
 
 /* ── 모달 ── */
 const showSalesModal = ref(false)
+const showReceiptModal = ref(false)
+
+const openReceipt = () => {
+  showReceiptModal.value = true
+}
 
 /* ── 포맷 ── */
 const fmt = (n) => new Intl.NumberFormat('ko-KR').format(n)
@@ -101,14 +108,66 @@ const openMonthPicker = () => { monthRef.value?.showPicker() }
 /* ── 네비게이션 ── */
 const goToItemSummary = () => router.push('/store/settlement/items')
 const goToVoucherList = () => router.push('/store/settlement/vouchers')
+
+/* ── 엑셀(.xlsx) 다운로드 ── */
+const downloadExcel = () => {
+  const d = activeTab.value === 'daily' ? selectedDate.value : selectedMonth.value
+  const data = currentSettlement.value
+
+  // 1. 주문 내역 데이터 준비 (Sheet 1)
+  const orderRows = orderHistory.value.map(o => ({
+    '주문번호': o.id,
+    '상품명': o.product,
+    '수량': o.qty,
+    '단가': o.unitPrice,
+    '합계금액': o.total,
+    '발생일시': o.time
+  }))
+
+  // 2. 정산 요약 데이터 준비 (Sheet 2)
+  const summaryRows = [
+    { '항목': '총 매출', '금액': data.totalSales, '비고': '상품 판매 합계' },
+    { '항목': '발주 대금', '금액': data.orderCost, '비고': '차감 (-)' },
+    { '항목': '배송비', '금액': data.shippingFee, '비고': '차감 (-)' },
+    { '항목': '정산 수수료', '금액': data.commission, '비고': '차감 (-)' },
+    { '항목': '손실액', '금액': data.loss, '비고': '차감 (-)' },
+    { '항목': '반품 환급', '금액': data.returnRefund, '비고': '가산 (+)' },
+    { '항목': '최종 정산 금액', '금액': data.finalAmount, '비고': '최종 수령액' }
+  ]
+
+  const wb = XLSX.utils.book_new()
+  const wsOrders = XLSX.utils.json_to_sheet(orderRows)
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows)
+
+  // 컬럼 너비 설정
+  wsOrders['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 20 }]
+  wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }]
+
+  XLSX.utils.book_append_sheet(wb, wsOrders, '주문상세내역')
+  XLSX.utils.book_append_sheet(wb, wsSummary, '정산결과요약')
+
+  XLSX.writeFile(wb, `Store_Settlement_${d}.xlsx`)
+}
 </script>
 
 <template>
   <div class="content-wrapper">
     <!-- 페이지 타이틀 -->
     <div class="page-header">
-      <h1 class="page-title">정산 요약</h1>
-      <p class="page-desc">일별 · 월별 정산 현황을 확인하세요.</p>
+      <div>
+        <h1 class="page-title">정산 요약</h1>
+        <p class="page-desc">일별 · 월별 정산 현황을 확인하세요.</p>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn excel-btn" @click="downloadExcel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Excel 다운로드
+        </button>
+        <button class="action-btn receipt-btn" @click="openReceipt">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          영수증 조회 (PDF)
+        </button>
+      </div>
     </div>
 
     <!-- 탭 + 날짜 선택 -->
@@ -229,6 +288,23 @@ const goToVoucherList = () => router.push('/store/settlement/vouchers')
     </div>
   </div>
 
+  <!-- 영수증 모달 -->
+  <SettlementReceiptModal
+    :is-open="showReceiptModal"
+    :store="{ 
+      name: '본인 가맹점', 
+      id: 'S001', 
+      sales: currentSettlement.totalSales,
+      orderCost: currentSettlement.orderCost,
+      shipping: currentSettlement.shippingFee,
+      commission: currentSettlement.commission,
+      loss: currentSettlement.loss,
+      refund: currentSettlement.returnRefund
+    }"
+    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
+    @close="showReceiptModal = false"
+  />
+
   <!-- 주문 내역 모달 -->
   <teleport to="body">
     <div v-if="showSalesModal" class="modal-overlay" @click.self="showSalesModal = false">
@@ -266,9 +342,16 @@ const goToVoucherList = () => router.push('/store/settlement/vouchers')
 .content-wrapper { max-width: 1400px; margin: 0 auto; }
 
 /* ── 페이지 헤더 ── */
-.page-header { margin-bottom: 1.5rem; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
 .page-title { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0 0 0.25rem; }
 .page-desc { color: var(--text-light); font-size: 0.9rem; margin: 0; }
+.header-actions { display: flex; gap: 0.6rem; }
+.action-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
+.action-btn:hover { transform: translateY(-1px); }
+.excel-btn { background: #1e293b; color: white; }
+.excel-btn:hover { background: #0f172a; }
+.receipt-btn { background: var(--primary); color: white; }
+.receipt-btn:hover { background: #4f46e5; }
 
 /* ── 컨트롤 바 ── */
 .control-bar { display: flex; align-items: center; margin-bottom: 1.5rem; gap: 0.75rem; flex-wrap: wrap; }
