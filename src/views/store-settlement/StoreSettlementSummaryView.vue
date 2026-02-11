@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import * as XLSX from 'xlsx'
-import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
+import html2pdf from 'html2pdf.js'
 
 const router = useRouter()
 
@@ -89,11 +89,7 @@ const orderHistory = computed(() => {
 
 /* ── 모달 ── */
 const showSalesModal = ref(false)
-const showReceiptModal = ref(false)
-
-const openReceipt = () => {
-  showReceiptModal.value = true
-}
+const pdfTemplateRef = ref(null)
 
 /* ── 포맷 ── */
 const fmt = (n) => new Intl.NumberFormat('ko-KR').format(n)
@@ -148,6 +144,22 @@ const downloadExcel = () => {
 
   XLSX.writeFile(wb, `Store_Settlement_${d}.xlsx`)
 }
+
+/* ── PDF 다운로드 ── */
+const downloadPDF = () => {
+  const d = activeTab.value === 'daily' ? selectedDate.value : selectedMonth.value
+  const element = pdfTemplateRef.value
+  
+  const opt = {
+    margin: 10,
+    filename: `Settlement_Receipt_${d}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }
+
+  html2pdf().set(opt).from(element).save()
+}
 </script>
 
 <template>
@@ -159,13 +171,13 @@ const downloadExcel = () => {
         <p class="page-desc">일별 · 월별 정산 현황을 확인하세요.</p>
       </div>
       <div class="header-actions">
-        <button class="action-btn excel-btn" @click="downloadExcel">
+        <button v-if="activeTab === 'monthly'" class="action-btn excel-btn" @click="downloadExcel">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Excel 다운로드
         </button>
-        <button class="action-btn receipt-btn" @click="openReceipt">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          영수증 조회 (PDF)
+        <button class="action-btn receipt-btn" @click="downloadPDF">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          정산 영수증 다운로드 (PDF)
         </button>
       </div>
     </div>
@@ -288,22 +300,93 @@ const downloadExcel = () => {
     </div>
   </div>
 
-  <!-- 영수증 모달 -->
-  <SettlementReceiptModal
-    :is-open="showReceiptModal"
-    :store="{ 
-      name: '본인 가맹점', 
-      id: 'S001', 
-      sales: currentSettlement.totalSales,
-      orderCost: currentSettlement.orderCost,
-      shipping: currentSettlement.shippingFee,
-      commission: currentSettlement.commission,
-      loss: currentSettlement.loss,
-      refund: currentSettlement.returnRefund
-    }"
-    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
-    @close="showReceiptModal = false"
-  />
+  <!-- PDF 출력을 위한 숨겨진 영수증 템플릿 -->
+  <div style="display: none;">
+    <div ref="pdfTemplateRef" class="pdf-receipt-content">
+      <div class="receipt-card-pdf">
+        <div class="receipt-header">
+          <h2>정산 영수증</h2>
+          <div class="sub-header">RECEIPT</div>
+          <div class="brand">Chain-G 정산 시스템</div>
+        </div>
+        
+        <div class="receipt-info">
+          <div class="info-row">
+            <span class="label">가맹점 :</span>
+            <span class="value">본인 가맹점 (S001)</span>
+          </div>
+          <div class="info-row">
+            <span class="label">정산 기간 :</span>
+            <span class="value">{{ activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">발행일 :</span>
+            <span class="value">{{ new Date().toLocaleString() }}</span>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="section">
+          <h3>매출 내역</h3>
+          <div class="item-row">
+            <span>주문 list 합계</span>
+            <span class="amount text-red">{{ fmt(currentSettlement.totalSales) }}원</span>
+          </div>
+          <div class="total-box-pdf">
+            <span>총 매출</span>
+            <span class="total-amount">{{ fmt(currentSettlement.totalSales) }}</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>차감 내역</h3>
+          <div class="item-row">
+            <span>발주 대금 (상품list)</span>
+            <span class="amount text-red">-{{ fmt(currentSettlement.orderCost) }}원</span>
+          </div>
+          <div class="item-row">
+            <span>배송비</span>
+            <span class="amount text-red">-{{ fmt(currentSettlement.shippingFee) }}원</span>
+          </div>
+          <div class="item-row">
+            <span>수수료</span>
+            <span class="amount text-red">-{{ fmt(currentSettlement.commission) }}원</span>
+          </div>
+          <div class="item-row">
+            <span>손실</span>
+            <span class="amount text-red">-{{ fmt(currentSettlement.loss) }}원</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>환급 내역</h3>
+          <div class="item-row">
+            <span>반품 환급</span>
+            <span class="amount text-green">+{{ fmt(currentSettlement.returnRefund) }}원</span>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="final-box-pdf">
+          <span>최종 정산 금액</span>
+          <span class="final-amount">{{ fmt(currentSettlement.finalAmount) }}</span>
+        </div>
+
+        <div class="calculation-guide">
+          총 매출 - (발주대금+배송비+수수료+손실)+반품 환급
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="footer-msg">
+          <p>본 문서는 공식 정식 영수증입니다.</p>
+          <p>세무 신고 및 회계 처리 시 보관하시기 바랍니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- 주문 내역 모달 -->
   <teleport to="body">
@@ -350,8 +433,30 @@ const downloadExcel = () => {
 .action-btn:hover { transform: translateY(-1px); }
 .excel-btn { background: #1e293b; color: white; }
 .excel-btn:hover { background: #0f172a; }
-.receipt-btn { background: var(--primary); color: white; }
-.receipt-btn:hover { background: #4f46e5; }
+.receipt-btn { background: #ef4444; color: white; }
+.receipt-btn:hover { background: #dc2626; }
+
+/* ── PDF 전용 스타일 ── */
+.pdf-receipt-content { padding: 40px; background: white; width: 800px; color: black; font-family: sans-serif; }
+.receipt-card-pdf { border: 1px solid #e2e8f0; border-radius: 20px; padding: 40px; background: white; }
+.receipt-header { text-align: center; margin-bottom: 30px; }
+.receipt-header h2 { font-size: 24px; font-weight: 800; margin: 0; }
+.sub-header { font-size: 14px; color: #94a3b8; font-weight: 600; margin: 5px 0; }
+.brand { font-size: 13px; color: #64748b; }
+.section-divider { height: 2px; background: #000; margin: 20px 0; }
+.receipt-info .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+.receipt-info .label { font-weight: 700; }
+.section h3 { font-size: 16px; font-weight: 800; margin-bottom: 15px; }
+.item-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
+.item-row .amount.text-red { color: #ef4444; }
+.item-row .amount.text-green { color: #10b981; }
+.total-box-pdf { background: #eff6ff; border-radius: 50px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; margin: 10px 0 30px; }
+.total-box-pdf .total-amount { font-weight: 800; font-size: 20px; }
+.final-box-pdf { background: #eff6ff; border-radius: 16px; padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.final-box-pdf span:first-child { font-weight: 800; font-size: 18px; }
+.final-box-pdf .final-amount { font-weight: 800; font-size: 24px; }
+.calculation-guide { background: #e2e8f0; border-radius: 50px; padding: 12px; text-align: center; font-size: 12px; color: #475569; font-weight: 600; margin-bottom: 30px; }
+.footer-msg { text-align: center; font-size: 12px; color: #64748b; margin-top: 20px; }
 
 /* ── 컨트롤 바 ── */
 .control-bar { display: flex; align-items: center; margin-bottom: 1.5rem; gap: 0.75rem; flex-wrap: wrap; }
