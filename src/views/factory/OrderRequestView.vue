@@ -179,12 +179,7 @@ const getStatusClass = (s) => ({
       </table>
     </div>
 
-    <!-- Bottom Action Bar -->
-    <div class="bottom-action-bar">
-      <button class="action-btn vehicle-btn" @click="$router.push({ name: 'factory-vehicle-assignment' })">
-        차량 배정
-      </button>
-    </div>
+
   </div>
 </template>
 
