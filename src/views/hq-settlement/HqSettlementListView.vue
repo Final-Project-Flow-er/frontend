@@ -115,6 +115,120 @@ const getStatusClass = (status) => ({
   '대기': 'status-wait',
   '확정': 'status-confirmed',
  }[status] || '')
+
+import * as XLSX from 'xlsx'
+
+/* ── 엑셀(.xlsx) 다운로드 ── */
+const downloadExcel = () => {
+  const d = activeTab.value === 'daily' ? selectedDate.value : selectedMonth.value
+  
+  // 1. 전표 데이터 준비 (Flat Table style for Filtering)
+  const voucherData = []
+  const types = [
+    { id: 'sales', label: '판매', side: 'debit' },
+    { id: 'refund', label: '반품', side: 'debit' },
+    { id: 'orderCost', label: '발주', side: 'credit' },
+    { id: 'shipping', label: '배송', side: 'credit' },
+    { id: 'loss', label: '손실', side: 'credit' },
+    { id: 'commission', label: '수수료', side: 'credit' }
+  ]
+
+  stores.value.forEach(store => {
+    types.forEach(type => {
+      const amount = store[type.id]
+      if (amount === 0) return
+
+      const base = seed(d + store.id + type.id)
+      const count = seededRand(base, 2, 4)
+      let storeCatAmount = 0
+
+      for (let j = 0; j < count; j++) {
+        const isLast = j === count - 1
+        const partAmount = isLast ? (amount - storeCatAmount) : round100(seededRand(base + j, amount / count / 0.8, amount / count))
+        storeCatAmount += partAmount
+
+        const hour = 10 + j
+        const minute = seededRand(base + j, 0, 59)
+        const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2,'0')}`
+        const voucherId = `${type.id.substring(0,2).toUpperCase()}-${store.id}-${d.replace(/-/g,'')}-${j+1}`
+        const desc = getDetailedDesc(type.id, j, store.id)
+
+        voucherData.push({
+          '구분': type.label,
+          '가맹점명': store.name,
+          '전표번호': voucherId,
+          '일시': `${d} ${time}`,
+          '내역상세': desc,
+          '차변(입금/매출)': type.side === 'debit' ? partAmount : 0,
+          '대변(출금/비용)': type.side === 'credit' ? partAmount : 0,
+        })
+      }
+    })
+  })
+
+  // [정렬] 사용자가 원하시는 대로 '판매' 등이 먼저 보이게 구분순으로 정렬
+  const sortOrder = { '판매':1, '반품':2, '발주':3, '배송':4, '손실':5, '수수료':6 }
+  voucherData.sort((a, b) => sortOrder[a['구분']] - sortOrder[b['구분']])
+
+  // 2. 요약 데이터 준비
+  const summaryData = [
+    { '항목': '총 매출 합계', '금액': totals.value.sales, '비고': '전체 가맹점 판매 합산' },
+    { '항목': '총 차감 합계', '금액': (totals.value.orderCost + totals.value.shipping + totals.value.commission + totals.value.loss), '비고': '발주/배송/수수료/손실 합산' },
+    { '항목': '총 환급 합계', '금액': totals.value.refund, '비고': '반품 환급 합산' },
+    { '항목': '최종 정산 금액', '금액': totalFinal.value, '비고': '매출 - 차감 + 환급' }
+  ]
+
+  // 3. 워크북 생성
+  const wb = XLSX.utils.book_new()
+  
+  // 시트 1: 상세 전표 내역
+  const wsVouchers = XLSX.utils.json_to_sheet(voucherData)
+  
+  // [필터 적용] 헤더 행에 오토필터 추가
+  const range = XLSX.utils.decode_range(wsVouchers['!ref'])
+  wsVouchers['!autofilter'] = { ref: XLSX.utils.encode_range({ s: {c:0, r:0}, e: {c:6, r:range.e.r} }) }
+  
+  // 컬럼 너비 설정
+  wsVouchers['!cols'] = [
+    { wch: 10 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 45 }, { wch: 15 }, { wch: 15 }
+  ]
+
+  // 시트 2: 정산 요약
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData)
+  wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 30 }]
+
+  XLSX.utils.book_append_sheet(wb, wsVouchers, '상세전표내역')
+  XLSX.utils.book_append_sheet(wb, wsSummary, '정산요약')
+
+  // 4. 파일 쓰기 및 다운로드
+  XLSX.writeFile(wb, `Settlement_Master_${d}.xlsx`)
+}
+
+const getDetailedDesc = (field, idx, storeId) => {
+  const baseId = idx + 1
+  const recipes = ['오리지널 떡볶이', '마라 떡볶이', '로제 떡볶이']
+  const levels = ['순한맛', '기본맛', '매운맛']
+  
+  if (field === 'sales') {
+    return `판매 완료 | 상품 ${baseId} × ${10+idx} @ ${fmt(12000+idx*1000)}원 | 주문번호: OD${storeId}${20260211000+idx}`
+  }
+  if (field === 'refund') {
+    return `반품 환급 | ${recipes[idx % 3]} ${levels[idx % 3]} 파손 건 | 반품코드: RE${storeId}${100+idx}`
+  }
+  if (field === 'orderCost') {
+    return `본사 출고 확정 | 발주 대금 결제 | 발주번호: HEAD20260210${String(baseId).padStart(3,'0')}`
+  }
+  if (field === 'shipping') {
+    return `배송 완료 | 기본/할증료 합산 | 배송코드: SH${storeId}${500+idx}`
+  }
+  if (field === 'loss') {
+    return `폐기/손실 처리 | 유효기간 경과 외 | 전표: LS${storeId}${idx}`
+  }
+  if (field === 'commission') {
+    return `정산 수수료 3% 외 | 플랫폼 및 결제 수수료 | 대상액: ${fmt(500000+idx*50000)}`
+  }
+  return '기타 내역'
+}
 </script>
 
 <template>
@@ -126,6 +240,10 @@ const getStatusClass = (status) => ({
         <p class="page-desc">전체 가맹점의 정산 현황을 조회하고 관리합니다.</p>
       </div>
       <div class="header-actions">
+        <button v-if="activeTab === 'monthly'" class="action-btn excel-btn" @click="downloadExcel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Excel 다운로드
+        </button>
         <button class="action-btn confirm-btn" @click="$router.push('/hq/settlement/confirm')">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           정산 확정
@@ -276,6 +394,8 @@ const getStatusClass = (status) => ({
 .header-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .action-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
 .action-btn:hover { transform: translateY(-1px); }
+.excel-btn { background: #1e293b; color: white; }
+.excel-btn:hover { background: #0f172a; }
 .confirm-btn { background: #10b981; color: white; }
 .confirm-btn:hover { background: #059669; }
 .voucher-btn { background: var(--primary); color: white; }

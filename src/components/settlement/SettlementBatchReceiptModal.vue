@@ -27,6 +27,24 @@ const getFinalAmount = (store) => {
   const refund = store.refund || 0
   return sales - (orderCost + shipping + commission + loss) + refund
 }
+
+const totals = computed(() => {
+  if (!props.stores) return null
+  return {
+    sales: props.stores.reduce((acc, s) => acc + (s.sales || 0), 0),
+    orderCost: props.stores.reduce((acc, s) => acc + (s.orderCost || 0), 0),
+    shipping: props.stores.reduce((acc, s) => acc + (s.shipping || 0), 0),
+    commission: props.stores.reduce((acc, s) => acc + (s.commission || 0), 0),
+    loss: props.stores.reduce((acc, s) => acc + (s.loss || 0), 0),
+    refund: props.stores.reduce((acc, s) => acc + (s.refund || 0), 0),
+  }
+})
+
+const totalFinal = computed(() => {
+  if (!totals.value) return 0
+  const t = totals.value
+  return t.sales - (t.orderCost + t.shipping + t.commission + t.loss) + t.refund
+})
 </script>
 
 <template>
@@ -39,20 +57,24 @@ const getFinalAmount = (store) => {
       </div>
 
       <div class="batch-scroll-area">
-        <div v-for="store in stores" :key="store.id" class="receipt-instance">
+        <!-- [수정] 전체 합산 영수증만 표시 -->
+        <div v-if="totals" class="receipt-instance summary-instance">
           <div class="receipt-content">
-            <!-- Left Section -->
-            <div class="receipt-card left-card">
+            <div class="receipt-card left-card summary-card-style">
               <div class="receipt-header">
-                <h2>정산 영수증</h2>
-                <div class="sub-header">RECEIPT</div>
+                <h2>전체 가맹점 정산 요약</h2>
+                <div class="sub-header">TOTAL SUMMARY RECEIPT</div>
                 <div class="brand">Chain-G 정산 시스템</div>
               </div>
               
               <div class="receipt-info">
                 <div class="info-row">
                   <span class="label">가맹점 :</span>
-                  <span class="value">{{ store?.name }} ({{ store?.id }})</span>
+                  <span class="value">전체 가맹점 (Total)</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">대상 점포 수 :</span>
+                  <span class="value">{{ stores?.length }}개 지점</span>
                 </div>
                 <div class="info-row">
                   <span class="label">정산 기간 :</span>
@@ -67,73 +89,69 @@ const getFinalAmount = (store) => {
               <div class="section-divider"></div>
 
               <div class="section">
-                <h3>매출 내역</h3>
+                <h3>전체 매출 합계</h3>
                 <div class="item-row">
-                  <span>주문 list</span>
-                  <span class="amount text-red">{{ fmt(store?.sales || 0) }}원</span>
+                  <span>총 주문 매출</span>
+                  <span class="amount text-red">{{ fmt(totals.sales) }}원</span>
                 </div>
                 <div class="total-box">
-                  <span>총 매출</span>
-                  <span class="total-amount">{{ fmt(store?.sales || 0) }}</span>
+                  <span>전체 매출</span>
+                  <span class="total-amount">{{ fmt(totals.sales) }}</span>
                 </div>
               </div>
 
               <div class="section">
-                <h3>차감 내역</h3>
+                <h3>전체 차감 합계</h3>
                 <div class="item-row">
-                  <span>발주 대금 (상품list)</span>
-                  <span class="amount text-red">-{{ fmt(store?.orderCost || 0) }}원</span>
+                  <span>총 발주 대금</span>
+                  <span class="amount text-red">-{{ fmt(totals.orderCost) }}원</span>
                 </div>
                 <div class="item-row">
-                  <span>배송비</span>
-                  <span class="amount text-red">-{{ fmt(store?.shipping || 0) }}원</span>
+                  <span>총 배송비</span>
+                  <span class="amount text-red">-{{ fmt(totals.shipping) }}원</span>
                 </div>
                 <div class="item-row">
-                  <span>수수료</span>
-                  <span class="amount text-red">-{{ fmt(store?.commission || 0) }}원</span>
+                  <span>총 수수료</span>
+                  <span class="amount text-red">-{{ fmt(totals.commission) }}원</span>
                 </div>
                 <div class="item-row">
-                  <span>손실</span>
-                  <span class="amount text-red">-{{ fmt(store?.loss || 0) }}원</span>
+                  <span>총 손실</span>
+                  <span class="amount text-red">-{{ fmt(totals.loss) }}원</span>
                 </div>
               </div>
             </div>
 
-            <!-- Right Section -->
-            <div class="receipt-card right-card">
+            <div class="receipt-card right-card summary-card-style">
               <div class="section">
-                <h3>환급 내역</h3>
+                <h3>전체 환급 합계</h3>
                 <div class="item-row">
-                  <span>반품 환급</span>
-                  <span class="amount text-green">+{{ fmt(store?.refund || 0) }}원</span>
+                  <span>총 반품 환급</span>
+                  <span class="amount text-green">+{{ fmt(totals.refund) }}원</span>
                 </div>
               </div>
 
               <div class="section-divider"></div>
 
-              <div class="final-box">
-                <span>최종 정산 금액</span>
-                <span class="final-amount">{{ fmt(getFinalAmount(store)) }}</span>
+              <div class="final-box summary-final">
+                <span>전체 최종 정산 합계</span>
+                <span class="final-amount">{{ fmt(totalFinal) }}</span>
               </div>
 
               <div class="calculation-guide">
-                총 매출 - (발주대금+배송비+수수료+손실)+반품 환급
+                전체 매출 - (발주+배송+수수료+손실 합계) + 환급 합계
               </div>
 
               <div class="section-divider"></div>
 
               <div class="footer-msg">
-                <p>본 문서는 공식 정식 영수증입니다.</p>
-                <p>세무 신고 및 회계 처리 시 보관하시기 바랍니다.</p>
+                <p>위 내역은 해당 기간 모든 가맹점의 정산 합계입니다.</p>
+                <p>총 {{ stores?.length }}개 지점의 데이터가 포함되었습니다.</p>
               </div>
 
               <div class="signature">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon></svg>
               </div>
             </div>
-          </div>
-          <div class="batch-divider">
-            <span>NEXT RECEIPT</span>
           </div>
         </div>
       </div>
@@ -262,6 +280,26 @@ const getFinalAmount = (store) => {
 .footer-msg p { margin: 2px 0; }
 
 .signature { text-align: right; color: #94a3b8; }
+
+.summary-card-style {
+  background: #f8fafc;
+  border: 2px solid #334155 !important;
+}
+
+.summary-final {
+  background: #334155 !important;
+  color: white !important;
+}
+.summary-final span { color: white !important; }
+
+.summary-divider {
+  background: #334155 !important;
+  height: 2px !important;
+}
+.summary-divider span {
+  background: #334155 !important;
+  color: white !important;
+}
 
 .batch-divider {
   width: 100%;
