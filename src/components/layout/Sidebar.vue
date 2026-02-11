@@ -185,15 +185,11 @@ const setActive = (menuName) => {
     router.push('/store/inventory')
   } else if (menuName === '가맹점 정산') {
     router.push('/store/settlement')
-  } else if (menuName === '본사 정산') {
-    router.push('/hq/settlement')
   }
-const navigateTo = (path) => {
-    router.push(path)
 }
 
-const goHome = () => {
-    router.push('/')
+const navigateTo = (path) => {
+    router.push(path)
 }
 </script>
 
@@ -314,6 +310,8 @@ const goHome = () => {
 
 .menu li:hover a {
   color: #ffffff;
+}
+
 .menu-item-row {
     display: flex;
     align-items: center;
@@ -355,6 +353,8 @@ const goHome = () => {
   background-color: #334155;
   color: white;
   padding-left: 1.8rem;
+}
+
 /* Submenu */
 .submenu {
     width: 100%;
@@ -368,6 +368,8 @@ const goHome = () => {
     color: #94a3b8;
     display: flex;
     align-items: center;
+}
+
 .menu li a.active::before {
   content: "";
   position: absolute;
