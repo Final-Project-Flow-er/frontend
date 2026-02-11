@@ -131,7 +131,7 @@ const getStatusClass = (status) => ({
     </div>
 
     <section class="summary-grid">
-      <div class="summary-card primary">
+      <div class="summary-card primary clickable" @click="router.push({ name: 'franchise-product-sell' })">
         <span class="s-label">총 매출</span>
         <p class="s-value">₩ {{ fmt(totals.sales) }}</p>
       </div>
@@ -217,11 +217,11 @@ const getStatusClass = (status) => ({
 .control-left { display: flex; align-items: center; gap: 0.75rem; }
 .tab-group { display: flex; background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; }
 .tab-group button { padding: 0.6rem 1.3rem; border: none; background: transparent; cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--text-light); transition: all 0.2s; }
-.tab-group button.active { background: var(--primary); color: white; }
+.tab-group button.active { background: #475569; color: white; }
 .tab-group button:hover:not(.active) { background: #f8fafc; }
-.date-wrapper { position: relative; display: inline-flex; align-items: center; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1.2rem; background: white; cursor: pointer; min-width: 160px; }
-.date-wrapper:hover { border-color: var(--primary); }
-.date-label { font-size: 1rem; font-weight: 600; color: var(--text-dark); pointer-events: none; white-space: nowrap; }
+.date-wrapper { position: relative; display: inline-flex; align-items: center; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.6rem 1.2rem; background: white; cursor: pointer; min-width: 150px; }
+.date-wrapper:hover { border-color: #475569; }
+.date-label { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); pointer-events: none; white-space: nowrap; }
 .date-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; }
 .search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); margin-bottom: 1.25rem; max-width: 300px; }
 .search-input { border: none; outline: none; font-size: 0.9rem; width: 100%; color: var(--text-dark); }
@@ -231,14 +231,16 @@ const getStatusClass = (status) => ({
 .summary-grid .summary-card:nth-child(2) { grid-column: span 2; }
 .summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); transition: transform 0.15s, box-shadow 0.15s; }
 .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-.summary-card.primary { }
-.summary-card.refund-card { }
+.summary-card.clickable { cursor: pointer; }
+.summary-card.clickable:hover { border-color: #475569; box-shadow: 0 4px 16px rgba(71,85,105,0.15); }
+.summary-card.primary .s-value { color: var(--primary); }
+.summary-card.refund-card .s-value { color: var(--primary); }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
 .s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); }
 .s-value.negative { color: #ef4444; }
 .s-value.positive { color: #10b981; }
 
-.final-card { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 1.25rem 2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
+.final-card { background: linear-gradient(135deg, #334155 0%, #475569 100%); color: white; padding: 1.25rem 2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(51,65,85,0.3); }
 .fc-left { display: flex; align-items: center; gap: 1rem; }
 .fc-label { font-size: 1rem; font-weight: 700; }
 .fc-count { font-size: 0.8rem; opacity: 0.8; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 999px; }
