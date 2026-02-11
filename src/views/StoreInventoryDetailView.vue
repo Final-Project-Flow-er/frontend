@@ -44,7 +44,7 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th class="checkbox-cell"><input type="checkbox" v-model="selectAll" @change="toggleAll" /></th>
+            <th v-if="route.query.source === 'store'" class="checkbox-cell"><input type="checkbox" v-model="selectAll" @change="toggleAll" /></th>
             <th>식별 코드</th>
             <th>박스 코드</th>
             <th>유통기한</th>
@@ -56,7 +56,7 @@
         </thead>
         <tbody>
           <tr v-for="item in filteredItems" :key="item.serialCode">
-            <td class="checkbox-cell"><input type="checkbox" v-model="selectedItems" :value="item.serialCode" /></td>
+            <td v-if="route.query.source === 'store'" class="checkbox-cell"><input type="checkbox" v-model="selectedItems" :value="item.serialCode" /></td>
             <td class="sku-cell">{{ item.serialCode }}</td>
             <td>{{ item.boxCode }}</td>
             <td>{{ item.expireDate }}</td>
@@ -75,7 +75,7 @@
 
     <!-- Bottom Actions -->
     <div class="bottom-actions">
-      <button class="action-btn danger" @click="requestReturn">반품 요청</button>
+      <button v-if="route.query.source === 'store'" class="action-btn danger" @click="requestReturn">반품 요청</button>
     </div>
   </div>
 </template>
@@ -87,6 +87,7 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 const productCode = ref(route.params.productCode)
+const userRole = sessionStorage.getItem('userRole')
 
 const filter = ref({
   expireDate: '',
@@ -162,15 +163,24 @@ const requestReturn = () => {
     alert('반품할 항목을 선택해주세요.')
     return
   }
-  alert(`${selectedItems.value.length}개 항목에 대한 반품 요청이 접수되었습니다.`)
-  // Mock logic: change status
-  items.value.forEach(item => {
-    if (selectedItems.value.includes(item.serialCode)) {
-      item.status = 'RETURN_WAIT'
-    }
+  
+  // Prepare data for the return creation page
+  const selectedList = items.value
+    .filter(item => selectedItems.value.includes(item.serialCode))
+    .map(item => ({
+      boxCode: item.boxCode,
+      idCode: item.serialCode, // Item identification code
+      productCode: productCode.value,
+      productName: `[개별] ${productCode.value}`, // Placeholder name
+      orderCode: 'DUMMY-ORDER-001', // Required for grouping in ReturnCreateView
+      quantity: 1,
+      totalAmount: 0
+    }))
+
+  router.push({ 
+    name: 'franchise-return-create', 
+    state: { returnItems: selectedList } 
   })
-  selectedItems.value = []
-  selectAll.value = false
 }
 </script>
 

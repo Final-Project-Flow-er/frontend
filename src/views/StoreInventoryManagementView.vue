@@ -241,7 +241,7 @@ const createOrder = () => {
 }
 
 const goToDetail = (code) => {
-  router.push(`/store/inventory/${code}`)
+  router.push({ path: `/store/inventory/${code}`, query: { source: 'store' } })
 }
 
 // Popup Logic
