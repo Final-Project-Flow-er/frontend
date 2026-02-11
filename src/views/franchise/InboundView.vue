@@ -124,14 +124,10 @@ const performReturnRequest = () => {
         boxCode: box.boxCode,
         orderCode: box.orderCode,
         productCode: box.productCode,
-        productName: box.name, // Keep name, maybe prepend [BOX]?
-        // "It enters as individual units" -> user wants Box unit.
-        // Set quantity to 1 for "1 Box"
-        quantity: 1, 
-        // Amount should be Total Amount of the box?
-        // If box has 20 items @ 12000, Box Price = 240000.
+        productName: box.name,
+        quantity: 1, // 1 Box unit 
         amount: 12000 * box.quantity, 
-        totalAmount: 12000 * box.quantity // 1 Box * BoxPrice
+        totalAmount: 12000 * box.quantity 
     }))
 
     router.push({ 

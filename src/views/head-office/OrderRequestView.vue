@@ -281,7 +281,7 @@ const getStatusClass = (s) => ({
     </div>
 
     <div class="bottom-actions">
-        <button class="primary-btn wide">차량 배정</button>
+        <button class="primary-btn wide" @click="$router.push({ name: 'factory-vehicle-assignment' })">차량 배정</button>
     </div>
 
     <!-- Cancellation Modal -->
