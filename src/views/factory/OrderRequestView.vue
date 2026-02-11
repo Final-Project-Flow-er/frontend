@@ -178,10 +178,40 @@ const getStatusClass = (s) => ({
         </tbody>
       </table>
     </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bottom-action-bar">
+      <button class="action-btn vehicle-btn" @click="$router.push({ name: 'factory-vehicle-assignment' })">
+        차량 배정
+      </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.bottom-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.action-btn {
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  color: white;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 1rem;
+}
+
+.vehicle-btn {
+  background-color: #6b8abf;
+}
+
+.vehicle-btn:hover { opacity: 0.9; }
 .content-wrapper { max-width: 1600px; margin: 0 auto; padding-bottom: 2rem; }
 .header-row { margin-bottom: 2rem; }
 .header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
