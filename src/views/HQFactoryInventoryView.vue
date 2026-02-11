@@ -1,18 +1,18 @@
 <template>
   <div class="content-wrapper">
     <div class="header-row">
-      <h2>가맹점 재고 관리</h2>
+      <h2>본사 공장 재고 관리</h2>
     </div>
 
     <!-- Filter Section (3 Columns) -->
     <div class="filter-section">
       <div class="filter-group">
-        <label>상품 코드</label>
+        <label>제품 코드</label>
         <input type="text" v-model="filter.productCode" placeholder="예: OR0101" />
       </div>
       <div class="filter-group">
-        <label>상품 이름</label>
-        <input type="text" v-model="filter.productName" placeholder="상품 이름 입력" />
+        <label>제품 이름</label>
+        <input type="text" v-model="filter.productName" placeholder="제품 이름 입력" />
       </div>
       <div class="filter-group">
         <label>상태</label>
@@ -46,8 +46,8 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>상품 코드</th>
-            <th>상품 이름</th>
+            <th>제품 코드</th>
+            <th>제품 이름</th>
             <th>수량</th>
             <th>인분</th>
             <th>
@@ -76,7 +76,8 @@
 
     <!-- Bottom Actions -->
     <div class="bottom-actions">
-      <button class="action-btn primary" @click="createOrder">발주 생성</button>
+      <!-- HQ might check Inventory but not Order from here? Or Order from Factory? Leaving for now -->
+      <!-- <button class="action-btn primary" @click="createOrder">발주 생성</button> -->
     </div>
 
     <!-- Password Popup -->
@@ -99,15 +100,15 @@
         <p class="modal-hint">설정할 제품의 코드를 입력하세요.</p>
         
         <div class="form-group mb-1">
-          <label>상품 코드</label>
+          <label>제품 코드</label>
           <input type="text" v-model="settingForm.productCode" placeholder="예: OR0101" @input="lookupProduct" />
         </div>
         
         <div v-if="foundProduct" class="found-product-info">
-          <strong>찾은 상품:</strong> {{ foundProduct.productName }}
+          <strong>찾은 제품:</strong> {{ foundProduct.productName }}
         </div>
         <div v-else-if="settingForm.productCode && !foundProduct" class="error-text">
-          해당 코드를 가진 상품을 찾을 수 없습니다.
+          해당 코드를 가진 제품을 찾을 수 없습니다.
         </div>
 
         <div class="form-group">
@@ -141,7 +142,7 @@ const filter = ref({
 const showPasswordPopup = ref(false)
 const showSettingsPopup = ref(false)
 const adminPassword = ref('')
-const settingForm = ref({ productCode: '', safeStock: 10 })
+const settingForm = ref({ productCode: '', safeStock: 50 })
 const foundProduct = ref(null)
 
 const lookupProduct = () => {
@@ -182,9 +183,9 @@ const generateMockInventory = () => {
                 const code = `${t.code}${s.code}${sz.code}`
                 const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
                 
-                // Random quantity for demo
-                const qty = Math.floor(Math.random() * 50)
-                const safe = 10
+                // Random quantity for demo (Higher for Factory)
+                const qty = Math.floor(Math.random() * 500) + 100
+                const safe = 50
 
                 list.push({
                     productCode: code,
@@ -217,7 +218,7 @@ const getStatusClass = (qty, safe) => {
 const filteredInventory = computed(() => {
   return inventory.value.filter(item => {
     const matchCode = !filter.value.productCode || item.productCode.startsWith(filter.value.productCode)
-    const matchName = !filter.value.productName || item.productName === filter.value.productName
+    const matchName = !filter.value.productName || item.productName.includes(filter.value.productName)
     
     // Status Filter Logic (Based on computed status)
     let statusMatch = true
@@ -242,6 +243,10 @@ const createOrder = () => {
 }
 
 const goToDetail = (code) => {
+    // HQ Factory Detail View? Reusing Store Detail for now or just log?
+    // User didn't request separate Detail View for HQ Factory, so linking to Store Detail (might need permission check later)
+    // Or maybe just show alert "상세 조회"
+    // For now, let's just use the same detail view as it is generic enough
   router.push(`/store/inventory/${code}`)
 }
 
@@ -267,7 +272,7 @@ const checkPassword = () => {
 
 const closeSettingsPopup = () => {
   showSettingsPopup.value = false
-  settingForm.value = { productCode: '', safeStock: 10 }
+  settingForm.value = { productCode: '', safeStock: 50 }
   foundProduct.value = null
 }
 
