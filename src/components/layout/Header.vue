@@ -1,6 +1,6 @@
 <template>
   <header class="header">
-    <div class="page-title"><h2>재고 관리 현황</h2></div>
+    <div class="page-title"><h2>{{ headerTitle }}</h2></div>
 
     <div class="header-tools">
       <div class="notification" @click="$router.push('/notice')">
@@ -14,7 +14,7 @@
 
         <div class="user-detail">
           <p class="u-name">유저</p>
-          <p class="u-role">가맹점주</p>
+          <p class="u-role">{{ roleDisplayName }}</p>
         </div>
 
         <div class="divider"></div>
@@ -32,6 +32,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 defineProps(['modelValue'])
@@ -39,9 +40,27 @@ defineEmits(['update:modelValue'])
 
 const router = useRouter()
 
+const userRole = sessionStorage.getItem('userRole')
+
+const roleMapping = {
+  admin: { header: '통합 관리', display: '총관리자' },
+  headOffice: { header: '본사', display: '본사 관리자' },
+  factory: { header: '공장', display: '공장 관리자' },
+  franchise: { header: '가맹점', display: '가맹점주' }
+}
+
+const headerTitle = computed(() => {
+  return roleMapping[userRole]?.header || '재고 관리 현황'
+})
+
+const roleDisplayName = computed(() => {
+  return roleMapping[userRole]?.display || '사용자'
+})
+
 const handleLogout = () => {
   if(confirm('로그아웃 하시겠습니까?')) {
     sessionStorage.removeItem('isLoggedIn')
+    sessionStorage.removeItem('userRole')
     router.push('/login')
   }
 }
