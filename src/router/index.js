@@ -40,7 +40,14 @@ const router = createRouter({
             path: '/',
             redirect: () => {
                 const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true'
-                return isLoggedIn ? '/franchise/inventory' : '/login'
+                if (!isLoggedIn) return '/login'
+
+                const userRole = sessionStorage.getItem('userRole')
+                if (userRole === 'admin' || userRole === 'headOffice') return '/registration'
+                if (userRole === 'factory') return '/factory/inbound'
+                if (userRole === 'franchise') return '/store/inventory'
+
+                return '/login'
             }
         },
         // --- Franchise Routes ---

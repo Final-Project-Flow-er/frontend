@@ -14,9 +14,26 @@ const handleLogin = () => {
     alert('아이디와 비밀번호를 입력해주세요.')
     return
   }
-  // 로그인 성공 시 세션 저장소에 로그인 상태 저장
-  sessionStorage.setItem('isLoggedIn', 'true')
-  router.push('/')
+
+  let role = ''
+  if (loginData.id === 'admin' && loginData.pw === 'admin') {
+    role = 'admin'
+  } else if (loginData.id === 'headOffice' && loginData.pw === 'headOffice') {
+    role = 'headOffice'
+  } else if (loginData.id === 'factory' && loginData.pw === 'factory') {
+    role = 'factory'
+  } else if (loginData.id === 'franchise01' && loginData.pw === 'franchise01') {
+    role = 'franchise'
+  }
+
+  if (role) {
+    // 로그인 성공 시 세션 저장소에 로그인 상태 및 역할 저장
+    sessionStorage.setItem('isLoggedIn', 'true')
+    sessionStorage.setItem('userRole', role)
+    router.push('/')
+  } else {
+    alert('아이디 또는 비밀번호가 올바르지 않습니다.')
+  }
 }
 </script>
 

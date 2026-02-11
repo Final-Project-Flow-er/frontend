@@ -5,7 +5,7 @@
     </div>
 
     <nav class="menu">
-      <template v-for="(group, index) in menuGroups" :key="index">
+      <template v-for="(group, index) in filteredMenuGroups" :key="index">
         <div class="menu-group">{{ group.title }}</div>
         <ul>
           <li
@@ -52,79 +52,67 @@ const route = useRoute()
 
 const menuGroups = ref([
   {
-    title: '메인 메뉴',
-    items: [
-      { name: '대시보드', path: '/' },
-      { name: '재고 현황', path: '' }, // Original item placeholder
-      { name: '분석 리포트', path: '' } // Original item placeholder
-    ]
-  },
-  {
+    role: ['admin', 'headOffice'],
     title: '본사',
     items: [
       {
         name: '조직 관리',
-        path: '',
         isOpen: false,
         children: [
-            { name: '조직 등록', path: '/registration' },
-            { name: '조직 조회', path: '/organizations' }
+          { name: '조직 등록', path: '/registration' },
+          { name: '조직 조회', path: '/organizations' }
         ]
       },
       {
         name: '회원 관리',
-        path: '',
         isOpen: false,
         children: [
-            { name: '회원 등록', path: '/admin/member-registration' },
-            { name: '회원 조회', path: '/admin/members' },
-            { name: '회원 로그', path: '/admin/member-logs' }
+          { name: '회원 등록', path: '/admin/member-registration' },
+          { name: '회원 조회', path: '/admin/members' },
+          { name: '회원 로그', path: '/admin/member-logs' }
         ]
       },
       {
         name: '운송 관리',
-        path: '',
         isOpen: false,
         children: [
-            { name: '업체 및 차량 등록', path: '/admin/logistics-registration' },
-            { name: '업체 및 차량 조회', path: '/admin/logistics' }
+          { name: '업체 및 차량 등록', path: '/admin/logistics-registration' },
+          { name: '업체 및 차량 조회', path: '/admin/logistics' }
         ]
       },
       {
         name: '재고 관리',
-        path: '',
         isOpen: false,
         children: [
-            { name: '공장 재고관리', path: '/hq/inventory/factory' },
-            { name: '가맹점 재고 관리', path: '/hq/inventory/franchise' }
+          { name: '공장 재고관리', path: '/hq/inventory/factory' },
+          { name: '가맹점 재고관리', path: '/hq/inventory/franchise' }
         ]
       },
       { name: '상품 관리', path: '/hq/products/manage' },
       {
         name: '로그 관리',
-        path: '',
         isOpen: false,
         children: [
-            { name: '본사 로그', path: '/hq/inventory/logs/hq' },
-            { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
-            { name: '공장 로그', path: '/hq/inventory/logs/factory' }
+          { name: '본사 로그', path: '/hq/inventory/logs/hq' },
+          { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
+          { name: '공장 로그', path: '/hq/inventory/logs/factory' }
         ]
       },
       {
-        name: '유통 및 정산',
-        path: '',
+        name: '발주 관리',
         isOpen: false,
         children: [
-            { name: '발주 관리', path: '/head-office/orders' },
-            { name: '발주 요청 접수', path: '/head-office/orders/reception' },
-            { name: '발주 요청 관리', path: '/head-office/orders/request' },
-            { name: '반품 요청 관리', path: '/head-office/returns' },
-            { name: '정산 관리', path: '/hq/settlement' }
+          { name: '발주 관리', path: '/head-office/orders' },
+          { name: '발주 요청 접수', path: '/head-office/orders/reception' },
+          { name: '발주 요청 관리', path: '/head-office/orders/request' }
         ]
-      }
+      },
+      { name: '반품 관리', path: '/head-office/returns' },
+      { name: '정산 관리', path: '/hq/settlement' }
     ]
   },
   {
+    role: ['admin', 'franchise'],
     title: '가맹점',
     items: [
       { name: '재고 관리', path: '/store/inventory' },
@@ -134,27 +122,30 @@ const menuGroups = ref([
       { name: '발주 관리', path: '/franchise/orders' },
       { name: '반품 관리', path: '/franchise/returns' },
       { name: '판매 관리', path: '/franchise/products' },
-      { name: '정산 내역', path: '/store/settlement' }
+      { name: '정산 관리', path: '/store/settlement' }
     ]
   },
   {
+    role: ['admin', 'factory'],
     title: '공장',
     items: [
       { name: '입고 관리', path: '/factory/inbound' },
       { name: '출고 관리', path: '/factory/outbound' },
-      { name: '발주 접수', path: '/factory/orders' },
-      { name: '발주 요청 관리', path: '/factory/orders/request' },
+      {
+        name: '발주 관리',
+        isOpen: false,
+        children: [
+          { name: '발주 접수', path: '/factory/orders' },
+          { name: '발주 요청 관리', path: '/factory/orders/request' }
+        ]
+      },
       { name: '로그 관리', path: '/hq/inventory/logs/factory' }
     ]
-  },
-  {
-      title: '시스템',
-      items: [
-          { name: '직원 관리', path: '' },
-          { name: '환경 설정', path: '' }
-      ]
   }
 ])
+
+const userRole = sessionStorage.getItem('userRole')
+const filteredMenuGroups = ref(menuGroups.value.filter(group => group.role.includes(userRole)))
 
 const goHome = () => {
   router.push({ path: '/' })
@@ -165,7 +156,7 @@ const currentPath = ref(window.location.pathname)
 watch(() => route.path, (newPath) => {
     currentPath.value = newPath
     // Auto-expand if child is active
-    menuGroups.value.forEach(group => {
+    filteredMenuGroups.value.forEach(group => {
         group.items.forEach(item => {
             if (item.children && item.children.some(c => c.path === newPath)) {
                 item.isOpen = true
