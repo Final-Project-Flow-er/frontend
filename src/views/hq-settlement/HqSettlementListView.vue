@@ -116,6 +116,41 @@ const getStatusClass = (status) => ({
   '확정': 'status-confirmed',
  }[status] || '')
 
+import SettlementTrendChart from '@/components/settlement/SettlementTrendChart.vue'
+
+/* ── 추이 그래프 데이터 ── */
+const trendStartDate = ref(selectedDate.value)
+const trendEndDate = ref(selectedDate.value)
+
+const trendStartRef = ref(null)
+const trendEndRef = ref(null)
+const openTrendStart = () => trendStartRef.value?.showPicker()
+const openTrendEnd = () => trendEndRef.value?.showPicker()
+
+const trendData = computed(() => {
+  const data = []
+  if (!trendStartDate.value || !trendEndDate.value) return []
+  
+  const start = new Date(trendStartDate.value)
+  const end = new Date(trendEndDate.value)
+  if (start > end) return []
+  
+  const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1
+  // 데이터가 너무 많으면 간격을 둠 (최대 20개 포인트 정도)
+  const step = diffDays > 20 ? Math.ceil(diffDays / 20) : 1
+  
+  for (let i = 0; i < diffDays; i += step) {
+    const curr = new Date(start)
+    curr.setDate(curr.getDate() + i)
+    const label = `${curr.getMonth() + 1}/${curr.getDate()}`
+    const seedKey = `${curr.getFullYear()}-${pad(curr.getMonth() + 1)}-${pad(curr.getDate())}`
+    const s = seed(seedKey + 'trend')
+    const val = round100(seededRand(s, 3000000, 8000000))
+    data.push({ label, value: val })
+  }
+  return data
+})
+
 import * as XLSX from 'xlsx'
 
 /* ── 엑셀(.xlsx) 다운로드 ── */
@@ -366,6 +401,28 @@ const getDetailedDesc = (field, idx, storeId) => {
         </tbody>
       </table>
     </div>
+
+    <!-- 추이 그래프 (선 그래프) -->
+    <div class="trend-section">
+      <div class="section-header">
+        <h3>전체 가맹점 정산 추이</h3>
+        <div class="trend-range-box">
+          <div class="date-pick-wrap" @click="openTrendStart">
+            <span>{{ trendStartDate.replace(/-/g, '. ') }}.</span>
+            <input ref="trendStartRef" type="date" v-model="trendStartDate" class="date-input-hidden" />
+          </div>
+          <span class="range-sep">~</span>
+          <div class="date-pick-wrap" @click="openTrendEnd">
+            <span>{{ trendEndDate.replace(/-/g, '. ') }}.</span>
+            <svg class="cal-icon-sm" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <input ref="trendEndRef" type="date" v-model="trendEndDate" class="date-input-hidden" />
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrapper">
+        <SettlementTrendChart :data="trendData" :height="240" />
+      </div>
+    </div>
   </div>
 
   <!-- 개별 정산 영수증 모달 -->
@@ -436,6 +493,64 @@ const getDetailedDesc = (field, idx, storeId) => {
 .fc-label { font-size: 1rem; font-weight: 700; }
 .fc-count { font-size: 0.8rem; opacity: 0.8; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 999px; }
 .fc-amount { font-size: 1.85rem; font-weight: 800; margin: 0; }
+
+.trend-section {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.section-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.trend-range-box {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1.2rem;
+  border-radius: 14px;
+  gap: 0.6rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  transition: all 0.2s;
+}
+.trend-range-box:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(71, 85, 105, 0.1);
+}
+.date-pick-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  font-family: 'Courier New', Courier, monospace; /* To match the aesthetic in screenshot */
+}
+.range-sep {
+  color: var(--text-light);
+  font-weight: 500;
+}
+.cal-icon-sm {
+  color: var(--text-dark);
+  margin-left: 0.2rem;
+}
+.chart-wrapper {
+  height: 260px;
+  width: 100%;
+}
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
