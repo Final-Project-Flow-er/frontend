@@ -337,7 +337,7 @@ const goToDetail = (empNum) => {
 
 .emp-number {
   font-family: monospace;
-  font-weight: 600;
+  font-weight: normal;
   color: #2563eb;
 }
 
@@ -345,7 +345,7 @@ const goToDetail = (empNum) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-weight: 600;
+  font-weight: normal;
 }
 
 .mini-photo,
@@ -368,7 +368,7 @@ const goToDetail = (empNum) => {
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: normal;
 }
 
 .role-badge.hq { background: #e0f2fe; color: #0369a1; }

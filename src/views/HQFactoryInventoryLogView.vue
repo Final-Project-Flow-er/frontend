@@ -31,7 +31,6 @@
             <option value="DISPOSAL">폐기</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <!-- Log List -->

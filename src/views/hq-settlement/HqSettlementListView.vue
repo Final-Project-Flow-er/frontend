@@ -115,10 +115,6 @@ const getStatusClass = (status) => ({
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
           조정 전표 등록
         </button>
-        <button class="action-btn log-btn" @click="$router.push('/hq/settlement/logs')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
-          이력 조회
-        </button>
       </div>
     </div>
 
@@ -154,33 +150,33 @@ const getStatusClass = (status) => ({
         <span class="fc-label">전체 가맹점 최종 정산 합계</span>
         <span class="fc-count">{{ filteredStores.length }}개 가맹점</span>
       </div>
-      <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
+      <p class="fc-amount">{{ fmt(totalFinal) }}</p>
     </div>
 
     <section class="summary-grid">
       <div class="summary-card primary clickable" @click="showSalesModal = true">
         <span class="s-label">총 매출</span>
-        <p class="s-value">₩ {{ fmt(totals.sales) }}</p>
+        <p class="s-value">{{ fmt(totals.sales) }}</p>
       </div>
       <div class="summary-card refund-card clickable" @click="showRefundModal = true">
         <span class="s-label">반품 환급</span>
-        <p class="s-value primary-color">₩ {{ fmt(totals.refund) }}</p>
+        <p class="s-value primary-color">{{ fmt(totals.refund) }}</p>
       </div>
       <div class="summary-card clickable" @click="openDetail('가맹점별 발주 대금', 'orderCost')">
         <span class="s-label">발주 대금</span>
-        <p class="s-value negative">₩ {{ fmt(totals.orderCost) }}</p>
+        <p class="s-value negative">{{ fmt(totals.orderCost) }}</p>
       </div>
       <div class="summary-card clickable" @click="openDetail('가맹점별 배송비', 'shipping')">
         <span class="s-label">배송비</span>
-        <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
+        <p class="s-value negative">{{ fmt(totals.shipping) }}</p>
       </div>
       <div class="summary-card clickable" @click="openDetail('가맹점별 손실', 'loss')">
         <span class="s-label">손실</span>
-        <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
+        <p class="s-value negative">{{ fmt(totals.loss) }}</p>
       </div>
       <div class="summary-card clickable" @click="openDetail('가맹점별 수수료', 'commission')">
         <span class="s-label">수수료</span>
-        <p class="s-value negative">₩ {{ fmt(totals.commission) }}</p>
+        <p class="s-value negative">{{ fmt(totals.commission) }}</p>
       </div>
     </section>
 
@@ -208,13 +204,13 @@ const getStatusClass = (status) => ({
         <tbody>
           <tr v-for="s in filteredStores" :key="s.id">
             <td class="store-cell">{{ s.name }}</td>
-            <td class="text-right primary-color">₩ {{ fmt(s.sales) }}</td>
-            <td class="text-right negative">₩ {{ fmt(s.orderCost) }}</td>
-            <td class="text-right negative">₩ {{ fmt(s.shipping) }}</td>
-            <td class="text-right negative">₩ {{ fmt(s.commission) }}</td>
-            <td class="text-right primary-color">₩ {{ fmt(s.refund) }}</td>
-            <td class="text-right negative">₩ {{ fmt(s.loss) }}</td>
-            <td class="text-right primary-color final-cell">₩ {{ fmt(getFinal(s)) }}</td>
+            <td class="text-right primary-color">{{ fmt(s.sales) }}</td>
+            <td class="text-right negative">{{ fmt(s.orderCost) }}</td>
+            <td class="text-right negative">{{ fmt(s.shipping) }}</td>
+            <td class="text-right negative">{{ fmt(s.commission) }}</td>
+            <td class="text-right primary-color">{{ fmt(s.refund) }}</td>
+            <td class="text-right negative">{{ fmt(s.loss) }}</td>
+            <td class="text-right primary-color final-cell">{{ fmt(getFinal(s)) }}</td>
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ s.status }}</span></td>
             <td class="text-center"><button class="detail-btn" @click="goToDetail(s.id)">상세</button></td>
           </tr>
@@ -238,11 +234,11 @@ const getStatusClass = (status) => ({
           <tbody>
             <tr v-for="s in filteredStores" :key="s.id">
               <td>{{ s.name }}</td>
-              <td class="text-right">₩ {{ fmt(s.sales) }}</td>
+              <td class="text-right">{{ fmt(s.sales) }}</td>
             </tr>
             <tr class="total-row">
-              <td><strong>합계</strong></td>
-              <td class="text-right"><strong>₩ {{ fmt(totals.sales) }}</strong></td>
+              <td>합계</td>
+              <td class="text-right">{{ fmt(totals.sales) }}</td>
             </tr>
           </tbody>
         </table>
@@ -265,11 +261,11 @@ const getStatusClass = (status) => ({
           <tbody>
             <tr v-for="s in filteredStores" :key="s.id">
               <td>{{ s.name }}</td>
-              <td class="text-right">₩ {{ fmt(s.refund) }}</td>
+              <td class="text-right">{{ fmt(s.refund) }}</td>
             </tr>
             <tr class="total-row">
-              <td><strong>합계</strong></td>
-              <td class="text-right"><strong>₩ {{ fmt(totals.refund) }}</strong></td>
+              <td>합계</td>
+              <td class="text-right">{{ fmt(totals.refund) }}</td>
             </tr>
           </tbody>
         </table>
@@ -292,11 +288,11 @@ const getStatusClass = (status) => ({
           <tbody>
             <tr v-for="s in filteredStores" :key="s.id">
               <td>{{ s.name }}</td>
-              <td class="text-right">₩ {{ fmt(s[detailModal.field]) }}</td>
+              <td class="text-right">{{ fmt(s[detailModal.field]) }}</td>
             </tr>
             <tr class="total-row">
-              <td><strong>합계</strong></td>
-              <td class="text-right"><strong>₩ {{ fmt(totals[detailModal.field]) }}</strong></td>
+              <td>합계</td>
+              <td class="text-right">{{ fmt(totals[detailModal.field]) }}</td>
             </tr>
           </tbody>
         </table>
@@ -345,7 +341,7 @@ const getStatusClass = (status) => ({
 .summary-card.primary .s-value { color: var(--primary); }
 .summary-card.refund-card .s-value { color: var(--primary); }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
-.s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); text-align: right; }
+.s-value { font-size: 1.4rem; font-weight: normal; margin: 0; color: var(--text-dark); text-align: right; }
 .s-value.negative { color: #ef4444; }
 .s-value.positive { color: #10b981; }
 
@@ -353,7 +349,7 @@ const getStatusClass = (status) => ({
 .fc-left { display: flex; align-items: center; gap: 1rem; }
 .fc-label { font-size: 1rem; font-weight: 700; }
 .fc-count { font-size: 0.8rem; opacity: 0.8; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 999px; }
-.fc-amount { font-size: 1.85rem; font-weight: 800; margin: 0; }
+.fc-amount { font-size: 1.85rem; font-weight: normal; margin: 0; }
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
@@ -365,11 +361,11 @@ const getStatusClass = (status) => ({
 .data-table tbody tr:hover { background: #f8fafc; }
 .text-right { text-align: right; }
 .text-center { text-align: center; }
-.store-cell { font-weight: 700; color: var(--text-dark); }
+.store-cell { font-weight: normal; color: var(--text-dark); }
 .negative { color: #ef4444 !important; }
 .positive { color: #10b981 !important; }
 .primary-color { color: var(--primary) !important; }
-.final-cell { font-weight: 800; color: var(--primary) !important; }
+.final-cell { font-weight: normal; color: var(--primary) !important; }
 .status-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
 .status-done { background: #d1fae5; color: #065f46; }
 .status-wait { background: #fef3c7; color: #92400e; }

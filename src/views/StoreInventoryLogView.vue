@@ -34,7 +34,6 @@
             <option value="OUTBOUND">이관출고</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <!-- Section 1: Logistics Logs (Box Units) -->

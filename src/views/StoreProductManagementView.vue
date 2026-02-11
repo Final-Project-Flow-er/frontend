@@ -32,7 +32,6 @@
           <option value="03">3~4인분</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <!-- Product Card Grid -->
@@ -260,7 +259,7 @@ const getSpiceLabel = (code) => {
     return map[code] || code
 }
 
-const formatPrice = (p) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(p)
+const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 // Modal Logic
 const updateCodeAndName = () => {
@@ -348,16 +347,16 @@ const saveProduct = () => {
 .status-badge.temporary_out { background: #fffaf0; color: #9c4221; }
 .status-badge.sale_scheduled { background: #e0e7ff; color: #3730a3; }
 .card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
-.card-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem; }
+.card-header h3 { margin: 0; font-size: 1.1rem; font-weight: normal; color: var(--text-dark); margin-bottom: 0.25rem; }
 .product-code { font-size: 0.8rem; color: var(--text-light); }
 .product-desc { font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-info-row { font-size: 0.9rem; color: var(--text-light); }
 .divider { margin: 0 0.5rem; color: #cbd5e1; }
-.info-label { font-weight: 600; margin-right: 0.25rem; color: #64748b; }
+.info-label { font-weight: normal; margin-right: 0.25rem; color: #64748b; }
 .price-section { background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem; }
 .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
 .price-label { color: #64748b; font-weight: 500; }
-.price-value { font-weight: 700; color: var(--text-dark); }
+.price-value { font-weight: normal; color: var(--text-dark); }
 .date-range { font-size: 0.8rem; color: #94a3b8; margin-left: auto; margin-right: 0.5rem; }
 .card-actions { border-top: 1px solid var(--border-color); padding: 1rem; display: flex; justify-content: flex-end; }
 .edit-btn {  background: white; border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }

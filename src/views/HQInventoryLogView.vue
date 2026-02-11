@@ -30,7 +30,6 @@
             <option value="RETURN_OUT">반품 출고</option>
         </select>
       </div>
-      <button class="search-btn">조회</button>
     </div>
 
     <!-- Section 1: 반품 입고 내역 -->

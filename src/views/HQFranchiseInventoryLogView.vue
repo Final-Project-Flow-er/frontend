@@ -45,8 +45,7 @@
                 <option value="REFUND">환불</option>
             </select>
         </div>
-        <button class="search-btn">조회</button>
-        </div>
+          </div>
 
         <!-- Section 1: Logistics Logs (Box Units) -->
         <div class="section-title">
