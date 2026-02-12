@@ -205,8 +205,8 @@ const toggleSelectAll = (event) => {
       <h2>공장 발주 요청 접수</h2>
       <div class="header-actions">
         <template v-if="selectionMode === null">
-          <button @click="enterAcceptMode" class="btn-primary">접수 모드</button>
-          <button @click="enterRejectMode" class="btn-danger">반려 모드</button>
+          <button @click="enterAcceptMode" class="btn-primary">접수</button>
+          <button @click="enterRejectMode" class="btn-danger">반려</button>
         </template>
         <template v-else-if="selectionMode === 'accept'">
           <button @click="confirmAccept" class="btn-success">선택 접수 완료</button>

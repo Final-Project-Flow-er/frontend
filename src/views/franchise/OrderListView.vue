@@ -333,7 +333,7 @@ const goToDetail = (item) => {
           <th class="text-right">단가</th>
           <th class="text-right">수량</th>
           <th class="text-right">금액</th>
-          <th class="text-right order-total-header">발주 총액</th>
+          <th class="text-right">발주 총액</th>
           <th>발주일</th>
           <th>수령인</th>
           <th>도착일시</th>
@@ -352,7 +352,7 @@ const goToDetail = (item) => {
           <td class="text-right">{{ formatNumber(item.unitPrice) }}</td>
           <td class="text-right">{{ formatNumber(item.quantity) }}</td>
           <td class="text-right font-bold-slate">{{ formatNumber(item.lineTotalAmount) }}</td>
-          <td class="text-right total-cell-bold">{{ formatNumber(item.orderTotalAmount) }}</td>
+          <td class="text-right">{{ formatNumber(item.orderTotalAmount) }}</td>
           <td>{{ item.orderDate }}</td>
           <td class="name-cell">{{ item.recipientName }}</td>
           <td>{{ item.arrivalDate }} {{ item.arrivalTime }}</td>

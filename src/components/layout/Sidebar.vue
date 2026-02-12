@@ -128,7 +128,6 @@ const menuGroups = ref([
       { name: '로그 관리', path: '/inventory/logs' },
       { name: '입고 관리', path: '/franchise/inbound' },
       { name: '발주/반품 관리', path: '/franchise/orders' },
-      { name: '반품 관리', path: '/franchise/returns' },
       { name: '판매 관리', path: '/franchise/products' },
       { name: '정산 관리', path: '/store/settlement' }
     ]
