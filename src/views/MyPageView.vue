@@ -13,7 +13,7 @@
               class="avatar-image"
             >
             <div v-else class="avatar-placeholder">
-              <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
@@ -589,12 +589,12 @@ const deleteAccount = () => {
 /* 프로필 히어로 섹션 */
 .profile-hero {
   position: relative;
-  height: 280px;
+  height: 180px;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   display: flex;
   align-items: flex-end;
-  padding: 0 4rem 3rem;
-  margin-bottom: 3rem;
+  padding: 0 0 2rem;
+  margin-bottom: 2rem;
   overflow: hidden;
 }
 
@@ -617,6 +617,7 @@ const deleteAccount = () => {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 2rem;
 }
 
 .profile-avatar-wrapper {
@@ -625,12 +626,12 @@ const deleteAccount = () => {
 
 .avatar-container {
   position: relative;
-  width: 140px;
-  height: 140px;
+  width: 100px;
+  height: 100px;
   background: white;
   border: 4px solid #334155;
-  border-radius: 32px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -641,7 +642,7 @@ const deleteAccount = () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 28px;
+  border-radius: 18px;
 }
 
 .avatar-placeholder {
@@ -650,14 +651,14 @@ const deleteAccount = () => {
 
 .avatar-edit-btn {
   position: absolute;
-  bottom: -10px;
-  right: -10px;
-  width: 40px;
-  height: 40px;
+  bottom: -5px;
+  right: -5px;
+  width: 32px;
+  height: 32px;
   background: #0f172a;
   color: white;
-  border: 4px solid #1e293b;
-  border-radius: 14px;
+  border: 3px solid #1e293b;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -688,7 +689,7 @@ const deleteAccount = () => {
   display: flex;
   align-items: baseline;
   gap: 1.25rem;
-  margin-top: 4rem;
+  margin-top: 1.5rem;
 }
 
 .hero-actions-inline {
@@ -743,7 +744,7 @@ const deleteAccount = () => {
 }
 
 .user-name {
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: white;
   margin: 0;
