@@ -60,20 +60,38 @@ const selectedBoxDetails = computed(() => {
 
 const selectBox = (boxCode) => {
   selectedBoxCode.value = boxCode
-  selectedItemIds.value.clear()
 }
 
 // Checkbox Logic - Boxes
 const toggleAllBoxes = (e) => {
   if (e.target.checked) {
-    inboundBoxes.value.forEach(box => selectedBoxIds.value.add(box.boxCode))
+    inboundBoxes.value.forEach(box => {
+      selectedBoxIds.value.add(box.boxCode)
+      // Automatically check all items in selected boxes
+      if (allBoxDetails[box.boxCode]) {
+        allBoxDetails[box.boxCode].forEach(item => selectedItemIds.value.add(item.id))
+      }
+    })
   } else {
     selectedBoxIds.value.clear()
+    selectedItemIds.value.clear()
   }
 }
+
 const toggleBox = (boxCode) => {
-  if (selectedBoxIds.value.has(boxCode)) selectedBoxIds.value.delete(boxCode)
-  else selectedBoxIds.value.add(boxCode)
+  if (selectedBoxIds.value.has(boxCode)) {
+    selectedBoxIds.value.delete(boxCode)
+    // Uncheck all items in this box
+    if (allBoxDetails[boxCode]) {
+      allBoxDetails[boxCode].forEach(item => selectedItemIds.value.delete(item.id))
+    }
+  } else {
+    selectedBoxIds.value.add(boxCode)
+    // Check all items in this box
+    if (allBoxDetails[boxCode]) {
+      allBoxDetails[boxCode].forEach(item => selectedItemIds.value.add(item.id))
+    }
+  }
 }
 
 // Checkbox Logic - Items
@@ -90,25 +108,11 @@ const toggleItem = (itemId) => {
 }
 
 const goToReturnRequest = () => {
-  // If user selected individual items (right side) but NOT the box (left side),
-  // or checks strictly if "Box" selection is valid.
-  
-  // The user said: "If not box level, button shouldn't work and show popup..."
-  // And "It enters as individual units". 
-  
-  // Strict check: Must select at least one Box.
   const boxCount = selectedBoxIds.value.size
-  
-  // Also check if they selected items *instead* of box? 
-  // If boxCount is 0, show the strict message.
   if (boxCount === 0) {
-    // "반품 요청은 박스 단위로만 가능합니다."
     openModal('알림', '반품 요청은 박스 단위로만 가능합니다.', null, false)
     return
   }
-  
-  // Requirement: "It enters as individual units" -> Fix this by passing Quantity 1 (Box unit)
-  // or maybe effectively treating it as a Box.
   
   openModal(
     '반품 요청 확인', 
@@ -140,22 +144,30 @@ const performReturnRequest = () => {
 }
 
 const approveInbound = () => {
-  if (!selectedBoxCode.value) {
-    openModal('알림', '입고 승인할 박스를 선택해주세요.', null, false)
+  const boxCount = selectedBoxIds.value.size
+  const itemCount = selectedItemIds.value.size
+
+  if (boxCount === 0 && itemCount === 0) {
+    openModal('알림', '입고 승인할 항목을 선택해주세요.', null, false)
     return
   }
-  openModal(
-    '입고 승인 확인', 
-    `${selectedBoxCode.value} 박스를 입고 승인하시겠습니까?`, 
-    performApprove
-  )
+
+  const msg = boxCount > 0 ? `선택된 ${boxCount}개의 박스를 입고 승인하시겠습니까?` : `선택된 ${itemCount}개의 항목을 입고 승인하시겠습니까?`
+  openModal('입고 승인 확인', msg, performApprove)
 }
 
 const performApprove = () => {
-  // Remove the approved box from the list
-  inboundBoxes.value = inboundBoxes.value.filter(box => box.boxCode !== selectedBoxCode.value)
-  // Clear selection
-  selectedBoxCode.value = null
+  // Remove approved boxes
+  selectedBoxIds.value.forEach(boxCode => {
+    inboundBoxes.value = inboundBoxes.value.filter(b => b.boxCode !== boxCode)
+    if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
+  })
+
+  // Remove individual items if any selected that aren't part of the selected boxes above
+  // Note: simplified for standard behavior where usually box selection handles it.
+  
+  selectedBoxIds.value.clear()
+  selectedItemIds.value.clear()
   openModal('알림', '입고 승인 되었습니다.', null, false)
 }
 
@@ -191,9 +203,9 @@ const handleModalClose = () => {
       <h2 class="page-title">입고 관리</h2>
     </div>
 
-    <div class="split-container">
-      <!-- Left Panel: Box List -->
-      <section class="left-panel">
+    <div class="main-container">
+      <!-- Top Section: Box List -->
+      <section class="top-panel">
         <h3 class="panel-title">박스 목록</h3>
         <div class="data-table-card">
           <div class="data-table-scroll-wrapper">
@@ -235,30 +247,25 @@ const handleModalClose = () => {
             </table>
           </div>
         </div>
-        <!-- Spacer to align with right panel's button area -->
-        <div class="action-bar spacer"></div>
       </section>
 
-      <!-- Right Panel: Detail List -->
-      <section class="right-panel">
+      <!-- Bottom Section: Detail List -->
+      <section class="bottom-panel">
         <h3 class="panel-title">상세 품목 목록</h3>
         <div class="data-table-card detail-card">
           <div v-if="!selectedBoxCode" class="empty-state">
-            <p>좌측에서 박스를 선택해주세요.</p>
+            <p>위 목록에서 박스를 선택하여 상세 품목을 확인하세요.</p>
           </div>
           <div v-else class="data-table-scroll-wrapper">
             <table class="data-table">
               <thead>
                 <tr>
                   <th class="checkbox-col">
-                    <input type="checkbox" @change="toggleAllItems" :checked="selectedBoxDetails.value && selectedBoxDetails.value.length > 0 && selectedItemIds.size === selectedBoxDetails.value.length">
+                    <input type="checkbox" @change="toggleAllItems" :checked="selectedBoxDetails.length > 0 && selectedItemIds.size === selectedBoxDetails.length">
                   </th>
                   <th>제품 식별 코드</th>
-                  <th>제품 코드</th>
-                  <th>제품명</th>
                   <th>생산일</th>
                   <th>유통기한</th>
-                  <th>개별 금액</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,28 +274,30 @@ const handleModalClose = () => {
                      <input type="checkbox" :checked="selectedItemIds.has(item.id)" @change="toggleItem(item.id)">
                   </td>
                   <td class="code-cell">{{ item.id }}</td>
-                  <td>{{ item.productCode }}</td>
-                  <td class="name-cell">{{ item.name }}</td>
                   <td>{{ item.productionDate }}</td>
                   <td>{{ item.expiryDate }}</td>
-                  <td class="text-right">{{ item.unitPrice.toLocaleString() }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
-
-        <div class="action-bar">
-          <button class="action-btn return-btn" @click="goToReturnRequest">
-            반품 요청
-          </button>
-          <button class="action-btn approve-btn" @click="approveInbound" :disabled="!selectedBoxCode">
-            입고 승인
-          </button>
-        </div>
       </section>
     </div>
 
+    <!-- Action Bar -->
+    <div class="bottom-action-bar">
+      <div class="selected-summary" v-if="selectedBoxIds.size > 0 || selectedItemIds.size > 0">
+        선택됨: 박스 <strong>{{ selectedBoxIds.size }}</strong>개, 품목 <strong>{{ selectedItemIds.size }}</strong>개
+      </div>
+      <div class="btn-group">
+        <button class="action-btn return-btn" @click="goToReturnRequest">
+          반품 요청
+        </button>
+        <button class="action-btn approve-btn" @click="approveInbound">
+          입고 승인
+        </button>
+      </div>
+    </div>
 
     <Modal
       :isOpen="modalVisible"
@@ -304,80 +313,73 @@ const handleModalClose = () => {
 <style scoped>
 .content-wrapper { 
   max-width: 100%;
-  height: 100%;
-  padding: 0 0 1rem 0; /* Minimal padding */
+  height: 100vh;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent page scroll */
+  overflow: hidden;
+  background-color: #f8fafc;
 }
 
 .page-header {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   flex-shrink: 0;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: normal;
-  color: var(--text-dark, #1e293b);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0;
 }
 
-.split-container {
-  display: flex;
-  gap: 1.5rem;
+.main-container {
   flex: 1;
-  overflow: hidden; /* Prevent full page scroll */
-  min-height: 0; /* Crucial for flex nested scrolling */
-}
-
-/* Left Panel */
-.left-panel {
-  flex: 3.5; /* Narrower width (approx 35%) */
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Allow shrinking for scroll overlap if needed, though flex-basis handles it */
+  gap: 1.5rem;
   min-height: 0;
 }
 
-/* Right Panel */
-.right-panel {
-  flex: 6.5; /* Wider width (approx 65%) */
+.top-panel {
+  flex: 0 0 250px;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  min-width: 0;
+}
+
+.bottom-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .panel-title {
   font-size: 1.1rem;
-  font-weight: normal;
+  font-weight: 500;
   margin-bottom: 0.75rem;
-  color: var(--text-dark, #334155);
-  flex-shrink: 0;
+  color: #475569;
 }
 
 .data-table-card {
   background: white;
   border-radius: 12px;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  min-height: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .data-table-scroll-wrapper {
   flex: 1;
   overflow: auto;
-  width: 100%;
 }
 
 .data-table {
-  width: max-content; /* Allow table to expand */
-  min-width: 100%; /* At least fill the container */
+  width: 100%;
   border-collapse: collapse;
 }
 
@@ -390,50 +392,65 @@ const handleModalClose = () => {
 
 .data-table th {
   text-align: left;
-  padding: 1rem;
-  background: #f8fafc;
+  padding: 0.75rem 1rem;
   color: #64748b;
   font-size: 0.85rem;
-  font-weight: normal;
+  font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
 
 .data-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
   font-size: 0.9rem;
   color: #334155;
   white-space: nowrap;
 }
+
+.checkbox-col { width: 50px; text-align: center; }
 
 .clickable-row {
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
-.clickable-row:hover {
-  background-color: #f1f5f9;
-}
-
-.clickable-row.active {
-  background-color: #e0f2fe;
-  border-left: 3px solid #0ea5e9;
-}
+.clickable-row:hover { background-color: #f1f5f9; }
+.clickable-row.active { background-color: #e0f2fe; border-left: 3px solid #acddf5; }
 
 .code-cell {
   font-family: monospace;
-  font-weight: normal;
   color: #475569;
 }
 
-.name-cell {
-  font-weight: normal;
+.bottom-action-bar {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
 }
 
-.text-right {
-  text-align: right;
+.selected-summary { color: #64748b; font-size: 0.9rem; }
+.btn-group { display: flex; gap: 0.75rem; }
+
+.action-btn {
+  padding: 0.75rem 2rem; 
+  border-radius: 8px; 
+  font-weight: normal; 
+  cursor: pointer; 
+  border: none;
+  color: white;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 1rem;
 }
+
+.action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.approve-btn { background-color: #6b8abf; }
+.return-btn { background-color: #d65b5b; }
 
 .empty-state {
   display: flex;
@@ -441,55 +458,7 @@ const handleModalClose = () => {
   justify-content: center;
   height: 100%;
   color: #94a3b8;
-  font-size: 1rem;
 }
 
-.action-bar {
-  margin-top: 1rem;
-  display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-  height: 48px; /* Fixed height for alignment */
-}
-
-.action-bar.spacer {
-  visibility: hidden; /* Invisible spacer */
-}
-
-.action-btn {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: normal;
-  font-size: 1rem;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  color: white;
-  margin-left: 0.75rem;
-}
-
-.action-btn:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.action-btn:disabled {
-  background: #94a3b8;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.approve-btn {
-  background: var(--primary, #2563eb);
-}
-
-.return-btn {
-  background: #ef4444; /* Red for return */
-}
-
-.checkbox-col {
-  width: 40px;
-  text-align: center;
-}
+.text-right { text-align: right; }
 </style>

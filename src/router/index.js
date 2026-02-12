@@ -21,6 +21,7 @@ import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
 import FactoryInboundView from '../views/factory/InboundView.vue'
 import FactoryOutboundView from '../views/factory/OutboundView.vue'
 import FactoryVehicleAssignmentView from '../views/factory/VehicleAssignmentView.vue'
+import FactoryReturnVehicleAssignmentView from '../views/factory/ReturnVehicleAssignmentView.vue'
 import MyPageView from '../views/MyPageView.vue'
 import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
 import OrganizationListView from '../views/OrganizationListView.vue'
@@ -32,6 +33,9 @@ import NoticeRegistrationView from '../views/NoticeRegistrationView.vue'
 import NoticeDetailView from '../views/NoticeDetailView.vue'
 import LogisticsRegistrationView from '../views/LogisticsRegistrationView.vue'
 import LogisticsListView from '../views/LogisticsListView.vue'
+import OrderReceptionDetailView from "@/views/head-office/OrderReceptionDetailView.vue";
+import ReturnRequestReceptionList from "@/views/head-office/ReturnRequestReceptionList.vue";
+import HeadOfficeLogisticsLogView from "@/views/head-office/LogisticsLogView.vue";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -182,6 +186,11 @@ const router = createRouter({
             component: LogisticsListView
         },
         {
+            path: '/notifications',
+            name: 'notification-list',
+            component: () => import('../views/NotificationListView.vue')
+        },
+        {
             path: '/store/inventory',
             name: 'store-inventory',
             component: () => import('../views/StoreInventoryManagementView.vue')
@@ -220,6 +229,16 @@ const router = createRouter({
             component: HeadOfficeOrderReceptionView
         },
         {
+            path: '/head-office/orders/reception/detail',
+            name: 'OrderReceptionDetail',
+            component: OrderReceptionDetailView,
+        },
+        {
+            path: '/head-office/returns/reception',
+            name: 'ReturnRequestReception',
+            component: ReturnRequestReceptionList,
+        },
+        {
             path: '/head-office/orders/request',
             name: 'head-office-order-request',
             component: HeadOfficeOrderRequestView
@@ -243,6 +262,11 @@ const router = createRouter({
             path: '/head-office/returns/:id',
             name: 'head-office-return-detail',
             component: () => import('../views/head-office/ReturnRequestDetailView.vue')
+        },
+        {
+            path: '/head-office/logs/logistics',
+            name: 'head-office-logistics-log',
+            component: HeadOfficeLogisticsLogView
         },
 
         // --- Factory Routes ---
@@ -270,6 +294,11 @@ const router = createRouter({
             path: '/factory/orders/vehicle-assignment',
             name: 'factory-vehicle-assignment',
             component: FactoryVehicleAssignmentView
+        },
+        {
+            path: '/factory/returns/vehicle-assignment',
+            name: 'factory-return-vehicle-assignment',
+            component: FactoryReturnVehicleAssignmentView
         },
         {
             path: '/store/settlement',
@@ -300,6 +329,11 @@ const router = createRouter({
             path: '/hq/settlement/detail/:storeId',
             name: 'hq-settlement-detail',
             component: () => import('@/views/hq-settlement/HqSettlementDetailView.vue')
+        },
+        {
+            path: '/hq/settlement/summary-detail',
+            name: 'hq-settlement-summary-detail',
+            component: () => import('@/views/hq-settlement/HqSettlementSummaryDetailView.vue')
         },
         {
             path: '/hq/settlement/voucher-manage',

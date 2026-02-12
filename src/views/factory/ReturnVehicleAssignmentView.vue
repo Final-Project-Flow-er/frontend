@@ -7,21 +7,19 @@ const router = useRouter()
 
 // Mock Data - Vehicles
 const vehicles = ref([
-  { company: '우리통상', driver: '홍길동', phone: '010-1234-5678', type: '5톤 트럭', number: '서울 12가 3456', maxWeight: 5000, currentWeight: 1200 },
-  { company: '대한물류', driver: '김철수', phone: '010-2222-3333', type: '1톤 탑차', number: '경기 88나 9999', maxWeight: 1000, currentWeight: 0 },
-  { company: '에이원', driver: '이영희', phone: '010-5555-6666', type: '2.5톤 트럭', number: '인천 77다 1111', maxWeight: 2500, currentWeight: 500 },
-  { company: '우리통상', driver: '정지훈', phone: '010-8888-9999', type: '1톤 탑차', number: '서울 55라 1234', maxWeight: 1000, currentWeight: 0 },
-  { company: '대한물류', driver: '차유진', phone: '010-4444-5555', type: '5톤 트럭', number: '경기 22마 5678', maxWeight: 5000, currentWeight: 0 },
+  { company: '우리통상', driver: '홍길동', phone: '010-1234-5678', type: '5톤 트럭', number: '서울 12가 3456', maxWeight: 5000, orderWeight: 1200, returnWeight: 0 },
+  { company: '대한물류', driver: '김철수', phone: '010-2222-3333', type: '1톤 탑차', number: '경기 88나 9999', maxWeight: 1000, orderWeight: 0, returnWeight: 0 },
+  { company: '에이원', driver: '이영희', phone: '010-5555-6666', type: '2.5톤 트럭', number: '인천 77다 1111', maxWeight: 2500, orderWeight: 500, returnWeight: 0 },
+  { company: '우리통상', driver: '정지훈', phone: '010-8888-9999', type: '1톤 탑차', number: '서울 55라 1234', maxWeight: 1000, orderWeight: 0, returnWeight: 0 },
+  { company: '대한물류', driver: '차유진', phone: '010-4444-5555', type: '5톤 트럭', number: '경기 22마 5678', maxWeight: 5000, orderWeight: 0, returnWeight: 0 },
 ])
 
-// Mock Data - Unassigned Orders
-const unassignedOrders = ref([
-  { orderCode: 'HEAD20260210001', franchise: '강남점', address: '서울 강남구 역삼동 123-45', product: '오리지널 떡볶이 밀키트', recipient: '김철수', contact: '010-1111-2222', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 800, transportCost: 50000 },
-  { orderCode: 'HEAD20260210002', franchise: '홍대점', address: '서울 마포구 서교동 456-78', product: '마라 떡볶이 밀키트', recipient: '박영희', contact: '010-3333-4444', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 1200, transportCost: 65000 },
-  { orderCode: 'HEAD20260210003', franchise: '잠실점', address: '서울 송파구 신천동 789-01', product: '로제 떡볶이 밀키트', recipient: '이민수', contact: '010-5555-6666', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 400, transportCost: 45000 },
-  { orderCode: 'HEAD20260211001', franchise: '신촌점', address: '서울 서대문구 창천동 111-22', product: '오리지널 떡볶이 밀키트', recipient: '정수원', contact: '010-7777-8888', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 1500, transportCost: 75000 },
-  { orderCode: 'HEAD20260211002', franchise: '서초점', address: '서울 서초구 서초동 333-44', product: '마라 떡볶이 밀키트', recipient: '강현우', contact: '010-0000-0000', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 600, transportCost: 55000 },
-  { orderCode: 'HEAD20260211003', franchise: '명동점', address: '서울 중구 을지로 555-66', product: '로제 떡볶이 밀키트', recipient: '윤지하', contact: '010-2222-1111', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 2000, transportCost: 90000 },
+// Mock Data - Unassigned Return Requests
+const unassignedReturns = ref([
+  { returnCode: 'RESE0120260209001', franchise: '강남점', address: '서울 강남구 역삼동 123-45', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 300, transportCost: 30000 },
+  { returnCode: 'RESE0220260209002', franchise: '홍대점', address: '서울 마포구 서교동 456-78', product: '마라 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 500, transportCost: 40000 },
+  { returnCode: 'RESE0320260210001', franchise: '잠실점', address: '서울 송파구 신천동 789-01', product: '로제 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-10', weight: 200, transportCost: 25000 },
+  { returnCode: 'RESE0420260211001', franchise: '신촌점', address: '서울 서대문구 창천동 111-22', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-11', weight: 800, transportCost: 55000 },
 ])
 
 const vehicleFilter = ref({
@@ -31,7 +29,7 @@ const vehicleFilter = ref({
   number: ''
 })
 
-const orderFilter = ref({
+const returnFilter = ref({
   search: ''
 })
 
@@ -48,73 +46,64 @@ const filteredVehicles = computed(() => {
   })
 })
 
-const filteredOrders = computed(() => {
-  return unassignedOrders.value.filter(o => {
-    const keyword = orderFilter.value.search.toLowerCase()
-    return !keyword || o.orderCode.toLowerCase().includes(keyword) || o.franchise.toLowerCase().includes(keyword)
+const filteredReturns = computed(() => {
+  return unassignedReturns.value.filter(r => {
+    const keyword = returnFilter.value.search.toLowerCase()
+    return !keyword || r.returnCode.toLowerCase().includes(keyword) || r.franchise.toLowerCase().includes(keyword)
   })
 })
 
 const selectedVehicle = ref(null)
-const selectedOrderCodes = ref(new Set())
+const selectedReturnCodes = ref(new Set())
 
 const selectVehicle = (vehicle) => {
-  // Sync selectedVehicle with the ref from vehicles array to maintain reactivity if we update vehicles.value
   selectedVehicle.value = vehicle
-  selectedOrderCodes.value.clear() // Reset orders when vehicle changes
+  selectedReturnCodes.value.clear()
 }
 
-const toggleOrder = (orderCode) => {
-  if (selectedOrderCodes.value.has(orderCode)) {
-    selectedOrderCodes.value.delete(orderCode)
+const toggleReturn = (returnCode) => {
+  if (selectedReturnCodes.value.has(returnCode)) {
+    selectedReturnCodes.value.delete(returnCode)
   } else {
-    selectedOrderCodes.value.add(orderCode)
+    selectedReturnCodes.value.add(returnCode)
   }
 }
 
-// Logic: Check if adding an order exceeds capacity
-const canCheckOrder = (order) => {
+const canCheckReturn = (ret) => {
   if (!selectedVehicle.value) return false
   
-  // Weights already on the vehicle + checked orders (excluding this one if already checked)
-  let totalWeightInVehicle = selectedVehicle.value.currentWeight
-  unassignedOrders.value.forEach(o => {
-    if (selectedOrderCodes.value.has(o.orderCode) && o.orderCode !== order.orderCode) {
-      totalWeightInVehicle += o.weight
+  let totalWeightInVehicle = selectedVehicle.value.orderWeight + selectedVehicle.value.returnWeight
+  unassignedReturns.value.forEach(r => {
+    if (selectedReturnCodes.value.has(r.returnCode) && r.returnCode !== ret.returnCode) {
+      totalWeightInVehicle += r.weight
     }
   })
   
-  // If removing, it's always allowed
-  if (selectedOrderCodes.value.has(order.orderCode)) return true
+  if (selectedReturnCodes.value.has(ret.returnCode)) return true
   
-  // If adding, check against max weight
-  return (totalWeightInVehicle + order.weight) <= selectedVehicle.value.maxWeight
+  return (totalWeightInVehicle + ret.weight) <= selectedVehicle.value.maxWeight
 }
 
 const assignVehicle = () => {
-  if (!selectedVehicle.value || selectedOrderCodes.value.size === 0) return
+  if (!selectedVehicle.value || selectedReturnCodes.value.size === 0) return
   
-  // Calculate total weight to assign
   let weightToAdd = 0
-  unassignedOrders.value.forEach(o => {
-    if (selectedOrderCodes.value.has(o.orderCode)) {
-      weightToAdd += o.weight
+  unassignedReturns.value.forEach(r => {
+    if (selectedReturnCodes.value.has(r.returnCode)) {
+      weightToAdd += r.weight
     }
   })
 
-  openModal('배정 확인', `${selectedVehicle.value.number} 차량에 ${selectedOrderCodes.value.size}건의 발주를 배정하시겠습니까?`, () => {
-    // Update the vehicle's current weight (persistent)
+  openModal('배정 확인', `${selectedVehicle.value.number} 차량에 ${selectedReturnCodes.value.size}건의 반품을 배정하시겠습니까?`, () => {
     const vehicleIdx = vehicles.value.findIndex(v => v.number === selectedVehicle.value.number)
     if (vehicleIdx !== -1) {
-        vehicles.value[vehicleIdx].currentWeight += weightToAdd
-        // Re-sync selectedVehicle to show updated weight in UI
+        vehicles.value[vehicleIdx].returnWeight += weightToAdd
         selectedVehicle.value = vehicles.value[vehicleIdx]
     }
 
-    // Remove assigned orders from the list
-    unassignedOrders.value = unassignedOrders.value.filter(o => !selectedOrderCodes.value.has(o.orderCode))
-    selectedOrderCodes.value.clear()
-    openModal('알림', '배정이 완료되었습니다.', null, false)
+    unassignedReturns.value = unassignedReturns.value.filter(r => !selectedReturnCodes.value.has(r.returnCode))
+    selectedReturnCodes.value.clear()
+    openModal('알림', '반품 차량 배정이 완료되었습니다.', null, false)
   })
 }
 
@@ -152,7 +141,7 @@ const goBack = () => router.back()
     <div class="page-header">
       <div class="header-left">
         <button class="back-btn" @click="goBack">←</button>
-        <h2 class="page-title">차량 배정 관리</h2>
+        <h2 class="page-title">반품 차량 배정 관리</h2>
       </div>
     </div>
 
@@ -218,9 +207,17 @@ const goBack = () => router.back()
                   <td>{{ v.type }}</td>
                   <td class="code-cell">{{ v.number }}</td>
                   <td class="text-right weight-cell">
-                    <span :class="{ 'overload': v.currentWeight >= v.maxWeight }">{{ v.currentWeight.toLocaleString() }}</span>
-                    <span class="divider">/</span>
-                    <span class="max-weight">{{ v.maxWeight.toLocaleString() }}kg</span>
+                    <div class="weight-details">
+                      <span class="weight-item order">발: {{ v.orderWeight.toLocaleString() }}</span>
+                      <span class="weight-item return">반: {{ v.returnWeight.toLocaleString() }}</span>
+                    </div>
+                    <div class="weight-total">
+                      <span :class="{ 'overload': (v.orderWeight + v.returnWeight) >= v.maxWeight }">
+                        {{ (v.orderWeight + v.returnWeight).toLocaleString() }}
+                      </span>
+                      <span class="divider">/</span>
+                      <span class="max-weight">{{ v.maxWeight.toLocaleString() }}kg</span>
+                    </div>
                   </td>
                 </tr>
                 <tr v-if="filteredVehicles.length === 0">
@@ -232,14 +229,14 @@ const goBack = () => router.back()
         </div>
       </div>
 
-      <!-- Bottom Section: Unassigned Orders (Full Width) -->
+      <!-- Bottom Section: Unassigned Returns (Full Width) -->
       <div class="bottom-content">
         <div class="order-list-section card">
           <div class="section-header">
             <div class="header-left-group">
-              <h3 class="section-title">차량 미배정 발주 목록</h3>
+              <h3 class="section-title">차량 미배정 반품 목록</h3>
               <div class="order-search-filter">
-                <input type="text" v-model="orderFilter.search" placeholder="발주코드 및 가맹점 검색" class="large-search" />
+                <input type="text" v-model="returnFilter.search" placeholder="반품코드 및 가맹점 검색" class="large-search" />
               </div>
             </div>
             <div v-if="selectedVehicle" class="info-badge">
@@ -251,39 +248,39 @@ const goBack = () => router.back()
               <thead>
                 <tr>
                   <th class="checkbox-col"></th>
-                  <th>발주 코드</th>
+                  <th>반품 코드</th>
                   <th>가맹점</th>
                   <th>주소</th>
+                  <th>제품</th>
                   <th>수령인</th>
                   <th>연락처</th>
                   <th>중량</th>
                   <th>운송비</th>
-                  <th>발주일</th>
-                  <th>도착일</th>
+                  <th>반품 요청일</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="o in filteredOrders" :key="o.orderCode">
+                <tr v-for="r in filteredReturns" :key="r.returnCode">
                   <td class="checkbox-col">
                     <input 
                       type="checkbox" 
-                      :checked="selectedOrderCodes.has(o.orderCode)" 
-                      :disabled="!canCheckOrder(o)"
-                      @change="toggleOrder(o.orderCode)"
+                      :checked="selectedReturnCodes.has(r.returnCode)" 
+                      :disabled="!canCheckReturn(r)"
+                      @change="toggleReturn(r.returnCode)"
                     />
                   </td>
-                  <td class="code-cell">{{ o.orderCode }}</td>
-                  <td>{{ o.franchise }}</td>
-                  <td class="address-cell" :title="o.address">{{ o.address }}</td>
-                  <td>{{ o.recipient }}</td>
-                  <td>{{ o.contact }}</td>
-                  <td class="text-right">{{ o.weight.toLocaleString() }}kg</td>
-                  <td class="text-right cost-cell">{{ o.transportCost.toLocaleString() }}원</td>
-                  <td>{{ o.orderDate }}</td>
-                  <td>{{ o.arrivalDate }}</td>
+                  <td class="code-cell">{{ r.returnCode }}</td>
+                  <td>{{ r.franchise }}</td>
+                  <td class="address-cell" :title="r.address">{{ r.address }}</td>
+                  <td class="name-cell">{{ r.product }}</td>
+                  <td>{{ r.recipient }}</td>
+                  <td>{{ r.contact }}</td>
+                  <td class="text-right">{{ r.weight.toLocaleString() }}kg</td>
+                  <td class="text-right cost-cell">{{ r.transportCost.toLocaleString() }}원</td>
+                  <td>{{ r.requestDate }}</td>
                 </tr>
-                <tr v-if="filteredOrders.length === 0">
-                   <td colspan="10" class="empty-state">미배정 발주 내역이 없습니다.</td>
+                <tr v-if="filteredReturns.length === 0">
+                   <td colspan="10" class="empty-state">미배정 반품 내역이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -292,11 +289,11 @@ const goBack = () => router.back()
 
         <div class="bottom-action-bar">
           <div class="capacity-indicator" v-if="selectedVehicle">
-             배정 수량: <strong>{{ selectedOrderCodes.size }}건</strong>
+             배정 수량: <strong>{{ selectedReturnCodes.size }}건</strong>
           </div>
           <button 
             class="action-btn assign-btn" 
-            :disabled="!selectedVehicle || selectedOrderCodes.size === 0"
+            :disabled="!selectedVehicle || selectedReturnCodes.size === 0"
             @click="assignVehicle"
           >
             차량 배정
@@ -362,7 +359,7 @@ const goBack = () => router.back()
 .top-content {
   display: flex;
   gap: 1.5rem;
-  height: 240px; /* 컴팩트한 높이로 조정 */
+  height: 240px;
   flex-shrink: 0;
 }
 
@@ -427,12 +424,12 @@ const goBack = () => router.back()
 }
 
 .order-list-section {
-  flex: 1; /* 다시 flex: 1로 설정하여 남은 공간 차지 */
-  min-height: 400px; /* 5줄 이상 확실히 보장 */
+  flex: 1;
+  min-height: 400px;
 }
 
 .table-wrapper {
-  flex: 1; /* 카드 내에서 가로 공간을 채우도록 */
+  flex: 1;
   overflow: auto;
   border: 1px solid #f1f5f9;
   border-radius: 8px;
@@ -475,7 +472,37 @@ const goBack = () => router.back()
 
 .checkbox-col { width: 40px; text-align: center; }
 .weight-cell {
-  font-family: inherit;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.weight-details {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.weight-item {
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.weight-item.order {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.weight-item.return {
+  background: #f0f9ff;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.weight-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 .weight-cell .divider {
   margin: 0 4px;

@@ -25,6 +25,16 @@
           >
         </div>
 
+        <div class="form-group">
+          <label>작성자</label>
+          <input 
+            type="text" 
+            v-model="formData.author" 
+            placeholder="작성자명을 입력하세요" 
+            required
+          >
+        </div>
+
         <div class="form-row">
           <div class="form-group checkbox-group">
             <label class="checkbox-label">
@@ -83,15 +93,24 @@ import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
 const route = useRoute()
 
+const userRole = sessionStorage.getItem('userRole')
+const isAdmin = userRole === 'admin' || userRole === 'headOffice'
+
 const isEdit = ref(false)
 const formData = reactive({
   title: '',
+  author: '',
   content: '',
   isImportant: false,
   fileName: ''
 })
 
 onMounted(() => {
+  if (!isAdmin) {
+    alert('권한이 없습니다.')
+    router.push('/notice')
+    return
+  }
   if (route.name === 'notice-edit') {
     isEdit.value = true
     const noticeId = route.params.id
@@ -101,12 +120,14 @@ onMounted(() => {
       {
         id: '3',
         title: '[긴급] 시스템 점검 안내 (02/15)',
+        author: '본사 관리자',
         content: '원활한 서비스 제공을 위해 아래와 같이 시스템 점검을 진행할 예정입니다.\n\n[점검 일시]\n2026년 2월 15일(일) 02:00 ~ 04:00 (약 2시간)\n\n[점검 내용]\n데이터베이스 최적화 및 보안 패치 적용\n\n점검 시간 동안에는 서비스 접속이 일시적으로 제한될 수 있으니 양해 부탁드립니다.',
         isImportant: true
       },
       {
         id: '2',
         title: '신규 상품 입고 및 주문 가이드 안내',
+        author: '영업기획팀',
         content: '안녕하세요. 본사 관리자입니다.\n\n2026년 상반기 신규 상품 라인업이 확정되어 안내 드립니다.\n첨부된 가이드 파일을 확인하시어 주문 및 판매에 참고 부탁드립니다.\n\n궁금하신 사항은 영업담당자에게 문의 바랍니다.',
         isImportant: false,
         fileName: '2026_신규상품_가이드라인.pdf'
@@ -114,6 +135,7 @@ onMounted(() => {
       {
         id: '1',
         title: '개인정보 처리방침 개정 안내',
+        author: '법무지원부',
         content: '안녕하세요. 본사 관리자입니다.\n\n회사의 개인정보 처리방침이 다음과 같이 개정될 예정임을 안내 드립니다.\n\n[주요 개정 내용]\n- 개인정보 보호 책임자 지정 방식 변경\n- 제3자 제공 업체 현황 업데이트\n\n개정된 방침은 2026년 3월 1일부터 적용됩니다.',
         isImportant: false
       }
@@ -122,6 +144,7 @@ onMounted(() => {
     const found = mockNotices.find(n => n.id === noticeId)
     if (found) {
       formData.title = found.title
+      formData.author = found.author || ''
       formData.content = found.content
       formData.isImportant = found.isImportant
       formData.fileName = found.fileName || ''

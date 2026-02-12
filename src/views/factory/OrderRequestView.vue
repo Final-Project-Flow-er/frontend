@@ -143,8 +143,6 @@ const getStatusClass = (s) => ({
             <th>제품 코드</th>
             <th>제품명</th>
             <th>수량</th>
-            <th>단위 금액</th>
-            <th>총 금액</th>
             <th>담당자</th>
             <th>연락처</th>
             <th>사원번호</th>
@@ -164,8 +162,6 @@ const getStatusClass = (s) => ({
             <td class="sku-cell">{{ order.productCode }}</td>
             <td>{{ order.productName }}</td>
             <td>{{ formatNumber(order.quantity) }}</td>
-            <td>{{ formatNumber(order.unitPrice) }}</td>
-            <td>{{ formatNumber(order.totalAmount) }}</td>
             <td>{{ order.managerName }}</td>
             <td>{{ order.managerPhone }}</td>
             <td>{{ order.employeeId }}</td>
@@ -178,7 +174,6 @@ const getStatusClass = (s) => ({
         </tbody>
       </table>
     </div>
-
 
   </div>
 </template>

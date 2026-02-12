@@ -3,13 +3,17 @@
     <div class="page-title"><h2>{{ headerTitle }}</h2></div>
 
     <div class="header-tools">
-      <div class="notification" @click="$router.push('/notice')">
+      <div class="notification" @click="$router.push('/notifications')">
         <img src="@/assets/notification.png" alt="알림" class="notif-img">
         <span class="dot"></span>
       </div>
 
       <div class="user-card" @click="$router.push('/mypage')">
         <div class="user-avatar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
         </div>
 
         <div class="user-detail">
@@ -92,16 +96,27 @@ const handleLogout = () => {
 }
 
 .user-avatar {
-  width: 35px;
-  height: 35px;
-  background-color: #475569;
+  width: 38px;
+  height: 38px;
+  background-color: #f8fafc;
   border-radius: 50%;
   flex-shrink: 0;
-  border: 1px solid #ddd;
+  border: 2px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  overflow: hidden;
 }
 
-.user-detail .u-name { margin: 0; font-weight: 600; font-size: 0.85rem; color: #1e293b; }
-.user-detail .u-role { margin: 0; font-size: 0.7rem; color: #94a3b8; }
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-detail .u-name { margin: 0; font-weight: 700; font-size: 0.85rem; color: #0f172a; }
+.user-detail .u-role { margin: 0; font-size: 0.75rem; color: #64748b; font-weight: 600; }
 
 .divider {
   width: 1px;

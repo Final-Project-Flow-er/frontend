@@ -280,10 +280,6 @@ const getStatusClass = (s) => ({
       </table>
     </div>
 
-    <div class="bottom-actions">
-        <button class="primary-btn wide" @click="$router.push({ name: 'factory-vehicle-assignment' })">차량 배정</button>
-    </div>
-
     <!-- Cancellation Modal -->
     <Teleport to="body">
       <div v-if="isCancelModalOpen" class="modal-overlay" @click.self="closeModal">

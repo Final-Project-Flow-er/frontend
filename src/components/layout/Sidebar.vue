@@ -17,22 +17,22 @@
               }"
           >
             <div class="menu-item-row" @click="toggleItem(item)">
-                <div class="icon-container">
-                    <span v-if="item.children" class="arrow-icon" :class="{ open: item.isOpen }">▶</span>
-                </div>
-                <span>{{ item.name }}</span>
+              <div class="icon-container">
+                <span v-if="item.children" class="arrow-icon" :class="{ open: item.isOpen }">▶</span>
+              </div>
+              <span>{{ item.name }}</span>
             </div>
 
             <!-- Children -->
             <ul v-if="item.children && item.isOpen" class="submenu">
-                <li
-                    v-for="child in item.children"
-                    :key="child.name"
-                    :class="{ active: currentPath === child.path, 'submenu-item': true }"
-                    @click.stop="navigateTo(child.path)"
-                >
-                   {{ child.name }}
-                </li>
+              <li
+                  v-for="child in item.children"
+                  :key="child.name"
+                  :class="{ active: currentPath === child.path, 'submenu-item': true }"
+                  @click.stop="navigateTo(child.path)"
+              >
+                {{ child.name }}
+              </li>
             </ul>
           </li>
         </ul>
@@ -46,8 +46,6 @@ import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
-const mainMenus = ['대시보드', '재고 관리', '재고 현황', '입출고 관리', '가맹점 정산', '본사 정산', '분석 리포트']
-const systemMenus = ['직원 관리', '환경 설정']
 const route = useRoute()
 
 const menuGroups = ref([
@@ -56,11 +54,11 @@ const menuGroups = ref([
     title: '본사',
     items: [
       {
-        name: '조직 관리',
+        name: '사업장 관리',
         isOpen: false,
         children: [
-          { name: '조직 등록', path: '/registration' },
-          { name: '조직 조회', path: '/organizations' }
+          { name: '사업장 등록', path: '/registration' },
+          { name: '사업장 조회', path: '/organizations' }
         ]
       },
       {
@@ -95,7 +93,8 @@ const menuGroups = ref([
         children: [
           { name: '본사 로그', path: '/hq/inventory/logs/hq' },
           { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
-          { name: '공장 로그', path: '/hq/inventory/logs/factory' }
+          { name: '공장 로그', path: '/hq/inventory/logs/factory' },
+          { name: '운송 로그', path: '/head-office/logs/logistics' }
         ]
       },
       {
@@ -104,11 +103,22 @@ const menuGroups = ref([
         children: [
           { name: '발주 관리', path: '/head-office/orders' },
           { name: '발주 요청 접수', path: '/head-office/orders/reception' },
-          { name: '발주 요청 관리', path: '/head-office/orders/request' }
+          { name: '발주 요청 관리', path: '/head-office/orders/request' },
+          { name: '차량 배정', path: '/factory/orders/vehicle-assignment' }
         ]
       },
-      { name: '반품 관리', path: '/head-office/returns' },
-      { name: '정산 관리', path: '/hq/settlement' }
+      // [수정] 반품 관리 하위에 '차량 배정' 추가
+      {
+        name: '반품 관리',
+        isOpen: false,
+        children: [
+          { name: '반품 요청 접수', path: '/head-office/returns/reception' },
+          { name: '반품 요청 관리', path: '/head-office/returns' },
+          { name: '차량 배정', path: '/factory/returns/vehicle-assignment' }
+        ]
+      },
+      { name: '정산 관리', path: '/hq/settlement' },
+      { name: '공지사항', path: '/notice' }
     ]
   },
   {
@@ -119,10 +129,10 @@ const menuGroups = ref([
       { name: '상품 정보', path: '/products/manage' },
       { name: '로그 관리', path: '/inventory/logs' },
       { name: '입고 관리', path: '/franchise/inbound' },
-      { name: '발주 관리', path: '/franchise/orders' },
-      { name: '반품 관리', path: '/franchise/returns' },
+      { name: '발주/반품 관리', path: '/franchise/orders' },
       { name: '판매 관리', path: '/franchise/products' },
-      { name: '정산 관리', path: '/store/settlement' }
+      { name: '정산 관리', path: '/store/settlement' },
+      { name: '공지사항', path: '/notice' }
     ]
   },
   {
@@ -135,11 +145,20 @@ const menuGroups = ref([
         name: '발주 관리',
         isOpen: false,
         children: [
-          { name: '발주 접수', path: '/factory/orders' },
-          { name: '발주 요청 관리', path: '/factory/orders/request' }
+          { name: '발주 요청 접수', path: '/factory/orders' },
+          { name: '발주 요청 관리', path: '/factory/orders/request' },
+          { name: '차량 배정', path: '/factory/orders/vehicle-assignment' }
         ]
       },
-      { name: '로그 관리', path: '/hq/inventory/logs/factory' }
+      {
+        name: '반품 관리',
+        isOpen: false,
+        children: [
+          { name: '차량 배정', path: '/factory/returns/vehicle-assignment' }
+        ]
+      },
+      { name: '로그 관리', path: '/hq/inventory/logs/factory' },
+      { name: '공지사항', path: '/notice' }
     ]
   }
 ])
@@ -154,36 +173,26 @@ const activeMenu = ref('대시보드')
 const currentPath = ref(window.location.pathname)
 
 watch(() => route.path, (newPath) => {
-    currentPath.value = newPath
-    // Auto-expand if child is active
-    filteredMenuGroups.value.forEach(group => {
-        group.items.forEach(item => {
-            if (item.children && item.children.some(c => c.path === newPath)) {
-                item.isOpen = true
-            }
-        })
+  currentPath.value = newPath
+  filteredMenuGroups.value.forEach(group => {
+    group.items.forEach(item => {
+      if (item.children && item.children.some(c => c.path === newPath)) {
+        item.isOpen = true
+      }
     })
+  })
 })
 
 const toggleItem = (item) => {
   if (item.children) {
-      item.isOpen = !item.isOpen
+    item.isOpen = !item.isOpen
   } else if (item.path) {
     router.push(item.path)
   }
 }
 
-const setActive = (menuName) => {
-  activeMenu.value = menuName
-  if (menuName === '재고 관리') {
-    router.push('/store/inventory')
-  } else if (menuName === '가맹점 정산') {
-    router.push('/store/settlement')
-  }
-}
-
 const navigateTo = (path) => {
-    router.push(path)
+  router.push(path)
 }
 </script>
 
@@ -212,7 +221,7 @@ const navigateTo = (path) => {
   transition: all 0.2s ease;
   user-select: none;
   overflow: hidden;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0;
 }
 
 .logo-area:hover {
@@ -240,40 +249,20 @@ const navigateTo = (path) => {
 
 .menu {
   flex: 1;
-  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
-/* Custom scrollbar for sidebar */
-.menu::-webkit-scrollbar {
-  width: 4px;
-}
-.menu::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
-}
-.menu::-webkit-scrollbar-track {
-  background: transparent;
-  transition: all 0.2s ease;
-}
-
-/* Scrollable Menu */
-.menu {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* Custom Scrollbar */
+/* Custom scrollbar */
 .menu::-webkit-scrollbar {
   width: 6px;
-}
-.menu::-webkit-scrollbar-track {
-  background: transparent;
 }
 .menu::-webkit-scrollbar-thumb {
   background: #334155;
   border-radius: 3px;
+}
+.menu::-webkit-scrollbar-track {
+  background: transparent;
 }
 .menu::-webkit-scrollbar-thumb:hover {
   background: #475569;
@@ -307,31 +296,30 @@ const navigateTo = (path) => {
 }
 
 .menu-item-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px; /* Reduced gap since container has width */
-    padding: 0.8rem 1.5rem;
-    width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0.8rem 1.5rem;
+  width: 100%;
 }
 
 .icon-container {
-    width: 16px; /* Fixed width to align text */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
+  width: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .arrow-icon {
-    font-size: 0.7rem;
-    display: inline-block;
-    transition: transform 0.2s;
+  font-size: 0.7rem;
+  display: inline-block;
+  transition: transform 0.2s;
 }
 .arrow-icon.open {
-    transform: rotate(90deg);
+  transform: rotate(90deg);
 }
-/* .no-arrow class removed as it's no longer needed */
 
 .menu li a {
   color: inherit;
@@ -349,21 +337,6 @@ const navigateTo = (path) => {
   padding-left: 1.8rem;
 }
 
-/* Submenu */
-.submenu {
-    width: 100%;
-    background: rgba(0,0,0,0.2);
-    padding-left: 0;
-}
-
-.submenu-item {
-    font-size: 0.9rem;
-    padding: 0.8rem 1.5rem 0.8rem 3.5rem !important; /* Adjusted Indent since arrow is gone/moved */
-    color: #94a3b8;
-    display: flex;
-    align-items: center;
-}
-
 .menu li a.active::before {
   content: "";
   position: absolute;
@@ -374,7 +347,22 @@ const navigateTo = (path) => {
   background-color: var(--primary, #94a3b8);
   border-radius: 0 4px 4px 0;
 }
+
+/* Submenu */
+.submenu {
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  padding-left: 0;
+}
+
+.submenu-item {
+  font-size: 0.9rem;
+  padding: 0.8rem 1.5rem 0.8rem 3.5rem !important;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
 .submenu-item:hover { background: rgba(255, 255, 255, 0.05) !important; color: white !important; }
 .submenu-item.active { color: #60a5fa !important; background: rgba(59, 130, 246, 0.1) !important; }
-
 </style>

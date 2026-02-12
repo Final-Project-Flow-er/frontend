@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
 
 const route = useRoute()
 const storeId = route.params.storeId || 'S001'
@@ -72,11 +73,13 @@ const getTypeClass = (type) => ({
   commission: 'type-commission', refund: 'type-refund', loss: 'type-loss', adjust: 'type-adjust',
 }[type] || '')
 
-/* ── 다운로드 ── */
-const downloadPDF = () => {
-  const label = activeTab.value === 'daily' ? selectedDate.value : selectedMonth.value
-  alert(`${storeName} 정산서 PDF 다운로드: ${label}\n(실제 API 연동 시 구현)`)
+/* ── 영수증 모달 ── */
+const showReceiptModal = ref(false)
+const openReceipt = () => {
+  showReceiptModal.value = true
 }
+
+/* ── 다운로드 ── */
 const downloadExcel = () => {
   alert(`${storeName} 전표 내역 Excel 다운로드: ${selectedMonth.value}\n(실제 API 연동 시 구현)`)
 }
@@ -96,7 +99,8 @@ const downloadExcel = () => {
         </div>
       </div>
       <div class="header-actions">
-        <button class="action-btn pdf" @click="downloadPDF">
+        <!-- 빨간색 PDF 버튼 -> 영수증 모달 트리거 -->
+        <button class="action-btn pdf" @click="openReceipt">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           PDF
         </button>
@@ -189,6 +193,14 @@ const downloadExcel = () => {
       </div>
     </div>
   </div>
+
+  <!-- 정산 영수증 모달 -->
+  <SettlementReceiptModal
+    :is-open="showReceiptModal"
+    :store="{ id: storeId, name: storeName, ...settlement }"
+    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
+    @close="showReceiptModal = false"
+  />
 </template>
 
 <style scoped>
@@ -223,8 +235,6 @@ const downloadExcel = () => {
 .summary-grid .summary-card:nth-child(1),
 .summary-grid .summary-card:nth-child(2) { grid-column: span 2; }
 .summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); }
-.summary-card.primary { }
-.summary-card.refund { }
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
 .s-value { font-size: 1.4rem; font-weight: normal; margin: 0; color: var(--text-dark); text-align: right; }
 .s-value.neg { color: #ef4444; }

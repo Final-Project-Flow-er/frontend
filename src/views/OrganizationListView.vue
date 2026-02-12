@@ -1,7 +1,7 @@
 <template>
   <div class="org-list-container">
     <div class="org-list-header">
-      <h1>조직 조회</h1>
+      <h1>사업장 조회</h1>
       <p class="subtitle">등록된 가맹점 및 공장을 조회하세요</p>
     </div>
 
@@ -9,11 +9,21 @@
     <div class="filter-section">
       <div class="filter-row">
         <div class="filter-group">
-          <label>조직 유형</label>
+          <label>사업장 유형</label>
           <select v-model="filters.type">
             <option value="all">전체</option>
+            <option value="headOffice">본사</option>
             <option value="store">가맹점</option>
             <option value="factory">공장</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>상태</label>
+          <select v-model="filters.status">
+            <option value="all">전체</option>
+            <option value="active">운영중</option>
+            <option value="inactive">운영중지</option>
           </select>
         </div>
 
@@ -27,7 +37,7 @@
             <input 
               type="text" 
               v-model="filters.searchQuery" 
-              placeholder="이름, 코드, 주소로 검색..."
+              placeholder="이름, 코드, 주소로 검색"
             >
           </div>
         </div>
@@ -39,20 +49,7 @@
 
       <!-- 추가 필터 (가맹점 전용) -->
       <div v-if="filters.type === 'all' || filters.type === 'store'" class="advanced-filters">
-        <div class="filter-group">
-          <label>최소 면적 (㎡)</label>
-          <input type="number" v-model.number="filters.minArea" placeholder="0">
-        </div>
 
-        <div class="filter-group">
-          <label>운영 시간 (이후 개점)</label>
-          <input type="time" v-model="filters.openTimeAfter">
-        </div>
-
-        <div class="filter-group">
-          <label>운영 시간 (이전 폐점)</label>
-          <input type="time" v-model="filters.closeTimeBefore">
-        </div>
 
         <div class="filter-group full-width">
           <label>운영 요일 (모두 포함)</label>
@@ -72,11 +69,13 @@
         <thead>
           <tr>
             <th>유형</th>
+            <th>상태</th>
             <th>코드</th>
             <th>이름</th>
+            <th>운영 요일</th>
             <th>주소</th>
             <th>전화번호</th>
-            <th>면적</th>
+            <th>관리</th>
             <th>상세</th>
           </tr>
         </thead>
@@ -89,15 +88,55 @@
           >
             <td>
               <span class="org-type-badge" :class="org.type">
-                {{ org.type === 'store' ? '가맹점' : '공장' }}
+                {{ getTypeLabel(org.type) }}
               </span>
             </td>
-            <td class="org-code">{{ org.code }}</td>
-            <td class="org-name">{{ org.name }}</td>
-            <td class="org-address">{{ org.address }}</td>
-            <td>{{ org.phone }}</td>
-            <td>{{ org.type === 'store' ? org.area + '㎡' : '-' }}</td>
             <td>
+              <span class="status-badge" :class="org.status || 'active'">
+                {{ (org.status === 'active' || !org.status) ? '운영중' : '중지' }}
+              </span>
+            </td>
+            <td class="org-code center-text">{{ org.code }}</td>
+            <td class="org-name center-text">{{ org.name }}</td>
+            <td class="center-text">
+              <div v-if="org.type === 'store'" class="days-pill-list">
+                <span v-for="day in weekDays" :key="day.value" 
+                      class="day-pill" 
+                      :class="{ active: org.operatingDays.includes(day.value) }">
+                  {{ day.label }}
+                </span>
+              </div>
+              <span v-else class="text-muted">-</span>
+            </td>
+            <td class="org-address center-text">{{ org.address }}</td>
+            <td class="center-text">{{ org.phone }}</td>
+            <td class="center-text" @click.stop>
+              <div class="action-buttons-center">
+                <button 
+                  v-if="org.status === 'active' || !org.status" 
+                  @click.stop="toggleStatus(org)" 
+                  class="btn-icon-action delete"
+                  title="운영 중지"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+                <button 
+                  v-else
+                  @click.stop="toggleStatus(org)" 
+                  class="btn-icon-action restore"
+                  title="운영 재개"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                </button>
+              </div>
+            </td>
+            <td class="center-text">
               <button class="btn-detail">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m9 18 6-6-6-6"></path>
@@ -129,11 +168,9 @@ const router = useRouter()
 // 필터
 const filters = reactive({
   type: 'all',
+  status: 'all',
   searchQuery: '',
-  minArea: null,
   selectedDays: [],
-  openTimeAfter: '',
-  closeTimeBefore: ''
 })
 
 // 요일 목록
@@ -150,12 +187,24 @@ const weekDays = [
 // 샘플 데이터 (실제로는 API에서 가져와야 함)
 const organizations = ref([
   {
+    code: 'HEAD',
+    type: 'headOffice',
+    name: '본사',
+    address: '서울특별시 강남구 테헤란로 1',
+    phone: '02-0000-0000',
+    status: 'active',
+    operatingDays: [],
+    openTime: '09:00',
+    closeTime: '18:00',
+    photoUrl: ''
+  },
+  {
     code: 'SE01',
     type: 'store',
     name: '서울점',
     address: '서울특별시 강남구 테헤란로 123',
     phone: '02-1234-5678',
-    area: 150,
+    status: 'active',
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
     openTime: '09:00',
     closeTime: '22:00',
@@ -167,7 +216,7 @@ const organizations = ref([
     name: '부산점',
     address: '부산광역시 해운대구 센텀중앙로 78',
     phone: '051-9876-5432',
-    area: 180,
+    status: 'active',
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
     openTime: '10:00',
     closeTime: '21:00',
@@ -178,7 +227,11 @@ const organizations = ref([
     type: 'factory',
     name: '중앙 생산 공장',
     address: '경기도 화성시 동탄산업1로 45',
-    phone: '031-5555-6666'
+    phone: '031-5555-6666',
+    representative: '김철수',
+    region: 'GG01',
+    status: 'active',
+    lineCount: 5
   },
   {
     code: 'SE03',
@@ -186,10 +239,10 @@ const organizations = ref([
     name: '대구점',
     address: '대구광역시 수성구 동대구로 456',
     phone: '053-7777-8888',
-    area: 120,
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     openTime: '08:00',
     closeTime: '23:00',
+    status: 'inactive',
     photoUrl: ''
   }
 ])
@@ -203,6 +256,11 @@ const filteredOrganizations = computed(() => {
     result = result.filter(org => org.type === filters.type)
   }
 
+  // 상태 필터
+  if (filters.status !== 'all') {
+    result = result.filter(org => org.status === filters.status)
+  }
+
   // 검색 필터
   if (filters.searchQuery.trim()) {
     const query = filters.searchQuery.toLowerCase()
@@ -213,10 +271,6 @@ const filteredOrganizations = computed(() => {
     )
   }
 
-  // 면적 필터 (가맹점만 해당)
-  if (filters.minArea !== null && filters.minArea > 0) {
-    result = result.filter(org => org.type !== 'store' || org.area >= filters.minArea)
-  }
 
   // 운영 요일 필터 (가맹점만 해당)
   if (filters.selectedDays.length > 0) {
@@ -226,13 +280,6 @@ const filteredOrganizations = computed(() => {
     })
   }
 
-  // 운영 시간 필터 (가맹점만 해당)
-  if (filters.openTimeAfter) {
-    result = result.filter(org => org.type !== 'store' || org.openTime >= filters.openTimeAfter)
-  }
-  if (filters.closeTimeBefore) {
-    result = result.filter(org => org.type !== 'store' || org.closeTime <= filters.closeTimeBefore)
-  }
 
   return result
 })
@@ -240,23 +287,42 @@ const filteredOrganizations = computed(() => {
 // 필터 초기화
 const resetFilters = () => {
   filters.type = 'all'
+  filters.status = 'all'
   filters.searchQuery = ''
-  filters.minArea = null
   filters.selectedDays = []
-  filters.openTimeAfter = ''
-  filters.closeTimeBefore = ''
 }
 
 // 상세 페이지로 이동
 const goToDetail = (code) => {
   router.push(`/organization/${code}`)
 }
+
+const getTypeLabel = (type) => {
+  const map = {
+    headOffice: '본사',
+    store: '가맹점',
+    factory: '공장'
+  }
+  return map[type] || type
+}
+
+const toggleStatus = (org) => {
+  if (org.status === 'active') {
+    if (confirm(`'${org.name}'의 운영을 중지하시겠습니까?`)) {
+      org.status = 'inactive'
+    }
+  } else {
+    if (confirm(`'${org.name}'의 운영을 재개하시겠습니까?`)) {
+      org.status = 'active'
+    }
+  }
+}
 </script>
 
 <style scoped>
 .org-list-container {
-  padding: 2rem;
-  max-width: 1400px;
+  padding: 1rem 2rem;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -265,10 +331,10 @@ const goToDetail = (code) => {
 }
 
 .org-list-header h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
 }
 
 .subtitle {
@@ -281,12 +347,12 @@ const goToDetail = (code) => {
 .filter-section {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem; /* Reduced from 1.5rem */
-  margin-bottom: 1.5rem; /* Reduced from 2rem */
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem; /* Reduced from 1.5rem */
+  gap: 0.75rem;
 }
 
 .filter-row {
@@ -298,19 +364,19 @@ const goToDetail = (code) => {
 
 .advanced-filters {
   display: flex;
-  gap: 0.75rem; /* Reduced from 1rem */
+  gap: 0.75rem;
   align-items: flex-end;
   flex-wrap: wrap;
-  padding-top: 1rem; /* Reduced from 1.5rem */
+  padding-top: 0.75rem;
   border-top: 1px dashed #e2e8f0;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem; /* Reduced from 0.5rem */
+  gap: 0.3rem; 
   flex: 1;
-  min-width: 140px; /* Slightly reduced */
+  min-width: 120px;
 }
 
 .filter-group label {
@@ -325,12 +391,14 @@ const goToDetail = (code) => {
 
 .filter-group select,
 .filter-group input {
-  padding: 0.5rem 0.75rem; /* Reduced from 0.75rem 1rem */
+  padding: 0.45rem 0.65rem;
   border: 1.5px solid #e2e8f0;
-  border-radius: 6px; /* Reduced from 8px */
-  font-size: 0.9rem; /* Reduced from 0.95rem */
+  border-radius: 6px;
+  font-size: 0.85rem;
   background: white;
   transition: all 0.2s;
+  height: 36px;
+  box-sizing: border-box;
 }
 
 .filter-group select:focus,
@@ -351,16 +419,21 @@ const goToDetail = (code) => {
 .day-checkbox-small {
   display: flex;
   align-items: center;
-  gap: 0.3rem; /* Reduced from 0.35rem */
-  padding: 0.3rem 0.5rem; /* Reduced from 0.4rem 0.6rem */
-  border: 1.5px solid #e2e8f0;
-  border-radius: 4px; /* Reduced from 6px */
+  gap: 0.3rem; 
+  padding: 0.25rem 0.45rem; 
+  border: 1.2px solid #e2e8f0;
+  border-radius: 4px; 
   cursor: pointer;
-  font-size: 0.8rem; /* Reduced from 0.85rem */
+  font-size: 0.75rem; 
   transition: all 0.2s;
   user-select: none;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.day-checkbox-small input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
 }
 
 .day-checkbox-small:hover {
@@ -438,9 +511,9 @@ const goToDetail = (code) => {
 }
 
 .org-table th {
-  padding: 0.75rem 1.25rem;
-  text-align: left;
-  font-size: 0.85rem;
+  padding: 0.65rem 1rem;
+  text-align: center; /* Center align header */
+  font-size: 0.8rem;
   font-weight: 700;
   color: #475569;
   text-transform: uppercase;
@@ -462,8 +535,15 @@ const goToDetail = (code) => {
 }
 
 .org-table td {
-  padding: 0.85rem 1.25rem;
-  font-size: 0.9rem;
+  padding: 0.7rem 0.5rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+  vertical-align: middle;
+}
+
+.center-text {
+  text-align: center;
+  font-size: 0.85rem;
   color: #0f172a;
 }
 
@@ -483,26 +563,112 @@ const goToDetail = (code) => {
 
 .org-type-badge.factory {
   background: #fef3c7;
+  background: #fef3c7;
   color: #92400e;
 }
 
-.org-code {
+.org-type-badge.headOffice {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  font-size: 0.7rem;
   font-weight: 700;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.org-code {
+  font-weight: 500;
   color: #64748b;
   font-family: monospace;
 }
 
 .org-name {
-  font-weight: 600;
+  font-weight: 500;
   color: #0f172a;
 }
 
 .org-address {
   color: #64748b;
-  max-width: 300px;
+  max-width: 200px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin: 0 auto; /* Center alignment helper */
+}
+
+.days-pill-list {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+.day-pill {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  padding: 0 2px;
+}
+
+.day-pill.active {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.text-muted {
+  color: #cbd5e1;
+}
+
+.action-buttons-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-icon-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.btn-icon-action.delete {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fee2e2;
+}
+
+.btn-icon-action.delete:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.btn-icon-action.restore {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.btn-icon-action.restore:hover {
+  background: #dcfce7;
+  border-color: #86efac;
 }
 
 .btn-detail {

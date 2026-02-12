@@ -154,15 +154,11 @@ const cancelOrder = () => {
           <span>상품 코드</span>
           <span>상품명</span>
           <span>수량</span>
-          <span>개당 금액</span>
-          <span>총 금액</span>
         </div>
         <div v-for="(product, index) in orderItem.products" :key="index" class="product-list-item">
           <span>{{ product.productCode }}</span>
           <span>{{ product.productName }}</span>
           <span>{{ product.quantity }}개</span>
-          <span>{{ formatPrice(product.amount) }}</span>
-          <span>{{ formatPrice(product.quantity * product.amount) }}</span>
         </div>
         <div class="product-list-total">
           <label>총 발주 금액</label>

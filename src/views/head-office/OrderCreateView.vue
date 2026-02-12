@@ -114,7 +114,6 @@ const createOrder = () => {
       <h2>본사 발주 생성</h2>
       <div class="header-actions">
         <button class="secondary-btn" @click="router.back()">닫기</button>
-        <button class="primary-btn" @click="createOrder">발주 생성</button>
       </div>
     </div>
 
@@ -228,6 +227,9 @@ const createOrder = () => {
         </div>
       </div>
     </div>
+    <div class="button-container">
+      <button class="primary-btn" @click="createOrder">발주 생성</button>
+    </div>
   </div>
 </template>
 
@@ -292,5 +294,8 @@ const createOrder = () => {
 
 .primary-btn { background: var(--primary); color: white; border: none; padding: 0.75rem 2rem; border-radius: 10px; font-weight: 700; cursor: pointer; }
 .secondary-btn { background: white; border: 1px solid var(--border-color); padding: 0.75rem 2rem; border-radius: 10px; font-weight: 600; cursor: pointer; }
+
+.button-container { display: flex; justify-content: flex-end; margin-top: 2rem; }
+
 
 </style>

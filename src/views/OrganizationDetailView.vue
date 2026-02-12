@@ -26,7 +26,7 @@
       <div class="card-header">
         <div class="header-left">
           <div class="org-type-badge" :class="organization.type">
-            {{ organization.type === 'store' ? '가맹점' : '공장' }}
+            {{ getOrgTypeLabel(organization.type) }}
           </div>
           <h1>{{ organization.name }}</h1>
         </div>
@@ -39,7 +39,7 @@
           <h2>기본 정보</h2>
           <div class="info-grid">
             <div class="info-field">
-              <label>{{ organization.type === 'store' ? '가맹점명' : '공장명' }}</label>
+              <label>{{ getOrgNameLabel(organization.type) }}</label>
               <input 
                 type="text" 
                 v-model="organization.name" 
@@ -84,15 +84,6 @@
         <section v-if="organization.type === 'store'" class="info-section">
           <h2>매장 정보</h2>
           <div class="info-grid">
-            <div class="info-field">
-              <label>면적 (㎡)</label>
-              <input 
-                type="number" 
-                v-model="organization.area" 
-                :disabled="!isEditing"
-                :class="{ 'input-disabled': !isEditing }"
-              >
-            </div>
 
             <div class="info-field">
               <label>운영 시작 시간</label>
@@ -158,6 +149,61 @@
             </div>
           </div>
         </section>
+
+        <!-- 공장 추가 정보 -->
+        <section v-if="organization.type === 'factory'" class="info-section">
+          <h2>공장 정보</h2>
+          <div class="info-grid">
+            <div class="info-field">
+              <label>공장 대표명</label>
+              <input 
+                type="text" 
+                v-model="organization.representative" 
+                :disabled="!isEditing"
+                :class="{ 'input-disabled': !isEditing }"
+              >
+            </div>
+
+            <div class="info-field">
+              <label>공장 지역</label>
+              <select 
+                v-model="organization.region" 
+                :disabled="!isEditing"
+                :class="{ 'input-disabled': !isEditing }"
+              >
+                <option value="SE01">서울</option>
+                <option value="GG01">경기</option>
+                <option value="IC01">인천</option>
+                <option value="BS01">부산</option>
+                <option value="DG01">대구</option>
+                <option value="DJ01">대전</option>
+                <option value="GJ01">광주</option>
+                <option value="UL01">울산</option>
+                <option value="SJ01">세종</option>
+                <option value="GW01">강원</option>
+                <option value="CB01">충북</option>
+                <option value="CN01">충남</option>
+                <option value="JB01">전북</option>
+                <option value="JN01">전남</option>
+                <option value="GB01">경북</option>
+                <option value="GN01">경남</option>
+                <option value="JJ01">제주</option>
+              </select>
+            </div>
+
+            <div class="info-field">
+              <label>생산 라인 개수</label>
+              <input 
+                type="number" 
+                v-model.number="organization.lineCount" 
+                :disabled="!isEditing"
+                :class="{ 'input-disabled': !isEditing }"
+                min="1"
+                max="9"
+              >
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -197,20 +243,37 @@ const getDayLabel = (value) => {
   return day ? day.label : value
 }
 
+const getOrgTypeLabel = (type) => {
+  const map = {
+    headOffice: '본사',
+    store: '가맹점',
+    factory: '공장'
+  }
+  return map[type] || '사업장'
+}
+
 // 조직 정보 로드
 const loadOrganization = () => {
   const code = route.params.code
   
   // TODO: API 호출로 조직 정보 가져오기
+  // TODO: API 호출로 조직 정보 가져오기
   // 샘플 데이터
   const sampleData = {
+    'HEAD': {
+      code: 'HEAD',
+      type: 'headOffice',
+      name: '본사',
+      address: '서울특별시 강남구 테헤란로 1',
+      phone: '02-0000-0000',
+      photoUrl: ''
+    },
     'SE01': {
       code: 'SE01',
       type: 'store',
       name: '서울점',
       address: '서울특별시 강남구 테헤란로 123',
       phone: '02-1234-5678',
-      area: 150,
       operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
       openTime: '09:00',
       closeTime: '22:00',
@@ -222,7 +285,6 @@ const loadOrganization = () => {
       name: '부산점',
       address: '부산광역시 해운대구 센텀중앙로 78',
       phone: '051-9876-5432',
-      area: 180,
       operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
       openTime: '10:00',
       closeTime: '21:00',
@@ -233,7 +295,10 @@ const loadOrganization = () => {
       type: 'factory',
       name: '중앙 생산 공장',
       address: '경기도 화성시 동탄산업1로 45',
-      phone: '031-5555-6666'
+      phone: '031-5555-6666',
+      representative: '김철수',
+      region: 'GG01',
+      lineCount: 5
     },
     'SE03': {
       code: 'SE03',
@@ -241,7 +306,6 @@ const loadOrganization = () => {
       name: '대구점',
       address: '대구광역시 수성구 동대구로 456',
       phone: '053-7777-8888',
-      area: 120,
       operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
       openTime: '08:00',
       closeTime: '23:00',
@@ -307,12 +371,19 @@ const goBack = () => {
 onMounted(() => {
   loadOrganization()
 })
+
+const getOrgNameLabel = (type) => {
+  if (type === 'store') return '가맹점명'
+  if (type === 'factory') return '공장명'
+  if (type === 'headOffice') return '본사명'
+  return '사업장명'
+}
 </script>
 
 <style scoped>
 .org-detail-container {
-  padding: 2rem;
-  max-width: 1000px;
+  padding: 1rem 2rem;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -321,18 +392,18 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .btn-back {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
   background: white;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
@@ -352,9 +423,9 @@ onMounted(() => {
 .btn-edit,
 .btn-save,
 .btn-cancel {
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1.25rem;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -402,9 +473,9 @@ onMounted(() => {
 }
 
 .card-header {
-  padding: 2rem;
+  padding: 1.25rem 1.5rem;
   background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 1.5px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -434,22 +505,27 @@ onMounted(() => {
   color: #92400e;
 }
 
+.org-type-badge.headOffice {
+  background: #dcfce7;
+  color: #166534;
+}
+
 .card-header h1 {
-  font-size: 1.75rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
 
 .org-code-large {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #64748b;
   font-family: monospace;
 }
 
 .card-body {
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 /* 정보 섹션 */
@@ -462,12 +538,12 @@ onMounted(() => {
 }
 
 .info-section h2 {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 1.5rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1.5px solid #e2e8f0;
 }
 
 .info-grid {
@@ -492,13 +568,16 @@ onMounted(() => {
   color: #475569;
 }
 
-.info-field input {
-  padding: 0.75rem 1rem;
+.info-field input,
+.info-field select {
+  padding: 0.6rem 0.8rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: all 0.2s;
   background: white;
+  height: 40px;
+  box-sizing: border-box;
 }
 
 .info-field input:focus {
@@ -521,11 +600,11 @@ onMounted(() => {
 }
 
 .day-tag {
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.75rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #0f172a;
 }
@@ -539,13 +618,14 @@ onMounted(() => {
 .day-checkbox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: 1.5px solid #e2e8f0;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1.2px solid #e2e8f0;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
+  font-size: 0.8rem;
 }
 
 .day-checkbox:hover {
@@ -555,11 +635,13 @@ onMounted(() => {
 
 .day-checkbox input[type="checkbox"] {
   cursor: pointer;
+  width: 14px;
+  height: 14px;
 }
 
 .day-checkbox input[type="checkbox"]:checked + span {
   color: #0f172a;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* 사진 섹션 */
@@ -578,6 +660,7 @@ onMounted(() => {
 
 .photo-display img {
   width: 100%;
+  max-width: 320px;
   height: auto;
   border-radius: 8px;
   border: 2px solid #e2e8f0;
