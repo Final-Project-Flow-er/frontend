@@ -93,6 +93,21 @@ const filteredOrders = computed(() => {
   })
 })
 
+const flattenedOrders = computed(() => {
+  const flattened = []
+  filteredOrders.value.forEach(order => {
+    order.products.forEach((product, index) => {
+      flattened.push({
+        ...order,
+        product,
+        isFirstProduct: index === 0,
+        productCount: order.products.length
+      })
+    })
+  })
+  return flattened
+})
+
 const getStatusClass = (s) => ({
   '대기': 'status-warning',
   '접수': 'status-info',
@@ -156,7 +171,7 @@ const goToEdit = (item) => {
         <label>담당자 번호</label>
         <input type="text" v-model="filter.managerPhone" placeholder="전화번호" />
       </div>
-      <div class="filter-group">
+      <div class="filter-group smaller">
         <label>제품 코드</label>
         <input type="text" v-model="filter.productCode" placeholder="OR0101" />
       </div>
@@ -170,9 +185,6 @@ const goToEdit = (item) => {
             <th>발주 상태</th>
             <th>제품 코드</th>
             <th>수량</th>
-            <th>단위 금액</th>
-            <th>단위 총 금액</th>
-            <th>총 금액</th>
             <th>발주일</th>
             <th>담당자 이름</th>
             <th>담당자 전화번호</th>
@@ -180,42 +192,20 @@ const goToEdit = (item) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filteredOrders" :key="order.orderCode" @click="goToDetail(order)" class="clickable-row">
-            <td class="sku-cell">{{ order.orderCode }}</td>
-            <td><span :class="['status-tag', getStatusClass(order.orderStatus)]">{{ order.orderStatus }}</span></td>
-            <td>
-              <div class="multi-line-cell">
-                <span v-for="p in order.products" :key="p.productCode" class="sku-cell small">
-                  {{ p.productCode }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <div class="multi-line-cell">
-                <span v-for="p in order.products" :key="p.productCode">
-                  {{ p.quantity }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <div class="multi-line-cell">
-                <span v-for="p in order.products" :key="p.productCode">
-                  {{ p.amount.toLocaleString() }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <div class="multi-line-cell">
-                <span v-for="p in order.products" :key="p.productCode">
-                  {{ (p.quantity * p.amount).toLocaleString() }}
-                </span>
-              </div>
-            </td>
-            <td>{{ order.totalAmount.toLocaleString() }}</td>
-            <td>{{ order.orderDate }}</td>
-            <td>{{ order.managerName }}</td>
-            <td>{{ order.managerPhone }}</td>
-            <td>{{ order.stockInDate }}</td>
+          <tr 
+            v-for="(row, idx) in flattenedOrders" 
+            :key="`${row.orderCode}-${row.product.productCode}`" 
+            @click="goToDetail(row)" 
+            :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
+          >
+            <td class="sku-cell">{{ row.orderCode }}</td>
+            <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ row.orderStatus }}</span></td>
+            <td class="sku-cell small">{{ row.product.productCode }}</td>
+            <td>{{ row.product.quantity }}</td>
+            <td>{{ row.orderDate }}</td>
+            <td>{{ row.managerName }}</td>
+            <td>{{ row.managerPhone }}</td>
+            <td>{{ row.stockInDate }}</td>
           </tr>
         </tbody>
       </table>
@@ -255,6 +245,9 @@ const goToEdit = (item) => {
   font-size: 0.95rem;
   min-width: 200px;
 }
+.filter-group.smaller input {
+  min-width: 120px;
+}
 .date-range { display: flex; align-items: center; gap: 8px; }
 .date-range input { min-width: 140px; }
 
@@ -271,16 +264,18 @@ const goToEdit = (item) => {
 .status-danger { background: #fee2e2; color: #991b1b; }
 .action-btn { background: white; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
 
-.product-codes, .multi-line-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 .sku-cell.small {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .clickable-row { cursor: pointer; transition: background-color 0.2s ease; }
 .clickable-row:hover { background-color: #f8fafc; }
+
+.first-product-row {
+  border-top: 2px solid var(--border-color);
+}
+
+.grouped-row td {
+  border-top: 1px dashed #e2e8f0;
+}
 </style>

@@ -12,14 +12,10 @@ const isLoading = ref(true)
 // Inspection Products Data
 const inspectionProducts = ref([])
 const productsFilter = ref({
-  boxCode: '',
+  boxCode: '', // [복구] 박스 코드 필터
   productIdCode: '',
-  productCode: '',
-  productName: '',
   inspectionStatus: '',
-  productCondition: '',
-  orderCode: '',
-  returnCode: ''
+  productCondition: ''
 })
 
 const inspectionStatuses = ['검수 전', '검수 완료']
@@ -27,7 +23,7 @@ const productConditions = ['검수 전', '정상', '하자']
 
 // Multi-ID Mock Data Logic
 const allReturns = [
-  { 
+  {
     returnCode: 'RESE0120231101001', franchiseCode: 'SE01', requestDate: '2023-11-05', status: '대기',
     boxCode: 'SE01FA0120231105OR0101001', productIdCode: 'SE01FA01AOR0101B001', orderCode: 'SE0120231101001', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
     reason: '파손', quantity: 5, amount: 50000, recipientName: '김가맹', recipientPhone: '010-1234-5678',
@@ -36,13 +32,13 @@ const allReturns = [
       { code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 5, unitPrice: 10000, condition: '정상' }
     ]
   },
-  { 
+  {
     returnCode: 'RESE0220231102005', franchiseCode: 'SE02', requestDate: '2023-11-06', status: '배송중',
     boxCode: 'SE02FA0120231106RO0201010', productIdCode: 'SE02FA02ARO0201B010', orderCode: 'SE0220231102005', productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
     reason: '오발주', quantity: 10, amount: 200000, recipientName: '이점주', recipientPhone: '010-9876-5432',
     address: '부산시 해운대구 ...', memo: '현재 배송 중입니다.'
   },
-  { 
+  {
     returnCode: 'RESE0320231030020', franchiseCode: 'SE03', requestDate: '2023-11-04', status: '배송 완료',
     boxCode: 'SE03FA0120231104MA0303020', productIdCode: 'SE03FA01AMA0303B020', orderCode: 'SE0320231030020', productCode: 'MA0303', productName: '마라 떡볶이 밀키트 매운맛 3,4인분',
     reason: '상품 하자', quantity: 2, amount: 60000, recipientName: '박센터', recipientPhone: '010-5555-4444',
@@ -59,14 +55,10 @@ onMounted(() => {
       // Generate inspection items for the mock
       inspectionProducts.value = Array.from({ length: found.quantity }).map((_, i) => ({
         id: Date.now() + i,
-        boxCode: found.boxCode,
+        boxCode: found.boxCode, // Copy boxCode to items
         productIdCode: `${found.productIdCode}-${i+1}`,
-        productCode: found.productCode,
-        productName: found.productName,
         inspectionStatus: '검수 전',
-        productCondition: '검수 전',
-        orderCode: found.orderCode,
-        returnCode: found.returnCode
+        productCondition: '검수 전'
       }))
     }
     isLoading.value = false
@@ -78,14 +70,10 @@ const canInspect = computed(() => returnItem.value?.status === '배송 완료')
 // Filtering Logic
 const filteredProducts = computed(() => {
   return inspectionProducts.value.filter(p => {
-    return (!productsFilter.value.boxCode || p.boxCode.includes(productsFilter.value.boxCode)) &&
-           (!productsFilter.value.productIdCode || p.productIdCode.includes(productsFilter.value.productIdCode)) &&
-           (!productsFilter.value.productCode || p.productCode.includes(productsFilter.value.productCode)) &&
-           (!productsFilter.value.productName || p.productName.includes(productsFilter.value.productName)) &&
-           (!productsFilter.value.inspectionStatus || p.inspectionStatus === productsFilter.value.inspectionStatus) &&
-           (!productsFilter.value.productCondition || p.productCondition === productsFilter.value.productCondition) &&
-           (!productsFilter.value.orderCode || p.orderCode.includes(productsFilter.value.orderCode)) &&
-           (!productsFilter.value.returnCode || p.returnCode.includes(productsFilter.value.returnCode))
+    return (!productsFilter.value.boxCode || p.boxCode.includes(productsFilter.value.boxCode)) && // [복구]
+        (!productsFilter.value.productIdCode || p.productIdCode.includes(productsFilter.value.productIdCode)) &&
+        (!productsFilter.value.inspectionStatus || p.inspectionStatus === productsFilter.value.inspectionStatus) &&
+        (!productsFilter.value.productCondition || p.productCondition === productsFilter.value.productCondition)
   })
 })
 
@@ -113,8 +101,8 @@ const getStatusClass = (s) => ({
   '배송중': 'status-primary',
   '배송 완료': 'status-ok',
   '검수 중': 'status-primary',
-  '대금 차감 완료': 'status-ok',
-  '대금 차감 거절': 'status-danger'
+  '반품 승인': 'status-ok',
+  '반품 거절': 'status-danger'
 }[s] || 'status-default')
 
 // Decision Actions
@@ -124,16 +112,16 @@ const finishWithDeduction = () => {
   } else {
     alert('대금 차감 승인 처리를 진행합니다.')
   }
-  returnItem.value.status = '대금 차감 완료'
+  returnItem.value.status = '반품 승인'
 }
 
 const finishWithRejection = () => {
   if (returnItem.value.reason === '오발주') {
-    alert('경고를 부여하며 대금 차감 거절 처리를 진행합니다.')
+    alert('경고를 부여하며 반품 거절 처리를 진행합니다.')
   } else {
-    alert('대금 차감 거절 처리를 진행합니다.')
+    alert('반품 거절 처리를 진행합니다.')
   }
-  returnItem.value.status = '대금 차감 거절'
+  returnItem.value.status = '반품 거절'
 }
 
 </script>
@@ -162,9 +150,14 @@ const finishWithRejection = () => {
           </div>
         </div>
         <div class="info-grid basic-grid">
+          <!-- Row 1 -->
           <div class="info-item">
             <span class="label">반품 코드</span>
             <span class="valueHighlight">{{ returnItem.returnCode }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">발주 코드</span>
+            <span class="value">{{ returnItem.orderCode }}</span>
           </div>
           <div class="info-item">
             <span class="label">가맹점 코드</span>
@@ -174,7 +167,17 @@ const finishWithRejection = () => {
             <span class="label">요청 일자</span>
             <span class="value">{{ returnItem.requestDate }}</span>
           </div>
+
+          <!-- Row 2 -->
           <div class="info-item">
+            <span class="label">수령인 / 연락처</span>
+            <span class="value">{{ returnItem.recipientName }} ({{ returnItem.recipientPhone }})</span>
+          </div>
+          <div class="info-item">
+            <span class="label">반품 수량 / 금액</span>
+            <span class="value">{{ formatNumber(returnItem.quantity) }}개 / <span class="price-text">{{ formatNumber(returnItem.amount) }}</span></span>
+          </div>
+          <div class="info-item full-width-item">
             <span class="label">반품 사유</span>
             <span class="value reason-text">{{ returnItem.reason }}</span>
           </div>
@@ -186,16 +189,13 @@ const finishWithRejection = () => {
         <div class="card-header">
           <h3>반품 상품 검수</h3>
         </div>
-        
+
         <!-- Inspection Filters -->
         <div class="table-filters" :class="{ 'disabled-overlay': !canInspect }">
           <div class="filter-row">
-            <input type="text" v-model="productsFilter.boxCode" placeholder="박스 코드" :disabled="!canInspect" />
-            <input type="text" v-model="productsFilter.productIdCode" placeholder="제품 식별코드" :disabled="!canInspect" />
-            <input type="text" v-model="productsFilter.productCode" placeholder="제품 코드" :disabled="!canInspect" />
-            <input type="text" v-model="productsFilter.productName" placeholder="제품명" :disabled="!canInspect" />
-          </div>
-          <div class="filter-row">
+            <!-- [추가] 박스 코드 필터 -->
+            <input type="text" v-model="productsFilter.boxCode" placeholder="박스 코드 검색" :disabled="!canInspect" />
+            <input type="text" v-model="productsFilter.productIdCode" placeholder="제품 식별코드 검색" :disabled="!canInspect" />
             <select v-model="productsFilter.inspectionStatus" :disabled="!canInspect">
               <option value="">검수 상태 (전체)</option>
               <option v-for="s in inspectionStatuses" :key="s" :value="s">{{ s }}</option>
@@ -204,8 +204,6 @@ const finishWithRejection = () => {
               <option value="">제품 상태 (전체)</option>
               <option v-for="c in productConditions" :key="c" :value="c">{{ c }}</option>
             </select>
-            <input type="text" v-model="productsFilter.orderCode" placeholder="발주 코드" :disabled="!canInspect" />
-            <input type="text" v-model="productsFilter.returnCode" placeholder="반품 코드" :disabled="!canInspect" />
           </div>
           <p v-if="!canInspect" class="locked-msg">
             상태가 '배송 완료'인 경우에만 검수가 가능합니다. (현재 상태: {{ returnItem.status }})
@@ -215,41 +213,35 @@ const finishWithRejection = () => {
         <div class="table-container" :class="{ 'disabled-table': !canInspect }">
           <table class="inspection-table">
             <thead>
-              <tr>
-                <th>박스 코드</th>
-                <th>제품 식별코드</th>
-                <th>제품 코드</th>
-                <th>제품명</th>
-                <th>검수 상태</th>
-                <th>제품 상태</th>
-                <th>발주 코드</th>
-                <th>반품 코드</th>
-              </tr>
+            <tr>
+              <!-- [추가] 박스 코드 컬럼 -->
+              <th>박스 코드</th>
+              <th>제품 식별코드</th>
+              <th>검수 상태</th>
+              <th>제품 상태</th>
+            </tr>
             </thead>
             <tbody>
-              <tr v-for="p in filteredProducts" :key="p.id">
-                <td>{{ p.boxCode }}</td>
-                <td><small>{{ p.productIdCode }}</small></td>
-                <td>{{ p.productCode }}</td>
-                <td>{{ p.productName }}</td>
-                <td>
-                  <select v-model="p.inspectionStatus" @change="handleStatusChange(p)" class="inline-select" :disabled="!canInspect">
-                    <option v-for="s in inspectionStatuses" :key="s" :value="s">{{ s }}</option>
-                  </select>
-                </td>
-                <td>
-                  <select 
-                    v-model="p.productCondition" 
+            <tr v-for="p in filteredProducts" :key="p.id">
+              <!-- [추가] 박스 코드 데이터 -->
+              <td>{{ p.boxCode }}</td>
+              <td class="id-code-cell">{{ p.productIdCode }}</td>
+              <td>
+                <select v-model="p.inspectionStatus" @change="handleStatusChange(p)" class="inline-select" :disabled="!canInspect">
+                  <option v-for="s in inspectionStatuses" :key="s" :value="s">{{ s }}</option>
+                </select>
+              </td>
+              <td>
+                <select
+                    v-model="p.productCondition"
                     :disabled="!canInspect || p.inspectionStatus !== '검수 완료'"
                     class="inline-select"
                     :class="{ 'condition-defective': p.productCondition === '하자' }"
-                  >
-                    <option v-for="c in productConditions" :key="c" :value="c" :disabled="c === '검수 전' && p.inspectionStatus === '검수 완료'">{{ c }}</option>
-                  </select>
-                </td>
-                <td>{{ p.orderCode }}</td>
-                <td>{{ p.returnCode }}</td>
-              </tr>
+                >
+                  <option v-for="c in productConditions" :key="c" :value="c" :disabled="c === '검수 전' && p.inspectionStatus === '검수 완료'">{{ c }}</option>
+                </select>
+              </td>
+            </tr>
             </tbody>
           </table>
         </div>
@@ -261,34 +253,14 @@ const finishWithRejection = () => {
           <p class="guide-text">※ 모든 제품의 검수가 완료되었습니다. 정산 처리를 진행해 주세요.</p>
         </div>
         <div class="action-buttons">
-          <!-- Logic: 
-            사유:상품하자 & 하자있음 -> 차감완료
-            사유:상품하자 & 하자없음 -> 차감거절
-            사유:오발주 & 하자있음 -> 차감거절 + 경고
-            사유:오발주 & 하자없음 -> 차감완료 + 경고
-          -->
           <template v-if="returnItem.reason === '상품 하자'">
-            <button v-if="hasDefect" class="deduction-btn approve" @click="finishWithDeduction">대금 차감 완료</button>
-            <button v-else class="deduction-btn reject" @click="finishWithRejection">대금 차감 거절</button>
+            <button v-if="hasDefect" class="deduction-btn approve" @click="finishWithDeduction">반품 승인</button>
+            <button v-else class="deduction-btn reject" @click="finishWithRejection">반품 거절</button>
           </template>
           <template v-else-if="returnItem.reason === '오발주'">
-            <button v-if="!hasDefect" class="deduction-btn approve" @click="finishWithDeduction">대금 차감 완료 (경고 부여)</button>
-            <button v-else class="deduction-btn reject" @click="finishWithRejection">대금 차감 거절 (경고 부여)</button>
+            <button v-if="!hasDefect" class="deduction-btn approve" @click="finishWithDeduction">반품 승인 (경고 부여)</button>
+            <button v-else class="deduction-btn reject" @click="finishWithRejection">반품 거절 (경고 부여)</button>
           </template>
-        </div>
-      </div>
-
-      <!-- Section 4: Logistical & Financial Summary -->
-      <div class="info-card tertiary-card">
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">수령인 / 연락처</span>
-            <span class="value">{{ returnItem.recipientName }} ({{ returnItem.recipientPhone }})</span>
-          </div>
-          <div class="info-item">
-            <span class="label">반품 수량 / 금액</span>
-            <span class="value">{{ formatNumber(returnItem.quantity) }}개 / <span class="price-text">{{ formatNumber(returnItem.amount) }}</span></span>
-          </div>
         </div>
       </div>
     </div>
@@ -312,11 +284,13 @@ const finishWithRejection = () => {
 .card-header h3 { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
 .header-title-row { display: flex; align-items: center; gap: 1rem; }
 
-.info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; padding: 1.2rem; }
-.basic-grid { grid-template-columns: 1fr 1fr 1fr 1.5fr; }
-.info-item { display: flex; flex-direction: column; gap: 0.3rem; }
+/* Grid Layout Updated for 4 Columns */
+.info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.5rem; }
+.info-item { display: flex; flex-direction: column; gap: 0.4rem; }
+.full-width-item { grid-column: span 2; } /* 사유 텍스트 길어질 수 있으므로 */
+
 .label { font-size: 0.8rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.02em; }
-.value { font-size: 0.95rem; color: var(--text-dark); font-weight: 500; }
+.value { font-size: 0.95rem; color: var(--text-dark); font-weight: 500; word-break: break-all; }
 .valueHighlight { font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
 .reason-text { font-weight: 700; color: #1e40af; }
 
@@ -343,37 +317,42 @@ const finishWithRejection = () => {
 .locked-msg .material-icons { font-size: 1.2rem; }
 
 .disabled-table { opacity: 0.7; pointer-events: none; grayscale: 50%; }
-.table-container { 
-  overflow-x: auto; 
-  width: 100%; 
-  border: 1px solid var(--border-color); 
-  border-radius: 8px; 
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
 }
 
-.inspection-table { 
-  width: 100%; 
-  border-collapse: collapse; 
-  min-width: 1600px; /* Further increased to prevent any overlap of long codes */
+.inspection-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.inspection-table th { 
-  background: #f1f5f9; 
-  padding: 1rem 1.5rem; /* Increased horizontal padding */
-  font-size: 0.8rem; 
-  color: var(--text-light); 
-  border-bottom: 1px solid var(--border-color); 
-  text-align: left; 
+.inspection-table th {
+  background: #f1f5f9;
+  padding: 1rem 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
   white-space: nowrap;
 }
 
-.inspection-table td { 
-  padding: 1rem 1.5rem; /* Increased horizontal padding */
-  border-bottom: 1px solid var(--border-color); 
-  font-size: 0.85rem; 
+.inspection-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
   white-space: nowrap;
 }
 
-.inline-select { padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; background: white; }
+.id-code-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #374151;
+}
+
+.inline-select { padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; background: white; min-width: 100px; }
 .inline-select:disabled { background: #f3f4f6; color: #94a3b8; }
 .condition-defective { color: #ef4444; font-weight: 700; border-color: #fca5a5; }
 

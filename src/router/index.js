@@ -32,6 +32,8 @@ import NoticeRegistrationView from '../views/NoticeRegistrationView.vue'
 import NoticeDetailView from '../views/NoticeDetailView.vue'
 import LogisticsRegistrationView from '../views/LogisticsRegistrationView.vue'
 import LogisticsListView from '../views/LogisticsListView.vue'
+import OrderReceptionDetailView from "@/views/head-office/OrderReceptionDetailView.vue";
+import ReturnRequestReceptionList from "@/views/head-office/ReturnRequestReceptionList.vue";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -218,6 +220,16 @@ const router = createRouter({
             path: '/head-office/orders/reception',
             name: 'head-office-order-reception',
             component: HeadOfficeOrderReceptionView
+        },
+        {
+            path: '/head-office/orders/reception/detail',
+            name: 'OrderReceptionDetail',
+            component: OrderReceptionDetailView,
+        },
+        {
+            path: '/head-office/returns/reception',
+            name: 'ReturnRequestReception',
+            component: ReturnRequestReceptionList,
         },
         {
             path: '/head-office/orders/request',

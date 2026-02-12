@@ -4,19 +4,19 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Mock Data
+// Mock Data (다양한 상태 포함)
 const returns = ref([
   {
-    id: 2, franchiseCode: 'SE02', requestDate: '2023-11-06', boxCode: 'SE02FA0120231106RO0201005',
-    productIdCode: 'SE02FA01ARO0201B005', reason: '오발주', recipientName: '이점주', recipientPhone: '010-9876-5432',
-    productCode: 'RO0201', orderCode: 'SE0220231102005', returnCode: 'RESE0220231102005',
-    status: '접수', quantity: 2, amount: 24000
+    id: 1, franchiseCode: 'SE01', requestDate: '2023-11-05', boxCode: 'SE01FA0120231105OR0101001',
+    productIdCode: 'SE01FA01AOR0101B001', reason: '파손', recipientName: '김가맹', recipientPhone: '010-1234-5678',
+    productCode: 'OR0101', orderCode: 'SE0120231101001', returnCode: 'RESE0120231101001',
+    status: '대기', quantity: 5, amount: 50000
   },
   {
-    id: 3, franchiseCode: 'SE03', requestDate: '2023-11-04', boxCode: 'SE03FA0120231104MA0303001',
-    productIdCode: 'SE03FA01AMA0303B020', reason: '상품 하자', recipientName: '박센터', recipientPhone: '010-5555-4444',
-    productCode: 'MA0303', orderCode: 'SE0320231030020', returnCode: 'RESE0320231030020',
-    status: '배송 완료', quantity: 2, amount: 60000
+    id: 4, franchiseCode: 'SE01', requestDate: '2023-11-07', boxCode: 'SE01FA0120231107OR0101002',
+    productIdCode: 'SE01FA01AOR0101B002', reason: '단순 변심', recipientName: '김가맹', recipientPhone: '010-1234-5678',
+    productCode: 'OR0101', orderCode: 'SE0120231101001', returnCode: 'RESE0120231101002',
+    status: '대기', quantity: 10, amount: 100000
   }
 ])
 
@@ -38,13 +38,13 @@ const statuses = [
   '대기', '접수', '배송 대기', '배송중', '배송 완료', '검수', '대금 차감 완료', '대금 차감 거절'
 ]
 
-// [NEW] Selection State
+// [RESTORED] Selection State
 const selectionMode = ref(false) // true: 접수 모드
 const selectedIds = ref([])
 
 const filteredReturns = computed(() => {
   return returns.value.filter(item => {
-    // [NEW] 접수 모드일 때는 '대기' 상태만 필터링
+    // 접수 모드일 때는 '대기' 상태만 필터링
     if (selectionMode.value && item.status !== '대기') {
       return false
     }
@@ -83,12 +83,11 @@ const goToDetail = (item) => {
   }
 }
 
-// [NEW] Actions
+// [RESTORED] Actions
 const enterSelectionMode = () => {
   selectionMode.value = true
   selectedIds.value = []
-  // 필터 초기화 (대기 상태만 보기 위해)
-  filter.value.status = ''
+  filter.value.status = '' // 대기 상태만 보기 위해 필터 초기화
 }
 
 const cancelSelectionMode = () => {
@@ -135,7 +134,17 @@ const toggleSelectAll = (e) => {
 <template>
   <div class="content-wrapper">
     <div class="header-row">
-      <h2>본사 반품 요청 관리</h2>
+      <h2>본사 반품 요청 접수</h2>
+      <div class="header-actions">
+        <!-- [RESTORED] 접수 모드 버튼 -->
+        <template v-if="!selectionMode">
+          <button class="primary-btn" @click="enterSelectionMode">접수</button>
+        </template>
+        <template v-else>
+          <button class="primary-btn" @click="confirmSelection">선택 완료</button>
+          <button class="secondary-btn" @click="cancelSelectionMode">취소</button>
+        </template>
+      </div>
     </div>
 
     <!-- Filter Section -->
@@ -181,13 +190,6 @@ const toggleSelectAll = (e) => {
           <label>반품 코드</label>
           <input type="text" v-model="filter.returnCode" />
         </div>
-        <div class="filter-group">
-          <label>반품 요청 상태</label>
-          <select v-model="filter.status" :disabled="selectionMode">
-            <option value="">전체</option>
-            <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </div>
       </div>
     </div>
 
@@ -196,7 +198,7 @@ const toggleSelectAll = (e) => {
       <table class="data-table">
         <thead>
         <tr>
-          <!-- [NEW] 체크박스 컬럼 -->
+          <!-- [RESTORED] 체크박스 컬럼 헤더 -->
           <th v-if="selectionMode" style="width: 40px; text-align: center;">
             <input type="checkbox" @change="toggleSelectAll"
                    :checked="selectedIds.length > 0 && selectedIds.length === filteredReturns.length" />
@@ -219,7 +221,7 @@ const toggleSelectAll = (e) => {
             @click="goToDetail(item)"
             :class="['clickable-row', { 'selected-row': selectedIds.includes(item.id) }]">
 
-          <!-- [NEW] 체크박스 셀 -->
+          <!-- [RESTORED] 체크박스 셀 -->
           <td v-if="selectionMode" style="text-align: center;" @click.stop>
             <input type="checkbox" :value="item.id" v-model="selectedIds" />
           </td>

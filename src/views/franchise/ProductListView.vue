@@ -25,26 +25,9 @@ const filteredSales = computed(() => {
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
     const matchQuantity = !filter.value.quantity || item.quantity.toString() === filter.value.quantity
-    
+
     return matchSalesCode && matchDate && matchProductCode && matchProductName && matchQuantity
   })
-})
-
-const groupedSales = computed(() => {
-  const groups = {}
-  filteredSales.value.forEach(item => {
-    if (!groups[item.salesCode]) {
-      groups[item.salesCode] = {
-        salesCode: item.salesCode,
-        date: item.date,
-        items: [],
-        totalAmount: 0
-      }
-    }
-    groups[item.salesCode].items.push(item)
-    groups[item.salesCode].totalAmount += item.totalPrice
-  })
-  return Object.values(groups)
 })
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
@@ -65,7 +48,7 @@ const cancelSale = () => {
     <div class="filter-section">
       <div class="filter-group">
         <label>판매 코드</label>
-        <input type="text" v-model="filter.salesCode" placeholder="2026021014220001" />
+        <input type="text" v-model="filter.salesCode" placeholder="Code..." />
       </div>
       <div class="filter-group">
         <label>판매 일시</label>
@@ -73,13 +56,13 @@ const cancelSale = () => {
       </div>
       <div class="filter-group">
         <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="OR0101" />
+        <input type="text" v-model="filter.productCode" placeholder="Code..." />
       </div>
-      <div class="filter-group">
+      <div class="filter-group grow-2">
         <label>제품 이름</label>
-        <input type="text" v-model="filter.productName" placeholder="제품명" />
+        <input type="text" v-model="filter.productName" placeholder="Product Name..." />
       </div>
-      <div class="filter-group">
+      <div class="filter-group narrow">
         <label>수량</label>
         <input type="number" v-model="filter.quantity" placeholder="0" />
       </div>
@@ -89,32 +72,31 @@ const cancelSale = () => {
       <div class="table-scroll-container">
         <table class="data-table">
           <thead>
-            <tr><th>판매 코드</th><th>판매 일시</th><th>제품 코드</th><th>제품 이름</th><th>수량</th><th>단위 금액</th><th>단위 총 금액</th><th>총 금액</th><th>취소</th></tr>
+          <tr>
+            <th>판매 코드</th>
+            <th>판매 일시</th>
+            <th>제품 코드</th>
+            <th>제품 이름</th>
+            <th class="text-right">수량</th>
+            <th class="text-right">단가</th>
+            <th class="text-right">총 금액</th>
+            <th class="text-center">관리</th>
+          </tr>
           </thead>
           <tbody>
-            <tr v-for="group in groupedSales" :key="group.salesCode">
-              <td class="sku-cell">{{ group.salesCode }}</td>
-              <td>{{ group.date }}</td>
-              <td>
-                <div v-for="(item, idx) in group.items" :key="idx" class="nested-item">{{ item.productCode }}</div>
-              </td>
-              <td class="name-cell">
-                <div v-for="(item, idx) in group.items" :key="idx" class="nested-item">{{ item.productName }}</div>
-              </td>
-              <td>
-                <div v-for="(item, idx) in group.items" :key="idx" class="nested-item">{{ item.quantity }}개</div>
-              </td>
-              <td>
-                <div v-for="(item, idx) in group.items" :key="idx" class="nested-item">{{ formatPrice(item.unitPrice) }}</div>
-              </td>
-              <td>
-                <div v-for="(item, idx) in group.items" :key="idx" class="nested-item">{{ formatPrice(item.quantity * item.unitPrice) }}</div>
-              </td>
-              <td class="total-cell">
-                <div class="grand-total">{{ formatPrice(group.totalAmount) }}</div>
-              </td>
-              <td><button class="action-btn" @click="cancelSale">취소</button></td>
-            </tr>
+          <tr v-for="(item, index) in filteredSales" :key="index">
+            <!-- [변경] 판매 코드: code-cell 제거 후 sku-cell (파란색) 적용 -->
+            <td class="sku-cell">{{ item.salesCode }}</td>
+            <td>{{ item.date }}</td>
+            <td class="sku-cell">{{ item.productCode }}</td>
+            <td class="name-cell">{{ item.productName }}</td>
+            <td class="text-right">{{ item.quantity }}</td>
+            <td class="text-right">{{ formatPrice(item.unitPrice) }}</td>
+            <td class="text-right total-cell">{{ formatPrice(item.totalPrice) }}</td>
+            <td class="text-center">
+              <button class="action-btn" @click="cancelSale">취소</button>
+            </td>
+          </tr>
           </tbody>
         </table>
       </div>
@@ -128,48 +110,41 @@ const cancelSale = () => {
 .content-wrapper { max-width: 1400px; margin: 0 auto; }
 .add-btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
 
-/* Filter Styles */
 .filter-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  margin-bottom: 1.5rem;
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);
+  margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: nowrap; overflow-x: auto;
 }
 .filter-group { display: flex; flex-direction: column; gap: 0.5rem; }
-.filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
-.filter-group input, .filter-group select {
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.95rem;
-  min-width: 150px;
-}
+.filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); white-space: nowrap; }
+.filter-group input { padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; min-width: 140px; }
+.filter-group.grow-2 input { min-width: 200px; }
+.filter-group.narrow input { min-width: 80px; width: 80px; }
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); }
-.table-scroll-container { overflow-x: auto; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; }
-.data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-.data-table th, .data-table td { white-space: nowrap; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.table-scroll-container { overflow-x: auto; width: 100%; border-radius: 8px; }
+.data-table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+.data-table th, .data-table td { white-space: nowrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
 .data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; }
 .data-table td { font-size: 0.85rem; }
-.sku-cell { color: var(--primary); font-weight: 600; }
-.name-cell { color: var(--text-dark); }
-.action-btn { background: white; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
 
-.nested-item {
-  padding: 0.2rem 0;
-  border-bottom: 1px dashed #edf2f7;
-}
-.nested-item:last-child {
-  border-bottom: none;
-}
+/* [변경] code-cell 스타일 삭제, sku-cell이 판매 코드에도 적용됨 */
+.sku-cell { color: var(--primary); font-weight: 600; } /* 제품 코드 & 판매 코드 파란색 */
 
-.total-cell { }
-.grand-total { font-weight: 700; color: var(--primary); font-size: 1rem; }
-.sub-totals { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-.sub-price { font-size: 0.8rem; color: var(--text-light); }
+.name-cell { color: var(--text-dark); max-width: 300px; white-space: normal; }
+.total-cell { font-weight: 700; color: var(--text-dark); }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+
+.action-btn {
+  background: white; border: 1px solid #fee2e2; color: #ef4444;
+  padding: 0.3rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+}
+.action-btn:hover { background: #fee2e2; }
+
+:root {
+  --primary: #4f46e5;
+  --text-light: #64748b;
+  --text-dark: #1e293b;
+  --border-color: #e2e8f0;
+}
 </style>
