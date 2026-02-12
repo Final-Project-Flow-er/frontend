@@ -93,7 +93,8 @@ const menuGroups = ref([
         children: [
           { name: '본사 로그', path: '/hq/inventory/logs/hq' },
           { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
-          { name: '공장 로그', path: '/hq/inventory/logs/factory' }
+          { name: '공장 로그', path: '/hq/inventory/logs/factory' },
+          { name: '운송 로그', path: '/head-office/logs/logistics' }
         ]
       },
       {
@@ -113,7 +114,7 @@ const menuGroups = ref([
         children: [
           { name: '반품 요청 접수', path: '/head-office/returns/reception' },
           { name: '반품 요청 관리', path: '/head-office/returns' },
-          { name: '차량 배정', path: '/head-office/returns/vehicle-assignment' }
+          { name: '차량 배정', path: '/factory/returns/vehicle-assignment' }
         ]
       },
       { name: '정산 관리', path: '/hq/settlement' },
@@ -145,7 +146,15 @@ const menuGroups = ref([
         isOpen: false,
         children: [
           { name: '발주 요청 접수', path: '/factory/orders' },
-          { name: '발주 요청 관리', path: '/factory/orders/request' }
+          { name: '발주 요청 관리', path: '/factory/orders/request' },
+          { name: '차량 배정', path: '/factory/orders/vehicle-assignment' }
+        ]
+      },
+      {
+        name: '반품 관리',
+        isOpen: false,
+        children: [
+          { name: '차량 배정', path: '/factory/returns/vehicle-assignment' }
         ]
       },
       { name: '로그 관리', path: '/hq/inventory/logs/factory' },

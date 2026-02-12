@@ -21,6 +21,7 @@ import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
 import FactoryInboundView from '../views/factory/InboundView.vue'
 import FactoryOutboundView from '../views/factory/OutboundView.vue'
 import FactoryVehicleAssignmentView from '../views/factory/VehicleAssignmentView.vue'
+import FactoryReturnVehicleAssignmentView from '../views/factory/ReturnVehicleAssignmentView.vue'
 import MyPageView from '../views/MyPageView.vue'
 import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
 import OrganizationListView from '../views/OrganizationListView.vue'
@@ -34,6 +35,7 @@ import LogisticsRegistrationView from '../views/LogisticsRegistrationView.vue'
 import LogisticsListView from '../views/LogisticsListView.vue'
 import OrderReceptionDetailView from "@/views/head-office/OrderReceptionDetailView.vue";
 import ReturnRequestReceptionList from "@/views/head-office/ReturnRequestReceptionList.vue";
+import HeadOfficeLogisticsLogView from "@/views/head-office/LogisticsLogView.vue";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -261,6 +263,11 @@ const router = createRouter({
             name: 'head-office-return-detail',
             component: () => import('../views/head-office/ReturnRequestDetailView.vue')
         },
+        {
+            path: '/head-office/logs/logistics',
+            name: 'head-office-logistics-log',
+            component: HeadOfficeLogisticsLogView
+        },
 
         // --- Factory Routes ---
         {
@@ -287,6 +294,11 @@ const router = createRouter({
             path: '/factory/orders/vehicle-assignment',
             name: 'factory-vehicle-assignment',
             component: FactoryVehicleAssignmentView
+        },
+        {
+            path: '/factory/returns/vehicle-assignment',
+            name: 'factory-return-vehicle-assignment',
+            component: FactoryReturnVehicleAssignmentView
         },
         {
             path: '/store/settlement',
