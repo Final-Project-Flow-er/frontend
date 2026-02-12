@@ -1,7 +1,7 @@
 <template>
   <div class="registration-container">
     <div class="registration-header">
-      <h1>조직 등록</h1>
+      <h1>사업장 등록</h1>
       <p class="subtitle">새로운 가맹점 또는 공장을 등록하세요</p>
     </div>
 
@@ -77,15 +77,6 @@
             >
           </div>
 
-          <div class="form-group">
-            <label>면적 (㎡) <span class="required">*</span></label>
-            <input 
-              type="number" 
-              v-model="storeData.area" 
-              placeholder="면적을 입력하세요"
-              required
-            >
-          </div>
 
           <div class="form-group full-width">
             <label>운영 요일 <span class="required">*</span></label>
@@ -196,6 +187,51 @@
               required
             >
           </div>
+
+          <div class="form-group">
+            <label>공장 대표명 <span class="required">*</span></label>
+            <input 
+              type="text" 
+              v-model="factoryData.representative" 
+              placeholder="대표자 성함을 입력하세요"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label>공장 지역 <span class="required">*</span></label>
+            <select v-model="factoryData.region" required>
+              <option value="SE01">서울</option>
+              <option value="GG01">경기</option>
+              <option value="IC01">인천</option>
+              <option value="BS01">부산</option>
+              <option value="DG01">대구</option>
+              <option value="DJ01">대전</option>
+              <option value="GJ01">광주</option>
+              <option value="UL01">울산</option>
+              <option value="SJ01">세종</option>
+              <option value="GW01">강원</option>
+              <option value="CB01">충북</option>
+              <option value="CN01">충남</option>
+              <option value="JB01">전북</option>
+              <option value="JN01">전남</option>
+              <option value="GB01">경북</option>
+              <option value="GN01">경남</option>
+              <option value="JJ01">제주</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>생산 라인 개수 <span class="required">*</span></label>
+            <input 
+              type="number" 
+              v-model.number="factoryData.lineCount" 
+              placeholder="생산 라인 개수를 입력하세요"
+              min="1"
+              max="9"
+              required
+            >
+          </div>
         </div>
 
         <div class="form-actions">
@@ -232,7 +268,6 @@ const storeData = reactive({
   name: '',
   address: '',
   phone: '',
-  area: '',
   operatingDays: [],
   openTime: '',
   closeTime: '',
@@ -243,7 +278,10 @@ const storeData = reactive({
 const factoryData = reactive({
   name: '',
   address: '',
-  phone: ''
+  phone: '',
+  representative: '',
+  region: 'SE01',
+  lineCount: 1
 })
 
 // 가맹점 코드 자동 생성 (실제로는 서버에서 생성)
@@ -296,10 +334,6 @@ const registerStore = () => {
     alert('매장 전화번호를 입력해주세요.')
     return
   }
-  if (!storeData.area) {
-    alert('면적을 입력해주세요.')
-    return
-  }
   if (storeData.operatingDays.length === 0) {
     alert('운영 요일을 선택해주세요.')
     return
@@ -335,6 +369,18 @@ const registerFactory = () => {
     alert('공장 전화번호를 입력해주세요.')
     return
   }
+  if (!factoryData.representative) {
+    alert('공장 대표명을 입력해주세요.')
+    return
+  }
+  if (!factoryData.region) {
+    alert('공장 지역을 선택해주세요.')
+    return
+  }
+  if (!factoryData.lineCount || factoryData.lineCount < 1) {
+    alert('생산 라인 개수를 입력해주세요.')
+    return
+  }
 
   // TODO: API 호출로 공장 등록
   console.log('공장 등록:', {
@@ -352,7 +398,6 @@ const resetStoreForm = () => {
   storeData.name = ''
   storeData.address = ''
   storeData.phone = ''
-  storeData.area = ''
   storeData.operatingDays = []
   storeData.openTime = ''
   storeData.closeTime = ''
@@ -364,13 +409,16 @@ const resetFactoryForm = () => {
   factoryData.name = ''
   factoryData.address = ''
   factoryData.phone = ''
+  factoryData.representative = ''
+  factoryData.region = 'SE01'
+  factoryData.lineCount = 1
 }
 </script>
 
 <style scoped>
 .registration-container {
-  padding: 2rem;
-  max-width: 1000px;
+  padding: 1rem 2rem;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -379,10 +427,10 @@ const resetFactoryForm = () => {
 }
 
 .registration-header h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
 }
 
 .subtitle {
@@ -403,12 +451,12 @@ const resetFactoryForm = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 1.25rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
@@ -432,32 +480,32 @@ const resetFactoryForm = () => {
 
 /* 폼 카드 */
 .registration-form {
-  margin-top: 2rem;
-  min-height: 800px;
+  margin-top: 1rem;
+  min-height: auto;
 }
 
 .form-card {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .form-card h2 {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 1.5rem 0;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e2e8f0;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1.5px solid #e2e8f0;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1.25rem 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group {
@@ -482,12 +530,14 @@ const resetFactoryForm = () => {
 
 .form-group input,
 .form-group select {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: all 0.2s;
   background: white;
+  height: 42px;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -513,13 +563,14 @@ const resetFactoryForm = () => {
 .day-checkbox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: 1.5px solid #e2e8f0;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1.2px solid #e2e8f0;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
+  font-size: 0.8rem;
 }
 
 .day-checkbox:hover {
@@ -529,11 +580,13 @@ const resetFactoryForm = () => {
 
 .day-checkbox input[type="checkbox"] {
   cursor: pointer;
+  width: 14px;
+  height: 14px;
 }
 
 .day-checkbox input[type="checkbox"]:checked + span {
   color: #0f172a;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* 사진 업로드 */
@@ -583,14 +636,15 @@ const resetFactoryForm = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 2rem;
+  gap: 0.5rem;
+  padding: 1.5rem;
   background: #f8fafc;
   border: 2px dashed #cbd5e1;
   border-radius: 8px;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
@@ -611,9 +665,9 @@ const resetFactoryForm = () => {
 
 .btn-register,
 .btn-reset {
-  padding: 0.85rem 2rem;
+  padding: 0.65rem 1.5rem;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;

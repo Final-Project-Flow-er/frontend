@@ -12,9 +12,18 @@
           <label>역할</label>
           <select v-model="filters.role">
             <option value="all">전체</option>
-            <option value="hq">본사 관리자</option>
-            <option value="franchise">가맹점주</option>
-            <option value="factory">공장 관리자</option>
+            <option value="hq">본사</option>
+            <option value="franchise">가맹점</option>
+            <option value="factory">공장</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>회원 상태</label>
+          <select v-model="filters.status">
+            <option value="all">전체</option>
+            <option value="active">활성</option>
+            <option value="inactive">비활성</option>
           </select>
         </div>
 
@@ -60,6 +69,8 @@
             <th>소속</th>
             <th>이메일</th>
             <th>연락처</th>
+            <th>회원 상태</th>
+            <th>관리</th>
             <th>상세</th>
           </tr>
         </thead>
@@ -86,12 +97,43 @@
             <td>{{ member.id }}</td>
             <td>
               <span class="role-badge" :class="member.role">
-                {{ getRoleLabel(member.role) }}
+                {{ getRoleDisplay(member) }}
               </span>
             </td>
             <td>{{ member.orgName || '-' }}</td>
             <td>{{ member.email }}</td>
             <td>{{ member.phone }}</td>
+            <td>
+              <span class="status-badge" :class="member.status || 'active'">
+                {{ (member.status === 'active' || !member.status) ? '활성' : '비활성' }}
+              </span>
+            </td>
+            <td class="td-actions" @click.stop>
+              <div class="action-buttons-wrap">
+                <button
+                  v-if="member.status === 'active' || !member.status"
+                  @click="toggleMemberStatus(member)"
+                  class="btn-icon-action delete"
+                  title="계정 비활성화"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+                <button
+                  v-else
+                  @click="toggleMemberStatus(member)"
+                  class="btn-icon-action restore"
+                  title="계정 복구"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                </button>
+              </div>
+            </td>
             <td>
               <button class="btn-detail">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -124,9 +166,24 @@ const router = useRouter()
 // 필터
 const filters = reactive({
   role: 'all',
+  status: 'all',
   searchQuery: '',
   orgName: ''
 })
+
+// 세부 역할 라벨 (권한별 역할 표시용)
+const ROLE_DETAIL_LABELS = {
+  hq_hr: '인사 관리자',
+  hq_settlement: '정산 관리자',
+  hq_logistics: '물류 관리자',
+  hq_system: '시스템 관리자',
+  fr_owner: '점주',
+  fr_manager: '매니저',
+  fr_staff: '직원',
+  fa_production: '생산 관리자',
+  fa_logistics: '물류 관리자',
+  fa_factory: '공장 관리자'
+}
 
 // 샘플 회원 데이터
 const members = ref([
@@ -135,36 +192,43 @@ const members = ref([
     name: '본사유저',
     id: 'hq_admin',
     role: 'hq',
+    roleDetail: 'hq_hr',
     orgName: '본사',
     email: 'admin@company.com',
     phone: '010-1111-2222',
-    photoUrl: ''
+    photoUrl: '',
+    status: 'active'
   },
   {
     employeeNumber: '20001',
     name: '가맹점유저',
     id: 'admin123',
     role: 'franchise',
+    roleDetail: 'fr_owner',
     orgName: '서울본점',
     email: 'admin@example.com',
     phone: '010-1234-5678',
-    photoUrl: ''
+    photoUrl: '',
+    status: 'active'
   },
   {
     employeeNumber: '30001',
     name: '공장유저',
     id: 'factory_mgr',
     role: 'factory',
+    roleDetail: 'fa_factory',
     orgName: '경기공장',
     email: 'factory@factory.com',
     phone: '010-5555-6666',
-    photoUrl: ''
+    photoUrl: '',
+    status: 'inactive'
   }
 ])
 
 const filteredMembers = computed(() => {
   return members.value.filter(member => {
     const roleMatch = filters.role === 'all' || member.role === filters.role
+    const statusMatch = filters.status === 'all' || (member.status || 'active') === filters.status
     const query = filters.searchQuery.toLowerCase()
     const searchMatch = !query || 
       member.name.toLowerCase().includes(query) ||
@@ -173,23 +237,39 @@ const filteredMembers = computed(() => {
       member.employeeNumber.includes(query)
     const orgMatch = !filters.orgName || (member.orgName && member.orgName.toLowerCase().includes(filters.orgName.toLowerCase()))
     
-    return roleMatch && searchMatch && orgMatch
+    return roleMatch && statusMatch && searchMatch && orgMatch
   })
 })
 
 const getRoleLabel = (role) => {
   switch(role) {
-    case 'hq': return '본사 관리자'
-    case 'franchise': return '가맹점주'
-    case 'factory': return '공장 관리자'
+    case 'hq': return '본사'
+    case 'franchise': return '가맹점'
+    case 'factory': return '공장'
     default: return role
   }
 }
 
+const getRoleDisplay = (member) => {
+  const typeLabel = getRoleLabel(member.role)
+  const detailLabel = member.roleDetail ? ROLE_DETAIL_LABELS[member.roleDetail] : null
+  return detailLabel ? `${typeLabel} · ${detailLabel}` : typeLabel
+}
+
 const resetFilters = () => {
   filters.role = 'all'
+  filters.status = 'all'
   filters.searchQuery = ''
   filters.orgName = ''
+}
+
+const toggleMemberStatus = (member) => {
+  const isActive = member.status === 'active' || !member.status
+  const action = isActive ? '비활성화' : '복구'
+  const name = member.name
+  if (confirm(`'${name}' 회원을 ${action}하시겠습니까?`)) {
+    member.status = isActive ? 'inactive' : 'active'
+  }
 }
 
 const goToDetail = (empNum) => {
@@ -374,6 +454,63 @@ const goToDetail = (empNum) => {
 .role-badge.hq { background: #e0f2fe; color: #0369a1; }
 .role-badge.franchise { background: #fef3c7; color: #b45309; }
 .role-badge.factory { background: #dcfce7; color: #15803d; }
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-badge.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.td-actions {
+  padding: 0.5rem 1rem !important;
+  vertical-align: middle;
+}
+.action-buttons-wrap {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  align-items: center;
+}
+.btn-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-icon-action.delete {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+.btn-icon-action.delete:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+.btn-icon-action.restore {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #86efac;
+}
+.btn-icon-action.restore:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
 
 .btn-detail {
   background: none;

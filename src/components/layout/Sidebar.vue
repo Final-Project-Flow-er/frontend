@@ -54,11 +54,11 @@ const menuGroups = ref([
     title: '본사',
     items: [
       {
-        name: '조직 관리',
+        name: '사업장 관리',
         isOpen: false,
         children: [
-          { name: '조직 등록', path: '/registration' },
-          { name: '조직 조회', path: '/organizations' }
+          { name: '사업장 등록', path: '/registration' },
+          { name: '사업장 조회', path: '/organizations' }
         ]
       },
       {
@@ -116,7 +116,8 @@ const menuGroups = ref([
           { name: '차량 배정', path: '/head-office/returns/vehicle-assignment' }
         ]
       },
-      { name: '정산 관리', path: '/hq/settlement' }
+      { name: '정산 관리', path: '/hq/settlement' },
+      { name: '공지사항', path: '/notice' }
     ]
   },
   {
@@ -129,7 +130,8 @@ const menuGroups = ref([
       { name: '입고 관리', path: '/franchise/inbound' },
       { name: '발주/반품 관리', path: '/franchise/orders' },
       { name: '판매 관리', path: '/franchise/products' },
-      { name: '정산 관리', path: '/store/settlement' }
+      { name: '정산 관리', path: '/store/settlement' },
+      { name: '공지사항', path: '/notice' }
     ]
   },
   {
@@ -146,7 +148,8 @@ const menuGroups = ref([
           { name: '발주 요청 관리', path: '/factory/orders/request' }
         ]
       },
-      { name: '로그 관리', path: '/hq/inventory/logs/factory' }
+      { name: '로그 관리', path: '/hq/inventory/logs/factory' },
+      { name: '공지사항', path: '/notice' }
     ]
   }
 ])

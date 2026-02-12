@@ -184,6 +184,11 @@ const router = createRouter({
             component: LogisticsListView
         },
         {
+            path: '/notifications',
+            name: 'notification-list',
+            component: () => import('../views/NotificationListView.vue')
+        },
+        {
             path: '/store/inventory',
             name: 'store-inventory',
             component: () => import('../views/StoreInventoryManagementView.vue')

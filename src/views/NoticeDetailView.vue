@@ -21,6 +21,10 @@
         </div>
         <div class="meta-info">
           <div class="meta-item">
+            <span class="label">작성자</span>
+            <span class="value">{{ notice.author }}</span>
+          </div>
+          <div class="meta-item">
             <span class="label">등록일</span>
             <span class="value">{{ notice.createdAt }}</span>
           </div>
@@ -66,12 +70,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
-const isAdmin = ref(true) // 실제로는 유저 역할에 따라 설정
+const userRole = sessionStorage.getItem('userRole')
+const isAdmin = computed(() => userRole === 'admin' || userRole === 'headOffice')
 
 const notice = ref(null)
 
@@ -83,6 +88,7 @@ onMounted(() => {
     notice.value = {
       id: 3,
       title: '[긴급] 시스템 점검 안내 (02/15)',
+      author: '본사 관리자',
       content: '원활한 서비스 제공을 위해 아래와 같이 시스템 점검을 진행할 예정입니다.\n\n[점검 일시]\n2026년 2월 15일(일) 02:00 ~ 04:00 (약 2시간)\n\n[점검 내용]\n데이터베이스 최적화 및 보안 패치 적용\n\n점검 시간 동안에는 서비스 접속이 일시적으로 제한될 수 있으니 양해 부탁드립니다.',
       createdAt: '2026-02-10',
       views: 125,
@@ -94,6 +100,7 @@ onMounted(() => {
     notice.value = {
       id: 2,
       title: '신규 상품 입고 및 주문 가이드 안내',
+      author: '영업기획팀',
       content: '안녕하세요. 본사 관리자입니다.\n\n2026년 상반기 신규 상품 라인업이 확정되어 안내 드립니다.\n첨부된 가이드 파일을 확인하시어 주문 및 판매에 참고 부탁드립니다.\n\n궁금하신 사항은 영업담당자에게 문의 바랍니다.',
       createdAt: '2026-02-08',
       views: 450,

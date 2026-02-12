@@ -57,29 +57,29 @@
         <thead>
           <tr>
             <th style="width: 22%">일시</th>
-            <th style="width: 12%" class="text-center">변동 유형</th>
-            <th style="width: 9%" class="text-center">사원번호</th>
+            <th style="width: 12%">변동 유형</th>
+            <th style="width: 9%">사원번호</th>
             <th style="width: 8%">이름</th>
             <th style="width: 8%">아이디</th>
             <th style="width: 19%">이메일</th>
             <th style="width: 12%">연락처</th>
-            <th style="width: 10%" class="text-center">생년월일</th>
+            <th style="width: 10%">생년월일</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="log in filteredLogs" :key="log.id" class="log-row">
             <td class="date-cell">{{ log.timestamp }}</td>
-            <td class="text-center">
+            <td>
               <span :class="['type-badge', log.type]">
                 {{ getTypeLabel(log.type) }}
               </span>
             </td>
-            <td class="emp-no text-center">{{ log.empNo }}</td>
+            <td class="emp-no">{{ log.empNo }}</td>
             <td class="name-text">{{ log.name }}</td>
             <td>{{ log.userId }}</td>
             <td class="email-text">{{ log.email }}</td>
             <td>{{ log.phone }}</td>
-            <td class="text-center">{{ log.birth }}</td>
+            <td>{{ log.birth }}</td>
           </tr>
           <tr v-if="filteredLogs.length === 0">
             <td colspan="8" class="empty-row">조회된 로그가 없습니다.</td>
@@ -282,12 +282,8 @@ const resetFilters = () => {
   padding: 1.1rem 0.75rem;
   font-size: 0.85rem;
   font-weight: 600;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.log-table th.text-center {
   text-align: center;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .log-table td {
@@ -298,9 +294,6 @@ const resetFilters = () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.log-table td.text-center {
   text-align: center;
 }
 
@@ -316,7 +309,7 @@ const resetFilters = () => {
 }
 
 .emp-no {
-  font-weight: 700;
+  font-weight: 400;
   color: #1e293b;
 }
 

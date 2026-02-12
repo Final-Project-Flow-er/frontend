@@ -10,7 +10,8 @@
       <div class="header-actions">
         <template v-if="!isEditing">
           <button @click="startEdit" class="btn-edit">수정</button>
-          <button @click="confirmDelete" class="btn-delete">회원 삭제</button>
+          <button v-if="isMemberActive" @click="confirmDeactivate" class="btn-deactivate">비활성화</button>
+          <button v-else @click="confirmRestore" class="btn-restore">계정 복구</button>
         </template>
         <template v-else>
           <button @click="saveChanges" class="btn-save">저장</button>
@@ -23,7 +24,10 @@
       <div class="card-header">
         <div class="header-left">
           <span class="role-badge" :class="member.role">
-            {{ getRoleLabel(member.role) }}
+            {{ getRoleDisplay(member) }}
+          </span>
+          <span class="status-badge" :class="member.status || 'active'">
+            {{ (member.status === 'active' || !member.status) ? '활성' : '비활성' }}
           </span>
           <h1>{{ member.name }}</h1>
         </div>
@@ -106,15 +110,28 @@
             <h2>소속 정보</h2>
             <div class="info-grid">
               <div class="info-field">
-                <label>역할</label>
+                <label>권한</label>
                 <select 
                   v-model="member.role" 
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
                 >
-                  <option value="hq">본사 관리자</option>
-                  <option value="franchise">가맹점주</option>
-                  <option value="factory">공장 관리자</option>
+                  <option value="hq">본사</option>
+                  <option value="franchise">가맹점</option>
+                  <option value="factory">공장</option>
+                </select>
+              </div>
+              <div class="info-field">
+                <label>역할</label>
+                <select 
+                  v-model="member.roleDetail" 
+                  :disabled="!isEditing"
+                  :class="{ 'input-disabled': !isEditing }"
+                >
+                  <option value="" disabled>역할 선택</option>
+                  <option v-for="opt in roleDetailOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
                 </select>
               </div>
               
@@ -157,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
@@ -179,6 +196,41 @@ const factoryOptions = [
   { name: '충청공장', code: 'FA02' }
 ]
 
+// 권한별 세부 역할
+const roleDetailsByType = {
+  hq: [
+    { value: 'hq_hr', label: '인사 관리자' },
+    { value: 'hq_settlement', label: '정산 관리자' },
+    { value: 'hq_logistics', label: '물류 관리자' },
+    { value: 'hq_system', label: '시스템 관리자' }
+  ],
+  franchise: [
+    { value: 'fr_owner', label: '점주' },
+    { value: 'fr_manager', label: '매니저' },
+    { value: 'fr_staff', label: '직원' }
+  ],
+  factory: [
+    { value: 'fa_production', label: '생산 관리자' },
+    { value: 'fa_logistics', label: '물류 관리자' },
+    { value: 'fa_factory', label: '공장 관리자' }
+  ]
+}
+
+const ROLE_DETAIL_LABELS = {
+  hq_hr: '인사 관리자',
+  hq_settlement: '정산 관리자',
+  hq_logistics: '물류 관리자',
+  hq_system: '시스템 관리자',
+  fr_owner: '점주',
+  fr_manager: '매니저',
+  fr_staff: '직원',
+  fa_production: '생산 관리자',
+  fa_logistics: '물류 관리자',
+  fa_factory: '공장 관리자'
+}
+
+const roleDetailOptions = computed(() => member.value ? roleDetailsByType[member.value.role] || [] : [])
+
 onMounted(() => {
   const empNum = route.params.employeeNumber
   // API 모드 (샘플 데이터 매칭)
@@ -188,36 +240,42 @@ onMounted(() => {
       name: '본사유저',
       id: 'hq_admin',
       role: 'hq',
+      roleDetail: 'hq_hr',
       orgName: '본사',
       orgCode: '',
       email: 'admin@company.com',
       phone: '010-1111-2222',
       birthdate: '1985-05-15',
-      photoUrl: ''
+      photoUrl: '',
+      status: 'active'
     },
     {
       employeeNumber: '20001',
       name: '가맹점유저',
       id: 'admin123',
       role: 'franchise',
+      roleDetail: 'fr_owner',
       orgName: '서울본점',
       orgCode: 'SE01',
       email: 'admin@example.com',
       phone: '010-1234-5678',
       birthdate: '2002-06-26',
-      photoUrl: ''
+      photoUrl: '',
+      status: 'active'
     },
     {
       employeeNumber: '30001',
       name: '공장유저',
       id: 'factory_mgr',
       role: 'factory',
+      roleDetail: 'fa_factory',
       orgName: '경기공장',
       orgCode: 'FA01',
       email: 'factory@factory.com',
       phone: '010-5555-6666',
       birthdate: '1990-11-20',
-      photoUrl: ''
+      photoUrl: '',
+      status: 'inactive'
     }
   ]
 
@@ -228,11 +286,12 @@ onMounted(() => {
   }
 })
 
-// 역할 변경 시 소속 정보 초기화
+// 권한 변경 시 세부 역할·소속 초기화
 watch(() => member.value?.role, (newRole, oldRole) => {
   if (!member.value || !isEditing.value) return
-  // 사원번호 접두사 변경 시뮬레이션 (선택적) 또는 소속 리셋
   if (newRole !== oldRole) {
+    const opts = roleDetailsByType[newRole]
+    member.value.roleDetail = opts && opts.length ? opts[0].value : ''
     member.value.orgName = newRole === 'hq' ? '본사' : ''
     member.value.orgCode = ''
   }
@@ -253,12 +312,22 @@ watch(() => member.value?.orgName, (newVal) => {
 
 const getRoleLabel = (role) => {
   switch(role) {
-    case 'hq': return '본사 관리자'
-    case 'franchise': return '가맹점주'
-    case 'factory': return '공장 관리자'
+    case 'hq': return '본사'
+    case 'franchise': return '가맹점'
+    case 'factory': return '공장'
     default: return role
   }
 }
+
+const getRoleDisplay = (m) => {
+  const typeLabel = getRoleLabel(m.role)
+  const detailLabel = m.roleDetail ? ROLE_DETAIL_LABELS[m.roleDetail] : null
+  return detailLabel ? `${typeLabel} · ${detailLabel}` : typeLabel
+}
+
+const isMemberActive = computed(() => {
+  return !member.value || member.value.status === 'active' || !member.value.status
+})
 
 const goBack = () => {
   router.push('/admin/members')
@@ -281,10 +350,19 @@ const saveChanges = () => {
   isEditing.value = false
 }
 
-const confirmDelete = () => {
-  if (confirm('정말로 이 회원을 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.')) {
-    alert('회원이 삭제되었습니다.')
-    router.push('/admin/members')
+const confirmDeactivate = () => {
+  if (confirm('이 회원 계정을 비활성화하시겠습니까? 비활성화된 계정은 로그인할 수 없습니다.')) {
+    member.value.status = 'inactive'
+    originalMember.value.status = 'inactive'
+    alert('계정이 비활성화되었습니다.')
+  }
+}
+
+const confirmRestore = () => {
+  if (confirm('이 회원 계정을 복구하시겠습니까?')) {
+    member.value.status = 'active'
+    originalMember.value.status = 'active'
+    alert('계정이 복구되었습니다.')
   }
 }
 
@@ -348,7 +426,7 @@ const onPhotoChange = (e) => {
   cursor: pointer;
 }
 
-.btn-delete {
+.btn-deactivate {
   padding: 0.6rem 1.5rem;
   background: white;
   color: #ef4444;
@@ -356,6 +434,22 @@ const onPhotoChange = (e) => {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+}
+.btn-deactivate:hover {
+  background: #fff1f2;
+}
+
+.btn-restore {
+  padding: 0.6rem 1.5rem;
+  background: #15803d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-restore:hover {
+  background: #166534;
 }
 
 .btn-cancel {
@@ -528,6 +622,17 @@ const onPhotoChange = (e) => {
 .role-badge.hq { background: #e0f2fe; color: #0369a1; }
 .role-badge.franchise { background: #fef3c7; color: #b45309; }
 .role-badge.factory { background: #dcfce7; color: #15803d; }
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+.status-badge.active { background: #dcfce7; color: #166534; }
+.status-badge.inactive { background: #f1f5f9; color: #64748b; }
 
 @media (max-width: 900px) {
   .card-body {

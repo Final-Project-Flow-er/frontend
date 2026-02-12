@@ -5,15 +5,15 @@
       <p class="subtitle">새로운 회원을 시스템에 등록합니다</p>
     </div>
 
-    <!-- 역할 선택 -->
+    <!-- 권한(본사/가맹점/공장) 선택 버튼 -->
     <div class="type-selection">
       <button 
         v-for="role in roles" 
         :key="role.value"
-        @click="selectedRole = role.value"
+        type="button"
+        @click="selectedRole = role.value; formData.roleDetail = ''"
         :class="['type-btn', { active: selectedRole === role.value }]"
       >
-        <!-- Icons for each role -->
         <svg v-if="role.value === 'hq'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 21h18"></path>
           <path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3"></path>
@@ -45,6 +45,21 @@
       <form @submit.prevent="handleRegister" class="registration-form">
         <div class="form-card">
           <div class="form-section">
+            <h2 class="section-title">역할</h2>
+            <div class="form-grid role-dropdown-row">
+              <div class="form-group">
+                <label>역할 <span class="required">*</span></label>
+                <select v-model="formData.roleDetail" class="form-select" required>
+                  <option value="" disabled>역할을 선택하세요</option>
+                  <option v-for="opt in roleDetailOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
             <h2 class="section-title">기본 정보</h2>
             
             <!-- 사진 업로드 -->
@@ -65,29 +80,29 @@
             <div class="form-grid">
               <!-- 공통 필드 -->
               <div class="form-group">
-                <label>이름</label>
+                <label>이름 <span class="required">*</span></label>
                 <input type="text" v-model="formData.name" placeholder="이름을 입력하세요" required>
               </div>
 
               <div class="form-group">
-                <label>이메일</label>
+                <label>이메일 <span class="required">*</span></label>
                 <input type="email" v-model="formData.email" placeholder="example@email.com" required>
               </div>
 
               <div class="form-group">
-                <label>연락처</label>
+                <label>연락처 <span class="required">*</span></label>
                 <input type="tel" v-model="formData.phone" placeholder="010-0000-0000" required>
               </div>
 
               <div class="form-group">
-                <label>생년월일</label>
+                <label>생년월일 <span class="required">*</span></label>
                 <input type="date" v-model="formData.birthdate" required>
               </div>
 
               <!-- 가맹점 전용 -->
               <template v-if="selectedRole === 'franchise'">
                 <div class="form-group">
-                  <label>가맹점명</label>
+                  <label>가맹점명 <span class="required">*</span></label>
                   <select v-model="formData.orgName" required>
                     <option value="" disabled>가맹점을 선택하세요</option>
                     <option v-for="org in franchiseOptions" :key="org.code" :value="org.name">
@@ -104,7 +119,7 @@
               <!-- 공장 전용 -->
               <template v-if="selectedRole === 'factory'">
                 <div class="form-group">
-                  <label>공장 이름</label>
+                  <label>공장 이름 <span class="required">*</span></label>
                   <select v-model="formData.orgName" required>
                     <option value="" disabled>공장을 선택하세요</option>
                     <option v-for="org in factoryOptions" :key="org.code" :value="org.name">
@@ -168,13 +183,35 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 
 const roles = [
-  { label: '본사 관리자', value: 'hq' },
-  { label: '가맹점주', value: 'franchise' },
-  { label: '공장 관리자', value: 'factory' }
+  { label: '본사', value: 'hq' },
+  { label: '가맹점', value: 'franchise' },
+  { label: '공장', value: 'factory' }
 ]
+
+// 권한별 세부 역할
+const roleDetailsByType = {
+  hq: [
+    { value: 'hq_hr', label: '인사 관리자' },
+    { value: 'hq_settlement', label: '정산 관리자' },
+    { value: 'hq_logistics', label: '물류 관리자' },
+    { value: 'hq_system', label: '시스템 관리자' }
+  ],
+  franchise: [
+    { value: 'fr_owner', label: '점주' },
+    { value: 'fr_manager', label: '매니저' },
+    { value: 'fr_staff', label: '직원' }
+  ],
+  factory: [
+    { value: 'fa_production', label: '생산 관리자' },
+    { value: 'fa_logistics', label: '물류 관리자' },
+    { value: 'fa_factory', label: '공장 관리자' }
+  ]
+}
+
+const roleDetailOptions = computed(() => roleDetailsByType[selectedRole.value] || [])
 
 const selectedRole = ref('hq')
 const isSubmitting = ref(false)
@@ -189,7 +226,8 @@ const formData = reactive({
   orgName: '',
   orgCode: '',
   region: '',
-  photoUrl: ''
+  photoUrl: '',
+  roleDetail: ''
 })
 
 const resultData = reactive({
@@ -228,8 +266,9 @@ watch(() => formData.orgName, (newVal) => {
   }
 })
 
-// 역할 변경 시 폼 초기화
+// 권한 타입 변경 시 세부 역할·소속 초기화
 watch(selectedRole, () => {
+  formData.roleDetail = ''
   formData.orgName = ''
   formData.orgCode = ''
 })
@@ -250,13 +289,16 @@ const onPhotoChange = (e) => {
 }
 
 const handleRegister = async () => {
+  if (!formData.roleDetail) {
+    alert('역할을 선택해주세요.')
+    return
+  }
   isSubmitting.value = true
   
   // API 지연 시뮬레이션
   await new Promise(resolve => setTimeout(resolve, 1000))
 
   // 자동 생성 로직 (Mock)
-  const empPrefix = selectedRole.value === 'hq' ? 'H' : (selectedRole.value === 'franchise' ? 'F' : 'P')
   resultData.employeeNumber = counters[selectedRole.value].toString()
   resultData.id = `${selectedRole.value}_${Math.random().toString(36).substring(2, 7)}`
   resultData.tempPassword = Math.random().toString(36).substring(2, 10).toUpperCase() + '!'
@@ -283,22 +325,22 @@ const closeModal = () => {
 }
 
 .registration-header { margin-bottom: 2rem; }
-.registration-header h1 { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 0 0 0.5rem 0; }
+.registration-header h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0 0 0.25rem 0; }
 .subtitle { color: #64748b; font-size: 0.95rem; margin: 0; }
 
-/* 타입 선택 (역할 선택) */
+/* 권한 선택 버튼 */
 .type-selection { display: flex; gap: 1rem; margin-bottom: 2rem; }
 .type-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 1.25rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
@@ -307,22 +349,28 @@ const closeModal = () => {
 .type-btn:hover { border-color: #cbd5e1; background: #f8fafc; }
 .type-btn.active { border-color: #0f172a; background: #0f172a; color: white; }
 
+/* 필수 입력 표시 */
+.required { color: #ef4444; margin-left: 2px; font-weight: 700; }
+
+/* 역할 드롭다운 행 */
+.role-dropdown-row { margin-bottom: 0.5rem; }
+
 /* 폼 카드 */
 .form-card {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .section-title {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 1.5rem 0;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f1f5f9;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1.5px solid #e2e8f0;
 }
 
 /* 사진 업로드 */
@@ -344,7 +392,7 @@ const closeModal = () => {
   width: 120px;
   height: 120px;
   object-fit: cover;
-  border: 4px solid #f1f5f9;
+  border: 4px solid #f8fafc;
   background: #f8fafc;
 }
 
@@ -356,7 +404,9 @@ const closeModal = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: #cbd5e1;
+  border: 2px dashed #cbd5e1;
+  background: #f8fafc;
 }
 
 .btn-upload {
@@ -375,7 +425,7 @@ const closeModal = () => {
   background: #e2e8f0;
 }
 
-.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem 1rem; margin-bottom: 1.5rem; }
 .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
 .form-group.full-width { grid-column: 1 / -1; }
 .form-group label { font-size: 0.9rem; font-weight: 600; color: #475569; }
@@ -383,13 +433,15 @@ const closeModal = () => {
 
 .form-group input,
 .form-group select {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: all 0.2s;
   background: white;
   outline: none;
+  height: 42px;
+  box-sizing: border-box;
 }
 .form-group input:focus,
 .form-group select:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1); }
@@ -398,9 +450,9 @@ const closeModal = () => {
 
 /* 버튼 액션 */
 .form-actions { display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 1px solid #f1f5f9; }
-.btn-register { padding: 0.85rem 2.5rem; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-register { padding: 0.65rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .btn-register { background: #0f172a; color: white; border: none; }
-.btn-register:hover:not(:disabled) { background: #1e293b; transform: translateY(-1px); }
+.btn-register:hover:not(:disabled) { background: #1e293b; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); }
 .btn-register:disabled { background: #94a3b8; cursor: not-allowed; }
 
 /* 모달 스타일 (기존 스타일 유지하되 톤 조정) */

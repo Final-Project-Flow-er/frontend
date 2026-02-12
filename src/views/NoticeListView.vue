@@ -19,18 +19,23 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.searchQuery" 
+              :value="filters.searchQuery" 
+              @input="e => filters.searchQuery = e.target.value"
               placeholder="제목 또는 내용 검색"
             >
           </div>
         </div>
 
-        <div class="filter-group date-group">
-          <label>등록일 범위</label>
-          <div class="date-inputs">
-            <input type="date" v-model="filters.startDate">
-            <span class="date-sep">~</span>
-            <input type="date" v-model="filters.endDate">
+        <div class="filter-group author-group">
+          <label>작성자</label>
+          <div class="author-box">
+            <input 
+              type="text" 
+              :value="filters.author" 
+              @input="e => filters.author = e.target.value"
+              placeholder="작성자명 검색"
+              class="author-input"
+            >
           </div>
         </div>
 
@@ -54,6 +59,7 @@
           <tr>
             <th class="col-no">NO</th>
             <th class="col-title">제목</th>
+            <th class="col-author">작성자</th>
             <th class="col-date">등록일</th>
           </tr>
         </thead>
@@ -77,6 +83,7 @@
                 </svg>
               </div>
             </td>
+            <td class="col-author">{{ notice.author }}</td>
             <td class="col-date">{{ notice.createdAt }}</td>
           </tr>
         </tbody>
@@ -99,17 +106,18 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const isAdmin = ref(true) 
+const userRole = sessionStorage.getItem('userRole')
+const isAdmin = computed(() => userRole === 'admin' || userRole === 'headOffice')
 const filters = reactive({
   searchQuery: '',
-  startDate: '',
-  endDate: ''
+  author: ''
 })
 
 const notices = ref([
   {
     id: 3,
     title: '[긴급] 시스템 점검 안내 (02/15)',
+    author: '본사 관리자',
     content: '원활한 서비스 제공을 위해 아래와 같이 시스템 점검을 진행할 예정입니다.',
     createdAt: '2026-02-10',
     views: 125,
@@ -119,6 +127,7 @@ const notices = ref([
   {
     id: 2,
     title: '신규 상품 입고 및 주문 가이드 안내',
+    author: '영업기획팀',
     content: '안녕하세요. 본사 관리자입니다. 2026년 상반기 신규 상품 라인업이 확정되었습니다.',
     createdAt: '2026-02-08',
     views: 450,
@@ -128,6 +137,7 @@ const notices = ref([
   {
     id: 1,
     title: '개인정보 처리방침 개정 안내',
+    author: '법무지원부',
     content: '회사의 개인정보 처리방침이 다음과 같이 개정될 예정임을 안내 드립니다.',
     createdAt: '2026-02-01',
     views: 890,
@@ -143,22 +153,16 @@ const filteredNotices = computed(() => {
       n.title.toLowerCase().includes(query) || 
       n.content.toLowerCase().includes(query)
     
-    let matchesDate = true
-    if (filters.startDate) {
-      matchesDate = matchesDate && n.createdAt >= filters.startDate
-    }
-    if (filters.endDate) {
-      matchesDate = matchesDate && n.createdAt <= filters.endDate
-    }
+    const authorQuery = filters.author.toLowerCase()
+    const matchesAuthor = !authorQuery || n.author.toLowerCase().includes(authorQuery)
     
-    return matchesSearch && matchesDate
+    return matchesSearch && matchesAuthor
   })
 })
 
 const resetFilters = () => {
   filters.searchQuery = ''
-  filters.startDate = ''
-  filters.endDate = ''
+  filters.author = ''
 }
 
 const goToRegister = () => {
@@ -269,22 +273,17 @@ const goToDetail = (id) => {
   outline: none;
 }
 
-.date-inputs {
+.author-inputs {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.date-inputs input {
-  padding: 0.5rem 0.75rem;
+.author-input {
+  padding: 0.6rem 1rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9rem;
-  color: #1e293b;
-}
-
-.date-sep {
-  color: #cbd5e1;
+  font-size: 0.95rem;
+  outline: none;
 }
 
 .filter-actions {
@@ -342,6 +341,12 @@ const goToDetail = (id) => {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.notice-table th.col-no,
+.notice-table th.col-author,
+.notice-table th.col-date {
+  text-align: center;
+}
+
 .notice-table td {
   padding: 1.25rem 1rem;
   font-size: 0.95rem;
@@ -350,7 +355,8 @@ const goToDetail = (id) => {
 }
 
 .col-no { width: 80px; text-align: center !important; }
-.col-date { width: 140px; color: #64748b !important; text-align: right !important; padding-right: 2rem !important; }
+.col-author { width: 120px; color: #475569; text-align: center !important; }
+.col-date { width: 140px; color: #64748b !important; text-align: center !important; }
 
 .notice-row {
   cursor: pointer;
