@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import html2pdf from 'html2pdf.js'
 import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
 import SettlementBatchReceiptModal from '@/components/settlement/SettlementBatchReceiptModal.vue'
 
@@ -79,18 +80,37 @@ const monthRef = ref(null)
 const openDatePicker = () => { dateRef.value?.showPicker() }
 const openMonthPicker = () => { monthRef.value?.showPicker() }
 
-/* ── 개별 영수증 모달 ── */
-const showReceiptModal = ref(false)
+/* ── 개별 영수증 PDF 다운로드 ── */
+const individualReceiptRef = ref(null)
 const selectedReceiptStore = ref(null)
-const openReceipt = (store) => {
+const downloadStorePDF = (store) => {
   selectedReceiptStore.value = store
-  showReceiptModal.value = true
+  // 템플릿 데이터가 반영될 시간을 주기 위해 nextTick이나 setTimeout 사용
+  setTimeout(() => {
+    const element = document.querySelector('.hq-individual-pdf-wrap')
+    const opt = {
+      margin: 10,
+      filename: `Receipt_${store.name}_${selectedDate.value}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }
+    html2pdf().set(opt).from(element).save()
+  }, 100)
 }
 
-/* ── 전체 영수증 모달 ── */
-const showBatchModal = ref(false)
-const openBatchReceipt = () => {
-  showBatchModal.value = true
+/* ── 전체 영수증 PDF 다운로드 ── */
+const batchReceiptRef = ref(null)
+const downloadBatchPDF = () => {
+  const element = document.querySelector('.hq-batch-pdf-wrap')
+  const opt = {
+    margin: 10,
+    filename: `Settlement_Batch_Summary_${selectedDate.value}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }
+  html2pdf().set(opt).from(element).save()
 }
 
 /* ── 상세 이동 ── */
@@ -361,9 +381,9 @@ const getDetailedDesc = (field, idx, storeId) => {
       <div class="table-header">
         <h3>가맹점별 정산 목록</h3>
         <div class="header-right-group">
-          <button class="all-pdf-btn" @click="openBatchReceipt">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            전체 가맹점 영수증 PDF
+          <button class="all-pdf-btn" @click="downloadBatchPDF">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            전체 가맹점 요약 PDF
           </button>
           <span class="badge">{{ filteredStores.length }}개</span>
         </div>
@@ -380,6 +400,7 @@ const getDetailedDesc = (field, idx, storeId) => {
             <th class="text-right">손실</th>
             <th class="text-right">최종 정산</th>
             <th class="text-center">상태</th>
+            <th class="text-center">영수증</th>
             <th class="text-center">상세</th>
           </tr>
         </thead>
@@ -394,6 +415,9 @@ const getDetailedDesc = (field, idx, storeId) => {
             <td class="text-right negative">₩ {{ fmt(s.loss) }}</td>
             <td class="text-right primary-color final-cell">₩ {{ fmt(getFinal(s)) }}</td>
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ s.status }}</span></td>
+            <td class="text-center">
+              <button class="row-receipt-btn" @click="downloadStorePDF(s)">PDF</button>
+            </td>
             <td class="text-center">
               <button class="detail-btn" @click="goToDetail(s.id)">상세</button>
             </td>
@@ -425,21 +449,27 @@ const getDetailedDesc = (field, idx, storeId) => {
     </div>
   </div>
 
-  <!-- 개별 정산 영수증 모달 -->
-  <SettlementReceiptModal
-    :is-open="showReceiptModal"
-    :store="selectedReceiptStore"
-    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
-    @close="showReceiptModal = false"
-  />
+  <!-- PDF 출력을 위한 숨겨진 가맹점 영수증 템플릿 -->
+  <div style="display: none;">
+    <div class="hq-individual-pdf-wrap">
+      <SettlementReceiptModal
+        :is-open="true"
+        :store="selectedReceiptStore"
+        :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
+      />
+    </div>
+  </div>
 
-  <!-- 전체 가맹점 영수증 모달 -->
-  <SettlementBatchReceiptModal
-    :is-open="showBatchModal"
-    :stores="filteredStores"
-    :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
-    @close="showBatchModal = false"
-  />
+  <!-- PDF 출력을 위한 숨겨진 전체 가맹점 요약 템플릿 -->
+  <div style="display: none;">
+    <div class="hq-batch-pdf-wrap">
+      <SettlementBatchReceiptModal
+        :is-open="true"
+        :stores="filteredStores"
+        :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
+      />
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -576,4 +606,6 @@ const getDetailedDesc = (field, idx, storeId) => {
 .status-confirmed { background: #ede9fe; color: #6366f1; }
 .detail-btn { padding: 0.35rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #475569; transition: all 0.2s; }
 .detail-btn:hover { background: #f1f5f9; border-color: #475569; }
+.row-receipt-btn { padding: 0.35rem 0.7rem; border-radius: 8px; border: 1px solid #ef4444; background: white; color: #ef4444; cursor: pointer; font-size: 0.75rem; font-weight: 700; transition: all 0.2s; }
+.row-receipt-btn:hover { background: #ef4444; color: white; }
 </style>
