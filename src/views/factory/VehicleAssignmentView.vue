@@ -16,12 +16,12 @@ const vehicles = ref([
 
 // Mock Data - Unassigned Orders
 const unassignedOrders = ref([
-  { orderCode: 'HEAD20260210001', franchise: '강남점', product: '오리지널 떡볶이 밀키트', recipient: '김철수', contact: '010-1111-2222', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 800, transportCost: 50000 },
-  { orderCode: 'HEAD20260210002', franchise: '홍대점', product: '마라 떡볶이 밀키트', recipient: '박영희', contact: '010-3333-4444', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 1200, transportCost: 65000 },
-  { orderCode: 'HEAD20260210003', franchise: '잠실점', product: '로제 떡볶이 밀키트', recipient: '이민수', contact: '010-5555-6666', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 400, transportCost: 45000 },
-  { orderCode: 'HEAD20260211001', franchise: '신촌점', product: '오리지널 떡볶이 밀키트', recipient: '정수원', contact: '010-7777-8888', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 1500, transportCost: 75000 },
-  { orderCode: 'HEAD20260211002', franchise: '서초점', product: '마라 떡볶이 밀키트', recipient: '강현우', contact: '010-0000-0000', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 600, transportCost: 55000 },
-  { orderCode: 'HEAD20260211003', franchise: '명동점', product: '로제 떡볶이 밀키트', recipient: '윤지하', contact: '010-2222-1111', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 2000, transportCost: 90000 },
+  { orderCode: 'HEAD20260210001', franchise: '강남점', address: '서울 강남구 역삼동 123-45', product: '오리지널 떡볶이 밀키트', recipient: '김철수', contact: '010-1111-2222', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 800, transportCost: 50000 },
+  { orderCode: 'HEAD20260210002', franchise: '홍대점', address: '서울 마포구 서교동 456-78', product: '마라 떡볶이 밀키트', recipient: '박영희', contact: '010-3333-4444', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 1200, transportCost: 65000 },
+  { orderCode: 'HEAD20260210003', franchise: '잠실점', address: '서울 송파구 신천동 789-01', product: '로제 떡볶이 밀키트', recipient: '이민수', contact: '010-5555-6666', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 400, transportCost: 45000 },
+  { orderCode: 'HEAD20260211001', franchise: '신촌점', address: '서울 서대문구 창천동 111-22', product: '오리지널 떡볶이 밀키트', recipient: '정수원', contact: '010-7777-8888', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 1500, transportCost: 75000 },
+  { orderCode: 'HEAD20260211002', franchise: '서초점', address: '서울 서초구 서초동 333-44', product: '마라 떡볶이 밀키트', recipient: '강현우', contact: '010-0000-0000', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 600, transportCost: 55000 },
+  { orderCode: 'HEAD20260211003', franchise: '명동점', address: '서울 중구 을지로 555-66', product: '로제 떡볶이 밀키트', recipient: '윤지하', contact: '010-2222-1111', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 2000, transportCost: 90000 },
 ])
 
 const vehicleFilter = ref({
@@ -32,8 +32,7 @@ const vehicleFilter = ref({
 })
 
 const orderFilter = ref({
-  franchise: '',
-  orderCode: ''
+  search: ''
 })
 
 const companies = ['우리통상', '대한물류', '에이원']
@@ -51,8 +50,8 @@ const filteredVehicles = computed(() => {
 
 const filteredOrders = computed(() => {
   return unassignedOrders.value.filter(o => {
-    return (!orderFilter.value.franchise || o.franchise.includes(orderFilter.value.franchise)) &&
-           (!orderFilter.value.orderCode || o.orderCode.includes(orderFilter.value.orderCode))
+    const keyword = orderFilter.value.search.toLowerCase()
+    return !keyword || o.orderCode.toLowerCase().includes(keyword) || o.franchise.toLowerCase().includes(keyword)
   })
 })
 
@@ -240,8 +239,7 @@ const goBack = () => router.back()
             <div class="header-left-group">
               <h3 class="section-title">차량 미배정 발주 목록</h3>
               <div class="order-search-filter">
-                <input type="text" v-model="orderFilter.orderCode" placeholder="발주 코드 검색" />
-                <input type="text" v-model="orderFilter.franchise" placeholder="가맹점 검색" />
+                <input type="text" v-model="orderFilter.search" placeholder="발주코드 및 가맹점 검색" class="large-search" />
               </div>
             </div>
             <div v-if="selectedVehicle" class="info-badge">
@@ -255,7 +253,7 @@ const goBack = () => router.back()
                   <th class="checkbox-col"></th>
                   <th>발주 코드</th>
                   <th>가맹점</th>
-                  <th>제품</th>
+                  <th>주소</th>
                   <th>수령인</th>
                   <th>연락처</th>
                   <th>중량</th>
@@ -276,7 +274,7 @@ const goBack = () => router.back()
                   </td>
                   <td class="code-cell">{{ o.orderCode }}</td>
                   <td>{{ o.franchise }}</td>
-                  <td class="name-cell">{{ o.product }}</td>
+                  <td class="address-cell" :title="o.address">{{ o.address }}</td>
                   <td>{{ o.recipient }}</td>
                   <td>{{ o.contact }}</td>
                   <td class="text-right">{{ o.weight.toLocaleString() }}kg</td>
@@ -492,6 +490,14 @@ const goBack = () => router.back()
   font-weight: 700;
 }
 .code-cell { font-family: monospace; font-weight: 600; color: #64748b; }
+.address-cell { 
+  max-width: 180px; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+  color: #64748b;
+  font-size: 0.8rem;
+}
 .name-cell { font-weight: 500; }
 .cost-cell { font-weight: 600; color: #0f172a; }
 .text-right { text-align: right; }
@@ -515,12 +521,12 @@ const goBack = () => router.back()
   gap: 0.5rem;
 }
 
-.order-search-filter input {
+.order-search-filter input.large-search {
   padding: 0.4rem 0.75rem;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 0.85rem;
-  width: 150px;
+  width: 250px;
 }
 
 .info-badge {

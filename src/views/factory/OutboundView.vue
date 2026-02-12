@@ -5,10 +5,10 @@ import Modal from '@/components/common/Modal.vue'
 // Mock Data for Left List (Outbound Boxes)
 // Mock Data for Left List (Outbound Boxes)
 const outboundBoxes = ref([
-  { boxCode: 'SE01-FA01-A1-OR0101-001', orderCode: 'SE0120231026001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20 },
-  { boxCode: 'SE01-FA01-A1-MA0301-001', orderCode: 'SE0120231026001', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15 },
-  { boxCode: 'SE01-FA01-A1-RO0201-001', orderCode: 'SE0120231025005', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10 },
-  { boxCode: 'SE01-FA01-A1-OR0103-001', orderCode: 'SE0120231025005', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5 },
+  { boxCode: 'SE01-FA01-A1-OR0101-001', orderCode: 'SE0120231026001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20, destination: '서울 강남점' },
+  { boxCode: 'SE01-FA01-A1-MA0301-001', orderCode: 'SE0120231026001', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15, destination: '서울 강남점' },
+  { boxCode: 'SE01-FA01-A1-RO0201-001', orderCode: 'SE0120231025005', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10, destination: '경기 판교점' },
+  { boxCode: 'SE01-FA01-A1-OR0103-001', orderCode: 'SE0120231025005', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5, destination: '경기 판교점' },
 ])
 
 // Mock Data for Right List (Details per box)
@@ -54,28 +54,38 @@ const selectedBoxDetails = computed(() => {
 
 const selectBox = (boxCode) => {
   selectedBoxCode.value = boxCode
-  // Clear item selection when switching boxes? 
-  // Requirement allows individual item selection, likely per loaded view.
-  // For simplicity, let's keep item selection state but maybe user wants to multi-select items across boxes?
-  // Usually detail view shows only one box. Let's clear item selection to avoid confusion.
-  // Or better, filter selectedItemIds to only those in current box if we only show one box's details at a time.
-  // But wait, "일괄적으로 삭제" implies global checkboxes? 
-  // With split view, usually right side shows ONLY selected box. 
-  // Let's reset item selection when box changes to simplicity.
-  selectedItemIds.value.clear()
 }
 
 // Checkbox Logic - Boxes
 const toggleAllBoxes = (e) => {
   if (e.target.checked) {
-    outboundBoxes.value.forEach(box => selectedBoxIds.value.add(box.boxCode))
+    outboundBoxes.value.forEach(box => {
+      selectedBoxIds.value.add(box.boxCode)
+      // Automatically check all items in selected boxes
+      if (allBoxDetails.value[box.boxCode]) {
+        allBoxDetails.value[box.boxCode].forEach(item => selectedItemIds.value.add(item.id))
+      }
+    })
   } else {
     selectedBoxIds.value.clear()
+    selectedItemIds.value.clear()
   }
 }
+
 const toggleBox = (boxCode) => {
-  if (selectedBoxIds.value.has(boxCode)) selectedBoxIds.value.delete(boxCode)
-  else selectedBoxIds.value.add(boxCode)
+  if (selectedBoxIds.value.has(boxCode)) {
+    selectedBoxIds.value.delete(boxCode)
+    // Uncheck all items in this box
+    if (allBoxDetails.value[boxCode]) {
+      allBoxDetails.value[boxCode].forEach(item => selectedItemIds.value.delete(item.id))
+    }
+  } else {
+    selectedBoxIds.value.add(boxCode)
+    // Check all items in this box
+    if (allBoxDetails.value[boxCode]) {
+      allBoxDetails.value[boxCode].forEach(item => selectedItemIds.value.add(item.id))
+    }
+  }
 }
 
 // Checkbox Logic - Items
@@ -94,14 +104,10 @@ const toggleItem = (itemId) => {
 
 // Actions
 
-
-  // Determine what to delete based on active context or combined?
-  // Requirement: "박스나 개별 목록들에서... 일괄적으로 삭제"
-  // "버튼은 체크가 된 항목들이 버튼을 누르면 공통으로 적용"
-  // So if boxes AND items are selected, we try to delete both?
+const performDelete = () => {
+  const boxCount = selectedBoxIds.value.size
+  const itemCount = selectedItemIds.value.size
   
-  const performDelete = () => {
-
   // Delete Boxes
   if (boxCount > 0) {
     outboundBoxes.value = outboundBoxes.value.filter(b => !selectedBoxIds.value.has(b.boxCode))
@@ -149,17 +155,21 @@ const deleteSelected = () => {
   openModal('삭제 확인', msg, performDelete)
 }
 
-  const performPicking = () => {
-
+const performPicking = () => {
   // Update picking status to true for selected items
-  const items = allBoxDetails.value[selectedBoxCode.value]
-  items.forEach(item => {
-    if (selectedItemIds.value.has(item.id)) {
-      item.picking = true
-    }
+  // Since we might have items from multiple boxes selected if we expanded logic,
+  // but currently we only show one box's details.
+  // Requirement doesn't specify cross-box picking in detail list yet, 
+  // but toggleBox selects all items. So we should pick ALL selected items.
+  
+  Object.keys(allBoxDetails.value).forEach(boxCode => {
+    allBoxDetails.value[boxCode].forEach(item => {
+      if (selectedItemIds.value.has(item.id)) {
+        item.picking = true
+      }
+    })
   })
   
-  // Also clear selection?
   selectedItemIds.value.clear()
   openModal('알림', '피킹 완료되었습니다.', null, false)
 }
@@ -175,42 +185,57 @@ const confirmPicking = () => {
 }
 
 const approveOutbound = () => {
+   const boxCount = selectedBoxIds.value.size
    const itemCount = selectedItemIds.value.size
-  if (itemCount === 0) {
-    openModal('알림', '출고 승인할 품목을 선택해주세요.', null, false)
+   
+  if (boxCount === 0 && itemCount === 0) {
+    openModal('알림', '출고 승인할 항목을 선택해주세요.', null, false)
     return
   }
 
-  // Check if any selected item is NOT picked
-  const items = allBoxDetails.value[selectedBoxCode.value]
-  const selectedItems = items.filter(i => selectedItemIds.value.has(i.id))
-  const unpicked = selectedItems.filter(i => !i.picking)
+  // Check if any selected item (including those in selected boxes) is NOT picked
+  let hasUnpicked = false
+  
+  // Check selected items directly
+  Object.keys(allBoxDetails.value).forEach(boxCode => {
+    allBoxDetails.value[boxCode].forEach(item => {
+      if (selectedItemIds.value.has(item.id) && !item.picking) {
+        hasUnpicked = true
+      }
+    })
+  })
 
-  if (unpicked.length > 0) {
+  if (hasUnpicked) {
     openModal('알림', '피킹이 완료(O)된 항목만 출고 승인할 수 있습니다.', null, false)
     return
   }
 
-  if (!confirm('선택된 제품들을 출고 승인하시겠습니까?')) return
-
   const performApprove = () => {
-    // Remove approved items
-    const remainingItems = items.filter(i => !selectedItemIds.value.has(i.id))
-    allBoxDetails.value[selectedBoxCode.value] = remainingItems
+    // Remove approved items and boxes
+    selectedBoxIds.value.forEach(boxCode => {
+      outboundBoxes.value = outboundBoxes.value.filter(b => b.boxCode !== boxCode)
+      delete allBoxDetails.value[boxCode]
+      if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
+    })
     
-    // Update Box Quantity
-    const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === selectedBoxCode.value)
-    if (boxIndex !== -1) {
-      outboundBoxes.value[boxIndex].quantity = remainingItems.length
-      // Remove box if empty
-      if (remainingItems.length === 0) {
-        outboundBoxes.value.splice(boxIndex, 1)
-        selectedBoxCode.value = null
+    // Remove individual items from their boxes
+    Object.keys(allBoxDetails.value).forEach(boxCode => {
+      const items = allBoxDetails.value[boxCode]
+      const remainingItems = items.filter(i => !selectedItemIds.value.has(i.id))
+      allBoxDetails.value[boxCode] = remainingItems
+      
+      const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === boxCode)
+      if (boxIndex !== -1) {
+        outboundBoxes.value[boxIndex].quantity = remainingItems.length
+        if (remainingItems.length === 0) {
+          outboundBoxes.value.splice(boxIndex, 1)
+          if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
+        }
       }
-    }
+    })
 
+    selectedBoxIds.value.clear()
     selectedItemIds.value.clear()
-    
     openModal('알림', '출고 승인 완료되었습니다.', null, false)
   }
 
@@ -250,9 +275,9 @@ const handleModalClose = () => {
       <h2 class="page-title">출고 관리 (공장)</h2>
     </div>
 
-    <div class="split-container">
-      <!-- Left Panel: Box List -->
-      <section class="left-panel">
+    <div class="main-container">
+      <!-- Top Section: Box List -->
+      <section class="top-panel">
         <h3 class="panel-title">박스 목록</h3>
         <div class="data-table-card">
           <div class="data-table-scroll-wrapper">
@@ -266,6 +291,7 @@ const handleModalClose = () => {
                   <th>발주 번호</th>
                   <th>제품 코드</th>
                   <th>이름</th>
+                  <th>가맹점</th>
                   <th>수량</th>
                 </tr>
               </thead>
@@ -284,6 +310,7 @@ const handleModalClose = () => {
                   <td class="code-cell">{{ box.orderCode }}</td>
                   <td>{{ box.productCode }}</td>
                   <td class="name-cell">{{ box.name }}</td>
+                  <td>{{ box.destination }}</td>
                   <td class="text-right">{{ box.quantity }}</td>
                 </tr>
               </tbody>
@@ -292,12 +319,12 @@ const handleModalClose = () => {
         </div>
       </section>
 
-      <!-- Right Panel: Detail List -->
-      <section class="right-panel">
+      <!-- Bottom Section: Detail List -->
+      <section class="bottom-panel">
         <h3 class="panel-title">상세 품목 목록</h3>
         <div class="data-table-card detail-card">
           <div v-if="!selectedBoxCode" class="empty-state">
-            <p>좌측에서 박스를 선택해주세요.</p>
+            <p>위 목록에서 박스를 선택하여 상세 품목을 확인하세요.</p>
           </div>
           <div v-else class="data-table-scroll-wrapper">
             <table class="data-table">
@@ -307,8 +334,6 @@ const handleModalClose = () => {
                     <input type="checkbox" @change="toggleAllItems" :checked="selectedBoxDetails.length > 0 && selectedItemIds.size === selectedBoxDetails.length">
                   </th>
                   <th>제품 식별 코드</th>
-                  <th>제품 코드</th>
-                  <th>제품명</th>
                   <th>유통기한</th>
                   <th class="text-center">피킹</th>
                 </tr>
@@ -319,12 +344,10 @@ const handleModalClose = () => {
                      <input type="checkbox" :checked="selectedItemIds.has(item.id)" @change="toggleItem(item.id)">
                   </td>
                   <td class="code-cell">{{ item.id }}</td>
-                  <td>{{ item.productCode }}</td>
-                  <td class="name-cell">{{ item.name }}</td>
                   <td>{{ item.expiryDate }}</td>
                   <td class="text-center">
                     <span :class="['status-badge', item.picking ? 'picked' : 'not-picked']">
-                      {{ item.picking ? 'O' : 'X' }}
+                      {{ item.picking ? 'O' : '-' }}
                     </span>
                   </td>
                 </tr>
@@ -335,13 +358,17 @@ const handleModalClose = () => {
       </section>
     </div>
 
-    <!-- Bottom Action Bar -->
+    <!-- Action Bar -->
     <div class="bottom-action-bar">
-      <button class="action-btn delete" @click="deleteSelected">삭제</button>
-      <button class="action-btn pick" @click="confirmPicking">피킹</button>
-      <button class="action-btn approve" @click="approveOutbound">출고 승인</button>
+      <div class="selected-summary" v-if="selectedBoxIds.size > 0 || selectedItemIds.size > 0">
+        선택됨: 박스 <strong>{{ selectedBoxIds.size }}</strong>개, 품목 <strong>{{ selectedItemIds.size }}</strong>개
+      </div>
+      <div class="btn-group">
+        <button class="action-btn delete" @click="deleteSelected">삭제</button>
+        <button class="action-btn pick" @click="confirmPicking">피킹</button>
+        <button class="action-btn approve" @click="approveOutbound">출고 승인</button>
+      </div>
     </div>
-
 
     <Modal
       :isOpen="modalVisible"
@@ -357,32 +384,138 @@ const handleModalClose = () => {
 <style scoped>
 .content-wrapper { 
   max-width: 100%;
-  height: 100%;
-  padding: 0 0 1rem 0;
+  height: 100vh;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: #f8fafc;
 }
 
 .page-header {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
   flex-shrink: 0;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: normal;
-  color: var(--text-dark, #1e293b);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0;
 }
 
-.bottom-action-bar {
+.main-container {
+  flex: 1;
   display: flex;
-  justify-content: flex-end; /* Aligned right */
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 0;
+}
+
+.top-panel {
+  flex: 0 0 250px; /* Increased height to show 3-4 rows comfortably */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bottom-panel {
+  flex: 1; /* Occupies the rest of the space */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  color: #475569;
+}
+
+.data-table-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.data-table-scroll-wrapper {
+  flex: 1;
+  overflow: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 10;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.checkbox-col { width: 50px; text-align: center; }
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.clickable-row:hover { background-color: #f1f5f9; }
+.clickable-row.active { background-color: #e0f2fe; border-left: 3px solid #acddf5; }
+
+.code-cell {
+  font-family: monospace;
+  color: #475569;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: normal;
+  font-size: 0.8rem;
+}
+
+.status-badge.picked { background: #d1fae5; color: #065f46; } 
+.status-badge.not-picked { background: #f1f5f9; color: #94a3b8; } 
+
+.bottom-action-bar {
   margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end; /* Moved to right */
+  align-items: center;
+  gap: 1.5rem;
   flex-shrink: 0;
 }
+
+.selected-summary { color: #64748b; font-size: 0.9rem; }
+.btn-group { display: flex; gap: 0.75rem; }
 
 .action-btn {
   padding: 0.75rem 2rem; 
@@ -397,134 +530,11 @@ const handleModalClose = () => {
 }
 
 .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-.action-btn:active { transform: translateY(0); }
 
-/* Muted Colors (Lower Saturation) */
-.action-btn.delete { background-color: #d65b5b; } /* Muted Red */
-.action-btn.pick { background-color: #5f9ea0; } /* Muted Teal (CadetBlue) */
-.action-btn.approve { background-color: #6b8abf; } /* Muted Blue */
-
-.split-container {
-  display: flex;
-  gap: 1.5rem;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.left-panel {
-  flex: 3.5;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-}
-
-.right-panel {
-  flex: 6.5;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-}
-
-.panel-title {
-  font-size: 1.1rem;
-  font-weight: normal;
-  margin-bottom: 0.75rem;
-  color: var(--text-dark, #334155);
-  flex-shrink: 0;
-}
-
-.data-table-card {
-  background: white;
-  border-radius: 12px;
-  border: 1px solid var(--border-color, #e2e8f0);
-  overflow: hidden;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  min-height: 0;
-}
-
-.data-table-scroll-wrapper {
-  flex: 1;
-  overflow: auto;
-  width: 100%;
-}
-
-.data-table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table thead {
-  position: sticky;
-  top: 0;
-  background: #f8fafc;
-  z-index: 10;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 0.85rem;
-  font-weight: normal;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
-
-.data-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 0.9rem;
-  color: #334155;
-  white-space: nowrap;
-}
-
-.checkbox-col {
-  width: 40px;
-  text-align: center;
-}
-
-.clickable-row {
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.clickable-row:hover {
-  background-color: #f1f5f9;
-}
-
-.clickable-row.active {
-  background-color: #e0f2fe;
-  border-left: 3px solid #0ea5e9;
-}
-
-.code-cell {
-  font-family: monospace;
-  font-weight: normal;
-  color: #475569;
-}
-
-.name-cell { font-weight: normal; }
-.text-right { text-align: right; }
-.text-center { text-align: center; }
-
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: normal;
-  font-size: 0.8rem;
-}
-
-.status-badge.picked { background: #d1fae5; color: #065f46; } 
-.status-badge.not-picked { background: #fee2e2; color: #991b1b; } 
+/* Rollback to original muted colors */
+.action-btn.delete { background-color: #d65b5b; }
+.action-btn.pick { background-color: #5f9ea0; }
+.action-btn.approve { background-color: #6b8abf; }
 
 .empty-state {
   display: flex;
@@ -533,4 +543,7 @@ const handleModalClose = () => {
   height: 100%;
   color: #94a3b8;
 }
+
+.text-right { text-align: right; }
+.text-center { text-align: center; }
 </style>

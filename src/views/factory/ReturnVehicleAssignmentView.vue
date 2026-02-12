@@ -16,10 +16,10 @@ const vehicles = ref([
 
 // Mock Data - Unassigned Return Requests
 const unassignedReturns = ref([
-  { returnCode: 'RESE0120260209001', franchise: '강남점', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 300, transportCost: 30000 },
-  { returnCode: 'RESE0220260209002', franchise: '홍대점', product: '마라 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 500, transportCost: 40000 },
-  { returnCode: 'RESE0320260210001', franchise: '잠실점', product: '로제 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-10', weight: 200, transportCost: 25000 },
-  { returnCode: 'RESE0420260211001', franchise: '신촌점', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-11', weight: 800, transportCost: 55000 },
+  { returnCode: 'RESE0120260209001', franchise: '강남점', address: '서울 강남구 역삼동 123-45', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 300, transportCost: 30000 },
+  { returnCode: 'RESE0220260209002', franchise: '홍대점', address: '서울 마포구 서교동 456-78', product: '마라 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 500, transportCost: 40000 },
+  { returnCode: 'RESE0320260210001', franchise: '잠실점', address: '서울 송파구 신천동 789-01', product: '로제 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-10', weight: 200, transportCost: 25000 },
+  { returnCode: 'RESE0420260211001', franchise: '신촌점', address: '서울 서대문구 창천동 111-22', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-11', weight: 800, transportCost: 55000 },
 ])
 
 const vehicleFilter = ref({
@@ -30,8 +30,7 @@ const vehicleFilter = ref({
 })
 
 const returnFilter = ref({
-  franchise: '',
-  returnCode: ''
+  search: ''
 })
 
 const companies = ['우리통상', '대한물류', '에이원']
@@ -49,8 +48,8 @@ const filteredVehicles = computed(() => {
 
 const filteredReturns = computed(() => {
   return unassignedReturns.value.filter(r => {
-    return (!returnFilter.value.franchise || r.franchise.includes(returnFilter.value.franchise)) &&
-           (!returnFilter.value.returnCode || r.returnCode.includes(returnFilter.value.returnCode))
+    const keyword = returnFilter.value.search.toLowerCase()
+    return !keyword || r.returnCode.toLowerCase().includes(keyword) || r.franchise.toLowerCase().includes(keyword)
   })
 })
 
@@ -237,8 +236,7 @@ const goBack = () => router.back()
             <div class="header-left-group">
               <h3 class="section-title">차량 미배정 반품 목록</h3>
               <div class="order-search-filter">
-                <input type="text" v-model="returnFilter.returnCode" placeholder="반품 코드 검색" />
-                <input type="text" v-model="returnFilter.franchise" placeholder="가맹점 검색" />
+                <input type="text" v-model="returnFilter.search" placeholder="반품코드 및 가맹점 검색" class="large-search" />
               </div>
             </div>
             <div v-if="selectedVehicle" class="info-badge">
@@ -252,6 +250,7 @@ const goBack = () => router.back()
                   <th class="checkbox-col"></th>
                   <th>반품 코드</th>
                   <th>가맹점</th>
+                  <th>주소</th>
                   <th>제품</th>
                   <th>수령인</th>
                   <th>연락처</th>
@@ -272,6 +271,7 @@ const goBack = () => router.back()
                   </td>
                   <td class="code-cell">{{ r.returnCode }}</td>
                   <td>{{ r.franchise }}</td>
+                  <td class="address-cell" :title="r.address">{{ r.address }}</td>
                   <td class="name-cell">{{ r.product }}</td>
                   <td>{{ r.recipient }}</td>
                   <td>{{ r.contact }}</td>
@@ -280,7 +280,7 @@ const goBack = () => router.back()
                   <td>{{ r.requestDate }}</td>
                 </tr>
                 <tr v-if="filteredReturns.length === 0">
-                   <td colspan="9" class="empty-state">미배정 반품 내역이 없습니다.</td>
+                   <td colspan="10" class="empty-state">미배정 반품 내역이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -517,6 +517,14 @@ const goBack = () => router.back()
   font-weight: 700;
 }
 .code-cell { font-family: monospace; font-weight: 600; color: #64748b; }
+.address-cell { 
+  max-width: 180px; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+  color: #64748b;
+  font-size: 0.8rem;
+}
 .name-cell { font-weight: 500; }
 .cost-cell { font-weight: 600; color: #0f172a; }
 .text-right { text-align: right; }
@@ -540,12 +548,12 @@ const goBack = () => router.back()
   gap: 0.5rem;
 }
 
-.order-search-filter input {
+.order-search-filter input.large-search {
   padding: 0.4rem 0.75rem;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 0.85rem;
-  width: 150px;
+  width: 250px;
 }
 
 .info-badge {
