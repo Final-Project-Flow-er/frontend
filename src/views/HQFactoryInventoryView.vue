@@ -4,81 +4,157 @@
       <h2>본사 공장 재고 관리</h2>
     </div>
 
-    <!-- Filter Section (3 Columns) -->
-    <div class="filter-section">
-      <div class="filter-group">
-        <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="예: OR0101" />
-      </div>
-      <div class="filter-group">
-        <label>제품 이름</label>
-        <input type="text" v-model="filter.productName" placeholder="제품 이름 입력" />
-      </div>
-      <div class="filter-group">
-        <label>상태</label>
-        <select v-model="filter.status">
-          <option value="">전체</option>
-          <option value="SAFE">안전 (SAFE)</option>
-          <option value="WARNING">부족 (WARNING)</option>
-          <option value="DANGER">위험 (DANGER)</option>
-        </select>
-      </div>
+    <!-- Step 1: Product Overview -->
+    <template v-if="currentStep === 1">
+        <!-- Filter Section (3 Columns) -->
+        <div class="filter-section">
+        <div class="filter-group">
+            <label>제품 코드</label>
+            <input type="text" v-model="filter.productCode" placeholder="예: OR0101" />
+        </div>
+        <div class="filter-group">
+            <label>제품 이름</label>
+            <input type="text" v-model="filter.productName" placeholder="제품 이름 입력" />
+        </div>
+        <div class="filter-group">
+            <label>상태</label>
+            <select v-model="filter.status">
+            <option value="">전체</option>
+            <option value="SAFE">안전 (SAFE)</option>
+            <option value="WARNING">부족 (WARNING)</option>
+            <option value="DANGER">위험 (DANGER)</option>
+            </select>
+        </div>
+        </div>
 
-    </div>
+        <!-- Safety Stock Alert Section -->
+        <div v-if="lowStockItems.length > 0" class="alert-section">
+        <div class="alert-title">⚠ 안전재고 부족 알림</div>
+        <ul>
+            <li v-for="item in lowStockItems" :key="item.productCode">
+            <strong>{{ item.productName }} ({{ item.productCode }})</strong>의 재고가 
+            <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. 
+            (안전재고: {{ item.safeStock }})
+            </li>
+        </ul>
+        </div>
+        <div v-else class="alert-section safe">
+        <div class="alert-title">✅ 모든 재고가 안전합니다.</div>
+        </div>
 
-    <!-- Safety Stock Alert Section -->
-    <div v-if="lowStockItems.length > 0" class="alert-section">
-      <div class="alert-title">⚠ 안전재고 부족 알림</div>
-      <ul>
-        <li v-for="item in lowStockItems" :key="item.productCode">
-          <strong>{{ item.productName }} ({{ item.productCode }})</strong>의 재고가 
-          <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. 
-          (안전재고: {{ item.safeStock }})
-        </li>
-      </ul>
-    </div>
-    <div v-else class="alert-section safe">
-      <div class="alert-title">✅ 모든 재고가 안전합니다.</div>
-    </div>
+        <!-- Data Table -->
+        <div class="data-table-card">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>제품 코드</th>
+                <th>제품 이름</th>
+                <th>총 수량</th>
+                <th>인분</th>
+                <th>
+                안전재고
+                <button class="icon-btn" @click="openPasswordPopup" title="안전재고 설정">⚙️</button>
+                </th>
+                <th>상태</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in filteredProducts" :key="item.productCode" @click="goToStep2(item)" class="clickable-row">
+                <td class="sku-cell">{{ item.productCode }}</td>
+                <td class="name-cell">{{ item.productName }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.portion === 1 ? '1~2인분' : '3~4인분' }}</td>
+                <td>{{ item.safeStock }}</td>
+                <td>
+                <span :class="['status-badge', getStatusClass(item.quantity, item.safeStock)]">
+                    {{ getStatusLabel(item.quantity, item.safeStock) }}
+                </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </template>
 
-    <!-- Data Table -->
-    <div class="data-table-card">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>제품 코드</th>
-            <th>제품 이름</th>
-            <th>수량</th>
-            <th>인분</th>
-            <th>
-              안전재고
-              <button class="icon-btn" @click="openPasswordPopup" title="안전재고 설정">⚙️</button>
-            </th>
-            <th>상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in filteredInventory" :key="item.productCode" @click="goToDetail(item.productCode)" class="clickable-row">
-            <td class="sku-cell">{{ item.productCode }}</td>
-            <td class="name-cell">{{ item.productName }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>{{ item.portion === 1 ? '1~2인분' : '3~4인분' }}</td>
-            <td>{{ item.safeStock }}</td>
-            <td>
-              <span :class="['status-badge', getStatusClass(item.quantity, item.safeStock)]">
-                {{ getStatusLabel(item.quantity, item.safeStock) }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- Step 2: Production Date Summary (FIFO) -->
+    <template v-else-if="currentStep === 2">
+        <div class="step-header">
+            <div class="selected-info">
+                <h3>{{ selectedProduct.productName }} <span class="sub-info">({{ selectedProduct.productCode }})</span></h3>
+            </div>
+            <button class="back-btn" @click="currentStep = 1">목록으로</button>
+        </div>
 
-    <!-- Bottom Actions -->
-    <div class="bottom-actions">
-      <!-- HQ might check Inventory but not Order from here? Or Order from Factory? Leaving for now -->
-      <!-- <button class="action-btn primary" @click="createOrder">발주 생성</button> -->
-    </div>
+        <div class="data-table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>제조일</th>
+                        <th>총 수량</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="batch in sortedBatches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
+                        <td>{{ batch.productionDate }}</td>
+                        <td class="number-cell">{{ batch.quantity }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </template>
+
+    <!-- Step 3: Granular Item Details -->
+    <template v-else-if="currentStep === 3">
+        <div class="step-header">
+            <div class="selected-info">
+                <h3>{{ selectedProduct.productName }} <span class="sub-info">| {{ selectedProductionDate }} 제조분</span></h3>
+            </div>
+            <button class="back-btn" @click="currentStep = 2">이전으로</button>
+        </div>
+
+        <!-- Step 3 Filters -->
+        <div class="filter-section mini">
+            <div class="filter-group">
+                <label>제품 식별 코드</label>
+                <input type="text" v-model="step3Filter.serialCode" placeholder="코드 입력" />
+            </div>
+            <div class="filter-group">
+                <label>제조일자</label>
+                <input type="date" v-model="step3Filter.productionDate" />
+            </div>
+            <div class="filter-group">
+                <label>배송완료 일자</label>
+                <input type="date" v-model="step3Filter.shippingDate" />
+            </div>
+            <div class="filter-group">
+                <label>입고 완료 일자</label>
+                <input type="date" v-model="step3Filter.inboundDate" />
+            </div>
+        </div>
+
+        <div class="data-table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>제품 식별 코드</th>
+                        <th>박스 코드</th>
+                        <th>제조일자</th>
+                        <th>배송완료 일자</th>
+                        <th>입고 완료 일자</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in granularItems" :key="item.serialCode">
+                        <td class="sku-cell">{{ item.serialCode }}</td>
+                        <td>-</td>
+                        <td>{{ item.productionDate }}</td>
+                        <td>{{ item.shippingDate || '-' }}</td>
+                        <td>{{ item.arrivalTime || '-' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </template>
 
     <!-- Password Popup -->
     <div v-if="showPasswordPopup" class="popup-overlay">
@@ -132,10 +208,23 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+// Redesign State
+const currentStep = ref(1)
+const selectedProduct = ref(null)
+const selectedProductionDate = ref(null)
+
 const filter = ref({
   productCode: '',
   productName: '',
   status: ''
+})
+
+const step3Filter = ref({
+  serialCode: '',
+  boxCode: '',
+  productionDate: '',
+  shippingDate: '',
+  inboundDate: ''
 })
 
 // Popups state
@@ -146,21 +235,24 @@ const settingForm = ref({ productCode: '', safeStock: 50 })
 const foundProduct = ref(null)
 
 const lookupProduct = () => {
-    foundProduct.value = inventory.value.find(p => p.productCode === settingForm.value.productCode)
+    foundProduct.value = products.value.find(p => p.productCode === settingForm.value.productCode)
     if (foundProduct.value) {
         settingForm.value.safeStock = foundProduct.value.safeStock
     }
 }
 
 // Mock Data
-const inventory = ref([])
+const products = ref([])
+const inventoryItems = ref([]) // Granular items
+
 
 onMounted(() => {
     generateMockInventory()
 })
 
 const generateMockInventory = () => {
-    const list = []
+    const pList = []
+    const iList = []
     const types = [
         { code: 'OR', name: '오리지널 떡볶이 밀키트' },
         { code: 'RO', name: '로제 떡볶이 밀키트' },
@@ -177,27 +269,55 @@ const generateMockInventory = () => {
         { code: '03', name: '3~4인분', portion: 3 }
     ]
 
+    const dates = ['2026-02-01', '2026-02-05', '2026-02-08', '2026-02-10']
+
     types.forEach(t => {
         spices.forEach(s => {
             sizes.forEach(sz => {
                 const code = `${t.code}${s.code}${sz.code}`
                 const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
                 
-                // Random quantity for demo (Higher for Factory)
-                const qty = Math.floor(Math.random() * 500) + 100
                 const safe = 50
+                let totalQty = 0
 
-                list.push({
+                // Generate item batches for each product
+                dates.forEach(d => {
+                    const batchQty = Math.floor(Math.random() * 50) + 20
+                    totalQty += batchQty
+
+                    const factoryCode = 'FA01'
+                    const line = 'A1'
+
+                    for(let i=0; i<batchQty; i++) {
+                        const boxIndex = Math.floor(i/20) + 1
+                        const itemIndex = (i % 20) + 1
+
+                        // Identification Code (Region based): [RegionCode + FactoryCode + ProductionLine + ProductCode + Box Index + Item Index]
+                        const serialCode = `UL01-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}-${itemIndex.toString().padStart(2, '0')}`
+
+                        iList.push({
+                            serialCode: serialCode,
+                            boxCode: `SE01-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}`,
+                            productCode: code,
+                            productionDate: d,
+                            shippingDate: '2026-02-11',
+                            arrivalTime: '2026-02-12'
+                        })
+                    }
+                })
+
+                pList.push({
                     productCode: code,
                     productName: name,
-                    quantity: qty,
+                    quantity: totalQty,
                     portion: sz.portion,
                     safeStock: safe
                 })
             })
         })
     })
-    inventory.value = list
+    products.value = pList
+    inventoryItems.value = iList
 }
 
 // Logic for Status Label
@@ -215,12 +335,11 @@ const getStatusClass = (qty, safe) => {
   return 'safe'
 }
 
-const filteredInventory = computed(() => {
-  return inventory.value.filter(item => {
+const filteredProducts = computed(() => {
+  return products.value.filter(item => {
     const matchCode = !filter.value.productCode || item.productCode.startsWith(filter.value.productCode)
     const matchName = !filter.value.productName || item.productName.includes(filter.value.productName)
     
-    // Status Filter Logic (Based on computed status)
     let statusMatch = true
     if (filter.value.status) {
       const currentStatusLabel = getStatusLabel(item.quantity, item.safeStock)
@@ -234,19 +353,51 @@ const filteredInventory = computed(() => {
 })
 
 const lowStockItems = computed(() => {
-  return inventory.value.filter(item => item.quantity <= item.safeStock)
+  return products.value.filter(item => item.quantity <= item.safeStock)
+})
+
+const sortedBatches = computed(() => {
+    if (!selectedProduct.value) return []
+    const batches = {}
+    inventoryItems.value
+        .filter(i => i.productCode === selectedProduct.value.productCode)
+        .forEach(i => {
+            if (!batches[i.productionDate]) batches[i.productionDate] = 0
+            batches[i.productionDate]++
+        })
+    
+    return Object.entries(batches)
+        .map(([date, qty]) => ({ productionDate: date, quantity: qty }))
+        .sort((a, b) => a.productionDate.localeCompare(b.productionDate)) // FIFO logic
+})
+
+const granularItems = computed(() => {
+    if (!selectedProduct.value || !selectedProductionDate.value) return []
+    return inventoryItems.value.filter(i => {
+        const matchProduct = i.productCode === selectedProduct.value.productCode && i.productionDate === selectedProductionDate.value
+        
+        const matchSerial = !step3Filter.value.serialCode || i.serialCode.includes(step3Filter.value.serialCode)
+        const matchBox = !step3Filter.value.boxCode || i.boxCode.includes(step3Filter.value.boxCode)
+        const matchProdDate = !step3Filter.value.productionDate || i.productionDate === step3Filter.value.productionDate
+        const matchShipDate = !step3Filter.value.shippingDate || i.shippingDate === step3Filter.value.shippingDate
+        const matchInboundDate = !step3Filter.value.inboundDate || i.arrivalTime === step3Filter.value.inboundDate
+
+        return matchProduct && matchSerial && matchBox && matchProdDate && matchShipDate && matchInboundDate
+    })
 })
 
 // Actions
-const createOrder = () => {
-  alert('발주 생성 페이지로 이동합니다 (구현 예정)')
+const goToStep2 = (product) => {
+    selectedProduct.value = product
+    currentStep.value = 2
+}
+
+const goToStep3 = (batch) => {
+    selectedProductionDate.value = batch.productionDate
+    currentStep.value = 3
 }
 
 const goToDetail = (code) => {
-    // HQ Factory Detail View? Reusing Store Detail for now or just log?
-    // User didn't request separate Detail View for HQ Factory, so linking to Store Detail (might need permission check later)
-    // Or maybe just show alert "상세 조회"
-    // For now, let's just use the same detail view as it is generic enough
   router.push(`/store/inventory/${code}`)
 }
 
@@ -350,8 +501,8 @@ const saveSettings = () => {
 /* Data Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
+.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
@@ -405,4 +556,18 @@ const saveSettings = () => {
 .error-text { color: #ef4444; font-size: 0.85rem; margin-bottom: 1rem; }
 
 .bottom-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+
+.filter-section.mini { padding: 1rem; gap: 1rem; margin-bottom: 1rem; background: #f8fafc; }
+.filter-section.mini .filter-group { min-width: 120px; }
+.filter-section.mini input { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+
+/* Redesign Specific Styles */
+.step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+.back-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--text-dark); transition: all 0.2s; }
+.back-btn:hover { background: #f8fafc; border-color: var(--text-light); }
+.selected-info h3 { margin: 0; font-size: 1.4rem; color: var(--text-dark); font-weight: 800; }
+.sub-info { color: #64748b; font-weight: 500; font-size: 1.1rem; margin-left: 0.75rem; }
+.sub-code { color: var(--text-light); font-weight: 500; font-size: 1rem; margin-left: 0.5rem; }
+.production-tag { background: var(--primary); color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem; margin-left: 1rem; vertical-align: middle; }
+.number-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
 </style>

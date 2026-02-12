@@ -3,7 +3,8 @@
     <div class="header-row">
       <h2>본사 상품 관리</h2>
       <div class="header-actions">
-        <!-- Add Button -->
+        <!-- Add Buttons -->
+        <button class="action-btn secondary mr-1" @click="openTypeModal">제품 타입 추가</button>
         <button class="action-btn primary" @click="openAddModal">상품 추가</button>
       </div>
     </div>
@@ -70,7 +71,11 @@
               <span class="price-value highlight">{{ formatPrice(product.price) }}</span>
             </div>
             <div class="price-row">
-              <span class="price-label">단가</span>
+              <span class="price-label">원가</span>
+              <span class="price-value">{{ formatPrice(product.costPrice) }}</span>
+            </div>
+            <div class="price-row">
+              <span class="price-label">공급가</span>
               <span class="date-range">({{ product.startDate }} ~ {{ product.endDate }})</span>
               <span class="price-value">{{ formatPrice(product.supplyPrice) }}</span>
             </div>
@@ -93,9 +98,7 @@
              <div class="form-group">
               <label>제품 타입</label>
               <select v-model="form.type" :disabled="isEditMode" @change="updateCodeAndName">
-                <option value="OR">오리지널</option>
-                <option value="RO">로제</option>
-                <option value="MA">마라</option>
+                <option v-for="t in productTypes" :key="t.code" :value="t.code">{{ t.name }}</option>
               </select>
             </div>
              <div class="form-group">
@@ -135,7 +138,11 @@
               <input type="number" v-model="form.price" />
             </div>
             <div class="form-group">
-              <label>단가 (판매가 -5000)</label>
+              <label>원가</label>
+              <input type="number" v-model="form.costPrice" />
+            </div>
+            <div class="form-group">
+              <label>공급가</label>
               <input type="number" v-model="form.supplyPrice" />
             </div>
             <div class="form-group">
@@ -174,16 +181,51 @@
             <textarea v-model="form.description" rows="2"></textarea>
           </div>
           
-           <!-- Image -->
+           <!-- Image Upload -->
           <div class="form-group full-width">
-            <label>이미지 URL</label>
-            <input type="text" v-model="form.imageUrl" />
+            <label>상품 이미지</label>
+            <div class="image-upload-wrapper">
+              <div class="image-preview" v-if="form.imageUrl">
+                <img :src="form.imageUrl" alt="Preview" />
+                <button class="remove-img" @click="form.imageUrl = ''">×</button>
+              </div>
+              <div class="image-placeholder" v-else @click="$refs.fileInput.click()">
+                <span class="plus-icon">+</span>
+                <span>이미지 선택</span>
+              </div>
+              <input type="file" ref="fileInput" @change="handleImageUpload" accept="image/*" hidden />
+              <div class="url-input-alt">
+                <label>또는 이미지 URL 입력</label>
+                <input type="text" v-model="form.imageUrl" placeholder="http://..." />
+              </div>
+            </div>
           </div>
 
         </div>
         <div class="modal-actions">
           <button @click="closeModal">취소</button>
           <button class="primary" @click="saveProduct">{{ isEditMode ? '수정' : '추가' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Type Add Modal -->
+    <div v-if="showTypeModal" class="modal-overlay">
+      <div class="modal-content type-modal">
+        <h3>제품 타입 추가</h3>
+        <div class="modal-body">
+          <div class="form-group mb-1">
+            <label>제품 타입 이름</label>
+            <input type="text" v-model="typeForm.name" placeholder="예: 바질" />
+          </div>
+          <div class="form-group">
+            <label>제품 타입 코드 (두 자리 영문)</label>
+            <input type="text" v-model="typeForm.code" placeholder="예: BA" maxlength="2" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeTypeModal">취소</button>
+          <button class="primary" @click="addType">추가</button>
         </div>
       </div>
     </div>
@@ -202,7 +244,19 @@ const filter = ref({
 })
 
 const showModal = ref(false)
+const showTypeModal = ref(false)
 const isEditMode = ref(false)
+
+const productTypes = ref([
+    { code: 'OR', name: '오리지널' },
+    { code: 'RO', name: '로제' },
+    { code: 'MA', name: '마라' }
+])
+
+const typeForm = ref({
+    name: '',
+    code: ''
+})
 
 const form = ref({
   type: 'OR',
@@ -213,6 +267,7 @@ const form = ref({
   description: '',
   imageUrl: '',
   price: 0,
+  costPrice: 0,
   supplyPrice: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
@@ -247,6 +302,7 @@ const generateMockProducts = () => {
                 const code = `${t.code}${s.code}${sz.code}`
                 const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}` 
                 const price = sz.code === '01' ? t.price1 : t.price2
+                const costPrice = price - 7000
                 const supplyPrice = price - 5000 
                 
                 list.push({
@@ -255,6 +311,7 @@ const generateMockProducts = () => {
                     description: `${t.name} ${s.name}입니다.`,
                     imageUrl: '',
                     price: price,
+                    costPrice: costPrice,
                     supplyPrice: supplyPrice,
                     status: 'ON_SALE',
                     servingSize: sz.serving,
@@ -309,8 +366,12 @@ const updateCodeAndName = () => {
     const s = form.value.spiceLevel
     const sz = form.value.sizeCode
 
+    const targetType = productTypes.value.find(tt => tt.code === t)
+    const typeName = targetType ? targetType.name : 'Unknown'
+    const suffix = targetType && targetType.name.includes('밀키트') ? '' : ' 떡볶이 밀키트'
+
     form.value.productCode = `${t}${s}${sz}`
-    form.value.name = `${tMap[t]} ${sMap[s]} ${szMap[sz]}`
+    form.value.name = `${typeName}${suffix} ${sMap[s]} ${szMap[sz]}`
     
     // Auto-set price
     // Auto-set price
@@ -319,6 +380,7 @@ const updateCodeAndName = () => {
     } else {
         form.value.price = (sz === '01') ? 12000 : 22000
     }
+    form.value.costPrice = form.value.price - 7000
     form.value.supplyPrice = form.value.price - 5000 // Fixed logic
 
     // Auto-set kcal
@@ -330,7 +392,7 @@ const openAddModal = () => {
   form.value = {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
       productCode: '', name: '', description: '', imageUrl: '', 
-      price: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
+      price: 0, costPrice: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
       kcal: 0,
       startDate: '2024-01-01', endDate: '2025-12-31'
   }
@@ -365,6 +427,53 @@ const saveProduct = () => {
         products.value.push({ ...form.value })
     }
     closeModal()
+}
+
+// Type Modal Logic
+const openTypeModal = () => {
+    typeForm.value = { name: '', code: '' }
+    showTypeModal.value = true
+}
+
+const closeTypeModal = () => {
+    showTypeModal.value = false
+}
+
+const addType = () => {
+    if (!typeForm.value.name || !typeForm.value.code) {
+        alert('이름과 코드를 모두 입력해주세요.')
+        return
+    }
+    if (typeForm.value.code.length !== 2) {
+        alert('코드는 반드시 두 자리여야 합니다.')
+        return
+    }
+    if (productTypes.value.find(t => t.code === typeForm.value.code.toUpperCase())) {
+        alert('이미 존재하는 코드입니다.')
+        return
+    }
+    
+    productTypes.value.push({
+        name: typeForm.value.name,
+        code: typeForm.value.code.toUpperCase()
+    })
+    alert(`신규 타입 [${typeForm.value.name}]이 추가되었습니다.`)
+    closeTypeModal()
+}
+
+const handleImageUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+            alert('이미지 크기는 2MB를 초과할 수 없습니다.')
+            return
+        }
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            form.value.imageUrl = e.target.result
+        }
+        reader.readAsDataURL(file)
+    }
 }
 
 </script>
@@ -410,13 +519,16 @@ const saveProduct = () => {
 .edit-btn {  background: white; border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
 .edit-btn:hover { background: #f8fafc; }
 .action-btn.primary { background: var(--primary); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.action-btn.secondary { background: white; color: var(--text-dark); border: 1px solid var(--border-color); padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.mr-1 { margin-right: 0.5rem; }
 
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 600px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+.modal-content.type-modal { width: 400px; }
 .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; }
-.modal-body { flex: 1; overflow-y: auto; padding-right: 0.5rem; }
-.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 0.5rem; }
+.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; width: 100%; }
 .form-row.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 .form-group { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
 .form-group.flex-2 { flex: 2; }
@@ -427,4 +539,17 @@ const saveProduct = () => {
 .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
 .modal-actions button { padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: 600; }
 .modal-actions button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Image Upload UI */
+.image-upload-wrapper { display: flex; flex-direction: column; gap: 1rem; }
+.image-preview { width: 120px; height: 120px; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid var(--border-color); }
+.image-preview img { width: 100%; height: 100%; object-fit: cover; }
+.remove-img { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.image-placeholder { width: 120px; height: 120px; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #64748b; background: #f8fafc; transition: all 0.2s; }
+.image-placeholder:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+.image-placeholder .plus-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+.url-input-alt { display: flex; flex-direction: column; gap: 0.4rem; }
+.url-input-alt label { font-size: 0.75rem; color: #94a3b8; }
+.url-input-alt input { font-size: 0.85rem !important; color: #64748b; }
+
 </style>

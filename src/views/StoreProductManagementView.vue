@@ -139,10 +139,24 @@
             </div>
           </div>
           
-           <!-- Image -->
+           <!-- Image Upload -->
           <div class="form-group full-width">
-            <label>이미지 URL</label>
-            <input type="text" v-model="form.imageUrl" />
+            <label>상품 이미지</label>
+            <div class="image-upload-wrapper">
+              <div class="image-preview" v-if="form.imageUrl">
+                <img :src="form.imageUrl" alt="Preview" />
+                <button class="remove-img" @click="form.imageUrl = ''">×</button>
+              </div>
+              <div class="image-placeholder" v-else @click="$refs.fileInput.click()">
+                <span class="plus-icon">+</span>
+                <span>이미지 선택</span>
+              </div>
+              <input type="file" ref="fileInput" @change="handleImageUpload" accept="image/*" hidden />
+              <div class="url-input-alt">
+                <label>또는 이미지 URL 입력</label>
+                <input type="text" v-model="form.imageUrl" placeholder="http://..." />
+              </div>
+            </div>
           </div>
 
         </div>
@@ -319,6 +333,21 @@ const saveProduct = () => {
     closeModal()
 }
 
+const handleImageUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+            alert('이미지 크기는 2MB를 초과할 수 없습니다.')
+            return
+        }
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            form.value.imageUrl = e.target.result
+        }
+        reader.readAsDataURL(file)
+    }
+}
+
 </script>
 
 <style scoped>
@@ -367,8 +396,8 @@ const saveProduct = () => {
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 600px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
 .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; }
-.modal-body { flex: 1; overflow-y: auto; padding-right: 0.5rem; }
-.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 0.5rem; }
+.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; width: 100%; }
 .form-group { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
 .form-group.full-width { width: 100%; margin-bottom: 1rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: #64748b; }
@@ -377,4 +406,17 @@ const saveProduct = () => {
 .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
 .modal-actions button { padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: 600; }
 .modal-actions button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Image Upload UI */
+.image-upload-wrapper { display: flex; flex-direction: column; gap: 1rem; }
+.image-preview { width: 120px; height: 120px; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid var(--border-color); }
+.image-preview img { width: 100%; height: 100%; object-fit: cover; }
+.remove-img { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.image-placeholder { width: 120px; height: 120px; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #64748b; background: #f8fafc; transition: all 0.2s; }
+.image-placeholder:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+.image-placeholder .plus-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+.url-input-alt { display: flex; flex-direction: column; gap: 0.4rem; }
+.url-input-alt label { font-size: 0.75rem; color: #94a3b8; }
+.url-input-alt input { font-size: 0.85rem !important; color: #64748b; }
+
 </style>

@@ -34,41 +34,42 @@
     </div>
 
     <!-- Log List -->
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>날짜</th>
-            <th>발주 코드</th>
-            <th>박스 코드</th>
-            <th>제품 명</th>
-            <th>유형</th>
-            <th>수량 (박스)</th>
-            <th>보낸 곳</th>
-            <th>받는 곳</th>
-            <th>단가</th>
-            <th>변경수량 (개)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="log in filteredLogs" :key="log.logId">
-            <td>{{ formatDate(log.arrivalTime) }}</td>
-            <td class="code-cell">{{ log.orderCode }}</td>
-            <td class="code-cell">{{ log.boxCode }}</td>
-            <td class="name-cell">{{ log.name }}</td>
-            <td>
-              <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
-            </td>
-            <td class="number-cell">{{ log.quantity }} 박스</td>
-            <td>{{ getSource(log) }}</td>
-            <td>{{ getDestination(log) }}</td>
-            <td class="number-cell">{{ formatPrice(log.supplyPrice) }}</td>
-            <td class="number-cell" :class="getChangeClass(getChangeQuantity(log))">
-              {{ getChangeQuantity(log) > 0 ? '+' : '' }}{{ getChangeQuantity(log) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="table-outer-container">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>발주 코드</th>
+              <th>박스 코드</th>
+              <th>제품 명</th>
+              <th>유형</th>
+              <th>수량 (박스)</th>
+              <th>단가</th>
+              <th>변경수량 (개)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="log in filteredLogs" :key="log.logId">
+              <td>{{ formatDate(log.arrivalTime) }}</td>
+              <td class="code-cell">{{ log.orderCode }}</td>
+              <td class="code-cell">{{ log.boxCode }}</td>
+              <td class="name-cell">{{ log.name }}</td>
+              <td>
+                <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
+              </td>
+              <td class="number-cell">{{ log.quantity }} 박스</td>
+              <td class="number-cell">{{ formatPrice(log.supplyPrice) }}</td>
+              <td class="number-cell" :class="getChangeClass(getChangeQuantity(log))">
+                {{ getChangeQuantity(log) > 0 ? '+' : '' }}{{ getChangeQuantity(log) }}
+              </td>
+            </tr>
+            <tr v-if="filteredLogs.length === 0">
+              <td colspan="8" class="empty-cell">조회된 공장 로그 내역이 없습니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -91,8 +92,8 @@ const logs = ref([
   {
     logId: 1,
     product: { productId: 1 },
-    boxCode: 'SEO00120260210OR010100100',
-    orderCode: '-', 
+    boxCode: 'SE01-FA01-A1-OR0101-001',
+    orderCode: 'HEAD20260210001', 
     name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
     logType: 'PRODUCTION', // 입고 (생산)
     supplyPrice: 10000,
@@ -104,8 +105,8 @@ const logs = ref([
   {
     logId: 2,
     product: { productId: 1 },
-    boxCode: 'SEO00120260210OR010100200',
-    orderCode: 'SE01202602100001',
+    boxCode: 'SE01-FA01-A1-OR0101-001',
+    orderCode: 'SE0120260210001',
     name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
     logType: 'DISTRIBUTION', // 출고 (To Store)
     supplyPrice: 10000,
@@ -118,7 +119,7 @@ const logs = ref([
   {
     logId: 4,
     product: { productId: 3 },
-    boxCode: 'SEO00120260210MA030100100',
+    boxCode: 'SE01-FA01-A1-MA0301-001',
     orderCode: '-',
     name: '마라 떡볶이 밀키트 매운맛 1,2인분',
     logType: 'DISPOSAL', // 폐기
@@ -132,10 +133,13 @@ const logs = ref([
 
 const filteredLogs = computed(() => {
   return logs.value.filter(log => {
+      const arrivalDate = log.arrivalTime.split('T')[0]
+      const matchStart = !filter.value.startDate || arrivalDate >= filter.value.startDate
+      const matchEnd = !filter.value.endDate || arrivalDate <= filter.value.endDate
       const matchName = !filter.value.productName || log.name.includes(filter.value.productName)
       const matchCode = !filter.value.orderCode || log.orderCode.includes(filter.value.orderCode)
       const matchType = !filter.value.logType || log.logType === filter.value.logType
-      return matchName && matchCode && matchType
+      return matchStart && matchEnd && matchName && matchCode && matchType
   })
 })
 
@@ -211,8 +215,8 @@ const getChangeClass = (qty) => {
 
 <style scoped>
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.header-row h2 { margin: 0; font-size: 1.5rem; font-weight: normal; color: var(--text-dark); }
-.content-wrapper { max-width: 1400px; margin: 0 auto; overflow-x: hidden; }
+.header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); }
+.content-wrapper { max-width: 1400px; margin: 0 auto; }
 
 /* Filter Styles */
 .filter-section {
@@ -230,35 +234,38 @@ const getChangeClass = (qty) => {
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 .filter-group input, .filter-group select { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
 .date-inputs { display: flex; gap: 0.5rem; align-items: center; }
-.search-btn {
-  background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; margin-left: auto;
-}
 
 /* Table Styles */
-.table-container {
-  background: white; border: 1px solid var(--border-color); border-radius: 12px; 
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.table-outer-container {
   width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+.table-container {
   overflow-x: auto;
 }
-table { width: 100%; border-collapse: collapse; text-align: left; }
-th { background: #f8fafc; padding: 0.75rem 0.5rem; font-weight: normal; color: #64748b; font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-td { padding: 0.75rem 0.5rem; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.85rem; vertical-align: middle; white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; text-align: center; }
+th { background: #f8fafc; padding: 1rem; font-weight: 600; color: #64748b; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; text-align: center; }
+td { padding: 1rem; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.95rem; vertical-align: middle; text-align: center; }
 tr:last-child td { border-bottom: none; }
 tr:hover { background: #f8fafc; }
 
-.code-cell { font-family: monospace; color: #475569; font-size: 0.75rem; letter-spacing: -0.02em; }
-.name-cell { font-weight: normal; color: var(--text-dark); white-space: nowrap; min-width: 150px; }
+.code-cell { font-family: monospace; color: #475569; font-size: 0.9rem; }
+.name-cell { font-weight: 600; color: var(--text-dark); }
 .number-cell { font-variant-numeric: tabular-nums; }
 
 /* Badges */
-.type-badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: normal; display: inline-block; min-width: 60px; text-align: center; }
+.type-badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; min-width: 60px; text-align: center; }
 .type-badge.inbound { background: #dbeafe; color: #1e40af; } /* Blue */
 .type-badge.outbound { background: #fee2e2; color: #991b1b; } /* Red */
 .type-badge.return-in { background: #dcfce7; color: #166534; } /* Green */
 .type-badge.refund { background: #f3e8ff; color: #6b21a8; } /* Purple */
 
-.plus { color: #166534; font-weight: normal; }
-.minus { color: #991b1b; font-weight: normal; }
+.plus { color: #166534; font-weight: 700; }
+.minus { color: #991b1b; font-weight: 700; }
+
+.empty-cell { text-align: center; color: #94a3b8; padding: 3rem !important; }
 
 </style>

@@ -24,57 +24,151 @@
         <p>현재 선택된 가맹점의 재고 현황을 조회 중입니다.</p>
       </div>
 
-      <!-- Filter Section -->
-      <div class="filter-section">
-        <div class="filter-group">
-          <label>상품 코드</label>
-          <input type="text" v-model="filter.productCode" placeholder="예: OR0101" />
-        </div>
-        <div class="filter-group">
-          <label>상품 이름</label>
-          <input type="text" v-model="filter.productName" placeholder="상품 이름 입력" />
-        </div>
-        <div class="filter-group">
-          <label>상태</label>
-          <select v-model="filter.status">
-            <option value="">전체</option>
-            <option value="SAFE">안전 (SAFE)</option>
-            <option value="WARNING">부족 (WARNING)</option>
-            <option value="DANGER">위험 (DANGER)</option>
-          </select>
+      <!-- Step 1: Product Overview -->
+      <template v-if="currentStep === 1">
+        <!-- Filter Section -->
+        <div class="filter-section">
+          <div class="filter-group">
+            <label>제품 코드</label>
+            <input type="text" v-model="filter.productCode" placeholder="예: OR0101" />
+          </div>
+          <div class="filter-group">
+            <label>제품 이름</label>
+            <input type="text" v-model="filter.productName" placeholder="제품 이름 입력" />
+          </div>
+          <div class="filter-group">
+            <label>상태</label>
+            <select v-model="filter.status">
+              <option value="">전체</option>
+              <option value="SAFE">안전 (SAFE)</option>
+              <option value="WARNING">부족 (WARNING)</option>
+              <option value="DANGER">위험 (DANGER)</option>
+            </select>
+          </div>
         </div>
 
-      </div>
+        <!-- Data Table -->
+        <div class="data-table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>제품 코드</th>
+                <th>제품 이름</th>
+                <th>총 수량</th>
+                <th>인분</th>
+                <th>안전재고</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in filteredProducts" :key="item.productCode" @click="goToStep2(item)" class="clickable-row">
+                <td class="sku-cell">{{ item.productCode }}</td>
+                <td class="name-cell">{{ item.productName }}</td>
+                <td class="number-cell">{{ item.quantity }}</td>
+                <td>{{ item.portion === 1 ? '1~2인분' : '3~4인분' }}</td>
+                <td class="number-cell">{{ item.safeStock }}</td>
+                <td>
+                  <span :class="['status-badge', getStatusClass(item.quantity, item.safeStock)]">
+                    {{ getStatusLabel(item.quantity, item.safeStock) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
 
-      <!-- Data Table -->
-      <div class="data-table-card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>상품 코드</th>
-              <th>상품 이름</th>
-              <th>수량</th>
-              <th>인분</th>
-              <th>안전재고</th>
-              <th>상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in filteredInventory" :key="item.productCode" @click="goToDetail(item.productCode)" class="clickable-row">
-              <td class="sku-cell">{{ item.productCode }}</td>
-              <td class="name-cell">{{ item.productName }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ item.portion === 1 ? '1~2인분' : '3~4인분' }}</td>
-              <td>{{ item.safeStock }}</td>
-              <td>
-                <span :class="['status-badge', getStatusClass(item.quantity, item.safeStock)]">
-                  {{ getStatusLabel(item.quantity, item.safeStock) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Step 2: FIFO Summary with Available/Return Pending -->
+      <template v-else-if="currentStep === 2">
+        <div class="step-header">
+            <div class="selected-info">
+                <h3>{{ selectedProduct.productName }} <span class="sub-info">({{ selectedProduct.productCode }})</span></h3>
+            </div>
+            <button class="back-btn" @click="currentStep = 1">목록으로</button>
+        </div>
+
+        <div class="data-table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>제조일</th>
+                        <th>총 수량</th>
+                        <th>가용 수량</th>
+                        <th>반품 대기</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="batch in sortedBatches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
+                        <td>{{ batch.productionDate }}</td>
+                        <td class="number-cell">{{ batch.total }}</td>
+                        <td class="number-cell available">{{ batch.available }}</td>
+                        <td class="number-cell pending">{{ batch.pending }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+      </template>
+
+      <!-- Step 3: Granular Item Details & Filters -->
+      <template v-else-if="currentStep === 3">
+        <div class="step-header">
+            <div class="selected-info">
+                <h3>{{ selectedProduct.productName }} <span class="sub-info">| {{ selectedProductionDate }} 제조분</span></h3>
+            </div>
+            <button class="back-btn" @click="currentStep = 2">이전으로</button>
+        </div>
+
+        <!-- Step 3 Filters -->
+        <div class="filter-section mini">
+            <div class="filter-group">
+                <label>제품 식별 코드</label>
+                <input type="text" v-model="step3Filter.serialCode" placeholder="코드 검색" />
+            </div>
+            <div class="filter-group">
+                <label>박스 코드</label>
+                <input type="text" v-model="step3Filter.boxCode" placeholder="박스코드 검색" />
+            </div>
+            <div class="filter-group">
+                <label>제조일자</label>
+                <input type="date" v-model="step3Filter.productionDate" />
+            </div>
+            <div class="filter-group">
+                <label>배송완료 일자</label>
+                <input type="date" v-model="step3Filter.shippingDate" />
+            </div>
+            <div class="filter-group">
+                <label>입고 완료 일자</label>
+                <input type="date" v-model="step3Filter.inboundDate" />
+            </div>
+        </div>
+
+        <div class="data-table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>제품 식별 코드</th>
+                        <th>박스 코드</th>
+                        <th>상태</th>
+                        <th>배송완료 일자</th>
+                        <th>입고 완료 일자</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in granularItems" :key="item.serialCode">
+                        <td class="sku-cell">{{ item.serialCode }}</td>
+                        <td>{{ item.boxCode }}</td>
+                        <td>
+                            <span :class="['status-item-badge', item.status === 'AVAILABLE' ? 'available' : 'return_pending']">
+                                {{ item.status === 'AVAILABLE' ? '가용' : '반품 대기' }}
+                            </span>
+                        </td>
+                        <td>{{ item.shippingDate || '-' }}</td>
+                        <td>{{ item.arrivalTime || '-' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+      </template>
     </div>
 
     <!-- Store Select Modal -->
@@ -133,19 +227,45 @@ const selectStore = (store) => {
 }
 
 // Inventory Logic
+// Redesign State
+const currentStep = ref(1)
+const selectedProduct = ref(null)
+const selectedProductionDate = ref(null)
+
 const filter = ref({
   productCode: '',
   productName: '',
   status: ''
 })
-const inventory = ref([])
+
+const step3Filter = ref({
+  serialCode: '',
+  boxCode: '',
+  productionDate: '',
+  shippingDate: '',
+  inboundDate: ''
+})
+
+const products = ref([])
+const inventoryItems = ref([]) // Granular items
+
 
 const generateMockInventory = () => {
-    // Generate random inventory for the selected store
-    const list = []
+    // Reset steps
+    currentStep.value = 1
+    selectedProduct.value = null
+
+    const pList = []
+    const iList = []
     const types = [ { code: 'OR', name: '오리지널 떡볶이 밀키트' }, { code: 'RO', name: '로제 떡볶이 밀키트' }, { code: 'MA', name: '마라 떡볶이 밀키트' } ]
     const spices = [ { code: '01', name: '순한맛' }, { code: '02', name: '기본맛' } ]
     const sizes = [ { code: '01', name: '1~2인분', portion: 1 }, { code: '03', name: '3~4인분', portion: 3 } ]
+
+    const dates = ['2026-02-01', '2026-02-05', '2026-02-08', '2026-02-10']
+    const storeCode = selectedStore.value.code
+    const regionCode = 'UL01'
+    const factoryCode = 'FA01'
+    const productionLines = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9']
 
     types.forEach(t => {
         spices.forEach(s => {
@@ -153,20 +273,57 @@ const generateMockInventory = () => {
                 const code = `${t.code}${s.code}${sz.code}`
                 const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
                 
-                // Random quantity for demo
-                const qty = Math.floor(Math.random() * 30) // Lower for store
+                const safe = 10
+                let totalQty = 0
 
-                list.push({
+                dates.forEach(d => {
+                    // Pick a random line for this production batch
+                    const line = productionLines[Math.floor(Math.random() * productionLines.length)]
+                    
+                    const batchQty = 25 // Force 25 to show 2 boxes (20+5)
+                    totalQty += batchQty
+
+                    // Pre-determine status for each box in this batch
+                    const boxStatuses = {} // boxIndex -> status
+
+                    for(let i=0; i<batchQty; i++) {
+                        const boxIndex = Math.floor(i/20) + 1
+                        const itemIndex = (i % 20) + 1
+                        
+                        // Box Code (Store based): [StoreCode + FactoryCode + ProductionLine + ProductCode + Box Index]
+                        const boxCode = `${storeCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}`
+                        
+                        // Identification Code (Region based): [RegionCode + FactoryCode + ProductionLine + ProductCode + Box Index + Item Index]
+                        const serialCode = `${regionCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}-${itemIndex.toString().padStart(2, '0')}`
+
+                        if (boxStatuses[boxIndex] === undefined) {
+                            boxStatuses[boxIndex] = Math.random() < 0.05 ? 'RETURN_PENDING' : 'AVAILABLE'
+                        }
+
+                        iList.push({
+                            serialCode: serialCode,
+                            boxCode: boxCode,
+                            productCode: code,
+                            productionDate: d,
+                            shippingDate: '2026-02-11',
+                            arrivalTime: '2026-02-12',
+                            status: boxStatuses[boxIndex]
+                        })
+                    }
+                })
+
+                pList.push({
                     productCode: code,
                     productName: name,
-                    quantity: qty,
+                    quantity: totalQty,
                     portion: sz.portion,
-                    safeStock: 10
+                    safeStock: safe
                 })
             })
         })
     })
-    inventory.value = list
+    products.value = pList
+    inventoryItems.value = iList
 }
 
 const getStatusLabel = (qty, safe) => {
@@ -183,12 +340,11 @@ const getStatusClass = (qty, safe) => {
   return 'safe'
 }
 
-const filteredInventory = computed(() => {
-  return inventory.value.filter(item => {
+const filteredProducts = computed(() => {
+  return products.value.filter(item => {
     const matchCode = !filter.value.productCode || item.productCode.startsWith(filter.value.productCode)
     const matchName = !filter.value.productName || item.productName.includes(filter.value.productName)
     
-    // Status Filter Logic
     let statusMatch = true
     if (filter.value.status) {
       const currentStatusLabel = getStatusLabel(item.quantity, item.safeStock)
@@ -200,6 +356,50 @@ const filteredInventory = computed(() => {
     return matchCode && matchName && statusMatch
   })
 })
+
+const sortedBatches = computed(() => {
+    if (!selectedProduct.value) return []
+    const dates = {}
+    inventoryItems.value
+        .filter(i => i.productCode === selectedProduct.value.productCode)
+        .forEach(i => {
+            if (!dates[i.productionDate]) {
+                dates[i.productionDate] = { total: 0, available: 0, pending: 0 }
+            }
+            dates[i.productionDate].total++
+            if (i.status === 'AVAILABLE') dates[i.productionDate].available++
+            else dates[i.productionDate].pending++
+        })
+    
+    return Object.entries(dates)
+        .map(([date, counts]) => ({ productionDate: date, ...counts }))
+        .sort((a, b) => a.productionDate.localeCompare(b.productionDate)) // FIFO
+})
+
+const granularItems = computed(() => {
+    if (!selectedProduct.value || !selectedProductionDate.value) return []
+    return inventoryItems.value.filter(i => {
+        const matchProduct = i.productCode === selectedProduct.value.productCode && i.productionDate === selectedProductionDate.value
+        
+        const matchSerial = !step3Filter.value.serialCode || i.serialCode.includes(step3Filter.value.serialCode)
+        const matchBox = !step3Filter.value.boxCode || i.boxCode.includes(step3Filter.value.boxCode)
+        const matchProdDate = !step3Filter.value.productionDate || i.productionDate === step3Filter.value.productionDate
+        const matchShipDate = !step3Filter.value.shippingDate || i.shippingDate === step3Filter.value.shippingDate
+        const matchInboundDate = !step3Filter.value.inboundDate || i.arrivalTime === step3Filter.value.inboundDate
+
+        return matchProduct && matchSerial && matchBox && matchProdDate && matchShipDate && matchInboundDate
+    })
+})
+
+const goToStep2 = (product) => {
+    selectedProduct.value = product
+    currentStep.value = 2
+}
+
+const goToStep3 = (batch) => {
+    selectedProductionDate.value = batch.productionDate
+    currentStep.value = 3
+}
 
 const goToDetail = (code) => {
   router.push(`/store/inventory/${code}`)
@@ -229,8 +429,8 @@ const goToDetail = (code) => {
 /* Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
+.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
@@ -262,4 +462,23 @@ const goToDetail = (code) => {
 .store-name { font-weight: 600; }
 .store-code { color: #94a3b8; font-size: 0.9rem; }
 .modal-actions { display: flex; justify-content: flex-end; }
+
+/* Redesign Specific Styles */
+.step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+.back-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--text-dark); transition: all 0.2s; }
+.back-btn:hover { background: #f8fafc; border-color: var(--text-light); }
+.selected-info h3 { margin: 0; font-size: 1.4rem; color: var(--text-dark); font-weight: 800; }
+.sub-info { color: #64748b; font-weight: 500; font-size: 1.1rem; margin-left: 0.75rem; }
+.number-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
+.number-cell.available { color: #2f855a; }
+.number-cell.pending { color: #c53030; }
+
+.filter-section.mini { padding: 1rem; gap: 1rem; margin-bottom: 1rem; background: #f8fafc; }
+.filter-section.mini .filter-group { min-width: 120px; }
+.filter-section.mini input { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+
+.status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.status-item-badge.available { background: #e6fffa; color: #2c7a7b; }
+.status-item-badge.return_pending { background: #fff5f5; color: #e53e3e; }
+
 </style>
