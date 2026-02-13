@@ -150,29 +150,13 @@
                 </div>
                 <div class="action-text">
                   <span class="label">비밀번호 변경</span>
-                  <span class="desc">주기적인 비번 변경으로 보안 유지</span>
+                  <span class="desc">주기적인 비밀번호 변경으로 보안 유지</span>
                 </div>
                 <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
               </button>
 
-              <button @click="showDeleteModal = true" class="action-item danger">
-                <div class="action-icon delete">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  </svg>
-                </div>
-                <div class="action-text">
-                  <span class="label">회원 탈퇴</span>
-                  <span class="desc">계정 영구 삭제 및 데이터 폐기</span>
-                </div>
-                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
             </div>
           </div>
         </div>
@@ -220,7 +204,7 @@
           <div class="org-form-grid">
             <div class="info-group">
               <label>사업장 이름</label>
-              <input v-model="myOrgInfo.name" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small">
+              <input v-model="myOrgInfo.name" disabled class="premium-input-small input-locked">
             </div>
             <div class="info-group">
               <label>연락처</label>
@@ -311,11 +295,11 @@
           <div class="org-form-grid">
             <div class="info-group full-width">
               <label>현재 비밀번호</label>
-              <input type="password" v-model="passwordData.currentPassword" placeholder="현재 비번을 입력하세요" class="premium-input">
+              <input type="password" v-model="passwordData.currentPassword" placeholder="현재 비밀번호를 입력하세요" class="premium-input">
             </div>
             <div class="info-group full-width">
               <label>새 비밀번호</label>
-              <input type="password" v-model="passwordData.newPassword" placeholder="새 비번을 입력하세요" class="premium-input">
+              <input type="password" v-model="passwordData.newPassword" placeholder="새 비밀번호를 입력하세요" class="premium-input">
             </div>
             <div class="info-group full-width">
               <label>새 비밀번호 확인</label>
@@ -330,32 +314,6 @@
       </div>
     </div>
 
-    <!-- 모달: 회원 탈퇴 -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="closeDeleteModal">
-      <div class="modal-content modal-compact" @click.stop>
-        <div class="modal-body danger-zone">
-          <div class="danger-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-          </div>
-          <h3>회원 탈퇴</h3>
-          <p>정말로 탈퇴하시겠습니까?<br>탈퇴 시 모든 정보가 <strong>즉시 삭제</strong>되며 복구할 수 없습니다.</p>
-          
-          <div class="info-group full-width mb-6">
-            <label>비밀번호 확인</label>
-            <input type="password" v-model="deleteAccountPassword" placeholder="비밀번호를 입력하세요" class="premium-input danger full-width">
-          </div>
-
-          <div class="danger-actions">
-            <button @click="deleteAccount" class="btn-danger-primary">탈퇴하기</button>
-            <button @click="closeDeleteModal" class="btn-slate-ghost">취소</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -432,7 +390,6 @@ const isEditingInfo = ref(false)
 const isEditingOrg = ref(false)
 const showOrgModal = ref(false)
 const showPasswordModal = ref(false)
-const showDeleteModal = ref(false)
 
 const passwordData = reactive({
   currentPassword: '',
@@ -440,7 +397,6 @@ const passwordData = reactive({
   confirmPassword: ''
 })
 
-const deleteAccountPassword = ref('')
 
 // 수정 원본 데이터 (취소용)
 let originalUserInfo = {}
@@ -537,10 +493,6 @@ const closePasswordModal = () => {
   showPasswordModal.value = false
 }
 
-const closeDeleteModal = () => {
-  deleteAccountPassword.value = ''
-  showDeleteModal.value = false
-}
 
 // 비밀번호 변경
 const changePassword = () => {
@@ -559,18 +511,6 @@ const changePassword = () => {
   }
 }
 
-// 회원 탈퇴
-const deleteAccount = () => {
-  if (!deleteAccountPassword.value) {
-    alert('비밀번호를 입력해주세요.')
-    return
-  }
-  
-  if (confirm('정말로 탈퇴하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
-    alert('그동안 이용해 주셔서 감사합니다.')
-    router.push('/login')
-  }
-}
 </script>
 
 <style scoped>
@@ -884,6 +824,7 @@ const deleteAccount = () => {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 .action-item {
@@ -1006,10 +947,6 @@ const deleteAccount = () => {
   width: 100%;
 }
 
-.btn-danger-primary:hover {
-  background: #dc2626;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-}
 
 .mb-6 { margin-bottom: 2rem !important; }
 .full-width { width: 100%; }
@@ -1234,46 +1171,6 @@ const deleteAccount = () => {
   gap: 0.75rem;
 }
 
-/* 위험 구역 */
-.danger-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 3rem 2rem !important;
-}
-
-.danger-icon {
-  width: 80px;
-  height: 80px;
-  background: #fff1f2;
-  border-radius: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.danger-zone h3 {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 0.5rem;
-  margin-top: 0;
-}
-
-.danger-zone p {
-  line-height: 1.6;
-  color: #64748b;
-  margin-bottom: 2rem;
-}
-
-.danger-actions {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
 
 /* 추가 유틸리티 */
 .premium-input-small {

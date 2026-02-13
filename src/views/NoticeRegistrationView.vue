@@ -30,8 +30,8 @@
           <input 
             type="text" 
             v-model="formData.author" 
-            placeholder="작성자명을 입력하세요" 
-            required
+            disabled
+            class="input-disabled"
           >
         </div>
 
@@ -99,7 +99,7 @@ const isAdmin = userRole === 'admin' || userRole === 'headOffice'
 const isEdit = ref(false)
 const formData = reactive({
   title: '',
-  author: '',
+  author: sessionStorage.getItem('userName') || '유저',
   content: '',
   isImportant: false,
   fileName: ''
@@ -248,6 +248,13 @@ input[type="text"]:focus,
 textarea:focus {
   border-color: #0f172a;
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+}
+
+.input-disabled {
+  background: #f8fafc !important;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e2e8f0 !important;
 }
 
 .checkbox-group {

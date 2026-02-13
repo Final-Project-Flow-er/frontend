@@ -275,14 +275,14 @@ const markAllAsRead = () => {
 .notification-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .notif-item {
   display: flex;
   align-items: flex-start;
   gap: 1.25rem;
-  padding: 1.5rem;
+  padding: 1.15rem 1.5rem;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -303,9 +303,9 @@ const markAllAsRead = () => {
 
 
 .notif-icon-box {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;

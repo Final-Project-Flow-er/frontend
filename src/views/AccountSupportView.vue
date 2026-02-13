@@ -10,10 +10,13 @@
       <div class="support-content">
         <div class="info-section">
           <h3>방법 1. 비밀번호 재설정 메일 발송</h3>
-          <p>등록된 사내 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
-          <div class="input-row">
-            <input type="email" v-model="email" placeholder="chain-g@email.com" />
-            <button @click="requestReset" class="action-btn">발송</button>
+          <p>등록된 아이디와 사내 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
+          <div class="support-form">
+            <div class="input-stack">
+              <input type="text" v-model="userId" placeholder="아이디를 입력하세요" class="support-input" />
+              <input type="email" v-model="email" placeholder="chain-g@email.com" class="support-input" />
+            </div>
+            <button @click="requestReset" class="action-btn-large">안내 메일 발송</button>
           </div>
         </div>
 
@@ -39,10 +42,12 @@
 <script setup>
 import { ref } from 'vue'
 
+const userId = ref('')
 const email = ref('')
 const requestReset = () => {
+  if (!userId.value) return alert('아이디를 입력해주세요.')
   if (!email.value) return alert('이메일을 입력해주세요.')
-  alert('입력하신 이메일로 안내 메일이 발송되었습니다.')
+  alert('입력하신 정보를 확인하여 안내 메일이 발송되었습니다.')
 }
 </script>
 
@@ -90,23 +95,34 @@ const requestReset = () => {
 .info-section h3 { font-size: 0.95rem; color: #0f172a; margin-bottom: 0.8rem; font-weight: 700; }
 .info-section p { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; line-height: 1.4; }
 
-.input-row { display: flex; gap: 8px; }
-.input-row input {
-  flex: 1;
-  padding: 0.7rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.9rem;
+.support-form { display: flex; flex-direction: column; gap: 12px; }
+.input-stack { display: flex; flex-direction: column; gap: 8px; }
+.support-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+.support-input:focus {
+  outline: none;
+  border-color: #0f172a;
 }
 
-.action-btn {
+.action-btn-large {
   background: #0f172a;
   color: white;
   border: none;
-  padding: 0 1.2rem;
-  border-radius: 6px;
+  padding: 0.9rem;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+.action-btn-large:hover {
+  background: #1e293b;
 }
 
 .divider { border: 0; border-top: 1px solid #f1f5f9; margin: 2rem 0; }

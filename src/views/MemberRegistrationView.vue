@@ -299,8 +299,11 @@ const handleRegister = async () => {
   await new Promise(resolve => setTimeout(resolve, 1000))
 
   // 자동 생성 로직 (Mock)
+  const serial = String(counters[selectedRole.value] % 10000).padStart(4, '0')
+  const prefix = selectedRole.value === 'hq' ? 'hq' : (selectedRole.value === 'franchise' ? 'fr' : 'fc')
+  
   resultData.employeeNumber = counters[selectedRole.value].toString()
-  resultData.id = `${selectedRole.value}_${Math.random().toString(36).substring(2, 7)}`
+  resultData.id = prefix + serial
   resultData.tempPassword = Math.random().toString(36).substring(2, 10).toUpperCase() + '!'
 
   // 카운터 증가 (프론트 레벨 시뮬레이션)

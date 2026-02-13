@@ -30,6 +30,16 @@ const handleLogin = () => {
     // 로그인 성공 시 세션 저장소에 로그인 상태 및 역할 저장
     sessionStorage.setItem('isLoggedIn', 'true')
     sessionStorage.setItem('userRole', role)
+    
+    // 작성자 자동 입력을 위해 이름 저장
+    const nameMap = {
+      admin: '본사 관리자',
+      headOffice: '본사 관리자',
+      factory: '공장 관리자',
+      franchise: '가맹점 관리자'
+    }
+    sessionStorage.setItem('userName', nameMap[role] || '사용자')
+    
     router.push('/')
   } else {
     alert('아이디 또는 비밀번호가 올바르지 않습니다.')

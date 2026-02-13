@@ -591,7 +591,7 @@ const resetFactoryForm = () => {
 
 /* 사진 업로드 */
 .photo-upload-area {
-  min-height: 200px;
+  min-height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -600,7 +600,7 @@ const resetFactoryForm = () => {
 .photo-preview {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 200px;
 }
 
 .photo-preview img {
@@ -637,7 +637,7 @@ const resetFactoryForm = () => {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 1.5rem;
+  padding: 1rem;
   background: #f8fafc;
   border: 2px dashed #cbd5e1;
   border-radius: 8px;

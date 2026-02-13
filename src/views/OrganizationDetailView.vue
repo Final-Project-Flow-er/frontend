@@ -107,9 +107,11 @@
 
             <div class="info-field full-width">
               <label>운영 요일</label>
-              <div v-if="!isEditing" class="days-display">
-                <span v-for="day in organization.operatingDays" :key="day" class="day-tag">
-                  {{ getDayLabel(day) }}
+              <div v-if="!isEditing" class="days-pill-display">
+                <span v-for="day in weekDays" :key="day.value" 
+                      class="day-pill" 
+                      :class="{ active: organization.operatingDays && organization.operatingDays.includes(day.value) }">
+                  {{ day.label }}
                 </span>
               </div>
               <div v-else class="days-selector">
@@ -593,20 +595,23 @@ const getOrgNameLabel = (type) => {
 }
 
 /* 요일 표시 */
-.days-display {
+.days-pill-display {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
 }
 
-.day-tag {
-  padding: 0.35rem 0.75rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
+.day-pill {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.day-pill.active {
   color: #0f172a;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .days-selector {

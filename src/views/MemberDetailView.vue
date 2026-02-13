@@ -99,8 +99,8 @@
                 <input 
                   type="date" 
                   v-model="member.birthdate" 
-                  disabled 
-                  class="input-disabled"
+                  :disabled="!isEditing"
+                  :class="{ 'input-disabled': !isEditing }"
                 >
               </div>
             </div>

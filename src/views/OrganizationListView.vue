@@ -86,12 +86,12 @@
             @click="goToDetail(org.code)"
             class="org-row"
           >
-            <td>
+            <td class="center-text">
               <span class="org-type-badge" :class="org.type">
                 {{ getTypeLabel(org.type) }}
               </span>
             </td>
-            <td>
+            <td class="center-text">
               <span class="status-badge" :class="org.status || 'active'">
                 {{ (org.status === 'active' || !org.status) ? '운영중' : '중지' }}
               </span>
@@ -306,6 +306,11 @@ const getTypeLabel = (type) => {
   return map[type] || type
 }
 
+const getDayLabel = (value) => {
+  const day = weekDays.find(d => d.value === value)
+  return day ? day.label : value
+}
+
 const toggleStatus = (org) => {
   if (org.status === 'active') {
     if (confirm(`'${org.name}'의 운영을 중지하시겠습니까?`)) {
@@ -322,7 +327,7 @@ const toggleStatus = (org) => {
 <style scoped>
 .org-list-container {
   padding: 1rem 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -497,12 +502,14 @@ const toggleStatus = (org) => {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto; /* 넓은 표 대응을 위한 가로 스크롤 허용 */
 }
 
 .org-table {
   width: 100%;
+  min-width: 1200px; /* 표가 너무 좁아져서 겹치지 않도록 최소 너비 설정 */
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .org-table thead {
@@ -511,14 +518,26 @@ const toggleStatus = (org) => {
 }
 
 .org-table th {
-  padding: 0.65rem 1rem;
-  text-align: center; /* Center align header */
-  font-size: 0.8rem;
+  padding: 1rem 0.6rem;
+  text-align: center;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: #f8fafc;
+  border-bottom: 2.5px solid #e2e8f0;
+  white-space: nowrap;
 }
+
+/* 열 너비 고정으로 완벽하게 일정한 간격 유지 */
+.org-table th:nth-child(1) { width: 90px; }  /* 유형 */
+.org-table th:nth-child(2) { width: 90px; }  /* 상태 */
+.org-table th:nth-child(3) { width: 100px; } /* 코드 */
+.org-table th:nth-child(4) { width: 160px; } /* 이름 */
+.org-table th:nth-child(5) { width: 220px; } /* 운영 요일 */
+.org-table th:nth-child(6) { width: 320px; } /* 주소 (너비 고정) */
+.org-table th:nth-child(7) { width: 140px; } /* 전화번호 */
+.org-table th:nth-child(8) { width: 80px; }  /* 관리 */
+.org-table th:nth-child(9) { width: 70px; }  /* 상세 */
 
 .org-table tbody tr {
   border-bottom: 1px solid #e2e8f0;
@@ -535,10 +554,11 @@ const toggleStatus = (org) => {
 }
 
 .org-table td {
-  padding: 0.7rem 0.5rem;
+  padding: 1rem 0.5rem;
   font-size: 0.85rem;
   color: #0f172a;
   vertical-align: middle;
+  text-align: center;
 }
 
 .center-text {
@@ -603,28 +623,30 @@ const toggleStatus = (org) => {
 
 .org-address {
   color: #64748b;
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0 auto; /* Center alignment helper */
+  width: 100%;
+  padding: 5px 10px;
+  text-align: center;
+  word-break: keep-all;
+  white-space: normal; /* 주소가 잘리지 않도록 줄바꿈 허용 */
+  line-height: 1.4;
+  margin: 0 auto;
 }
 
 .days-pill-list {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   justify-content: center;
 }
 
 .day-pill {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: #cbd5e1;
-  padding: 0 2px;
+  font-weight: 500;
 }
 
 .day-pill.active {
   color: #0f172a;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .text-muted {
