@@ -309,7 +309,7 @@ const generateMockProducts = () => {
                     productCode: code, // e.g. OR0101
                     name: name,
                     description: `${t.name} ${s.name}입니다.`,
-                    imageUrl: '',
+                    imageUrl: `/images/${t.code}.png`, // Updated to .png
                     price: price,
                     costPrice: costPrice,
                     supplyPrice: supplyPrice,
