@@ -20,11 +20,14 @@ import FactoryOrderListView from '../views/factory/OrderListView.vue'
 import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
 import FactoryInboundView from '../views/factory/InboundView.vue'
 import FactoryOutboundView from '../views/factory/OutboundView.vue'
-import FactoryVehicleAssignmentView from '../views/factory/VehicleAssignmentView.vue'
-import FactoryReturnVehicleAssignmentView from '../views/factory/ReturnVehicleAssignmentView.vue'
+import HeadOfficeVehicleAssignmentView from '../views/head-office/VehicleAssignmentView.vue'
+import HeadOfficeReturnVehicleAssignmentView from '../views/head-office/ReturnVehicleAssignmentView.vue'
 import MyPageView from '../views/MyPageView.vue'
 import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
 import OrganizationListView from '../views/OrganizationListView.vue'
+import FranchiseListView from '../views/FranchiseListView.vue'
+import FactoryListView from '../views/FactoryListView.vue'
+import HeadOfficeManagementView from '../views/HeadOfficeManagementView.vue'
 import OrganizationDetailView from '../views/OrganizationDetailView.vue'
 import MemberListView from '../views/MemberListView.vue'
 import MemberDetailView from '../views/MemberDetailView.vue'
@@ -131,6 +134,21 @@ const router = createRouter({
             component: OrganizationListView
         },
         {
+            path: '/admin/organizations/franchise',
+            name: 'franchise-list',
+            component: FranchiseListView
+        },
+        {
+            path: '/admin/organizations/factory',
+            name: 'factory-list',
+            component: FactoryListView
+        },
+        {
+            path: '/admin/head-office/management',
+            name: 'head-office-management',
+            component: HeadOfficeManagementView
+        },
+        {
             path: '/organization/:code',
             name: 'organization-detail',
             component: OrganizationDetailView
@@ -210,6 +228,11 @@ const router = createRouter({
             path: '/franchise/products/sales-form',
             name: 'franchise-product-sales-form',
             component: ProductSalesView
+        },
+        {
+            path: '/franchise/products/sales/:salesCode',
+            name: 'franchise-sales-detail',
+            component: () => import('../views/franchise/SalesDetailView.vue')
         },
 
         // --- Head Office Routes ---
@@ -291,14 +314,14 @@ const router = createRouter({
             component: FactoryOrderRequestView
         },
         {
-            path: '/factory/orders/vehicle-assignment',
-            name: 'factory-vehicle-assignment',
-            component: FactoryVehicleAssignmentView
+            path: '/head-office/orders/vehicle-assignment',
+            name: 'head-office-vehicle-assignment',
+            component: HeadOfficeVehicleAssignmentView
         },
         {
-            path: '/factory/returns/vehicle-assignment',
-            name: 'factory-return-vehicle-assignment',
-            component: FactoryReturnVehicleAssignmentView
+            path: '/head-office/returns/vehicle-assignment',
+            name: 'head-office-return-vehicle-assignment',
+            component: HeadOfficeReturnVehicleAssignmentView
         },
         {
             path: '/store/settlement',

@@ -7,11 +7,12 @@
         </svg>
         목록으로
       </button>
-      <div class="header-actions">
+      <div v-if="member" class="header-actions">
         <template v-if="!isEditing">
           <button @click="startEdit" class="btn-edit">수정</button>
           <button v-if="isMemberActive" @click="confirmDeactivate" class="btn-deactivate">비활성화</button>
-          <button v-else @click="confirmRestore" class="btn-restore">계정 복구</button>
+          <button v-else-if="member.status === 'inactive'" @click="confirmRestore" class="btn-restore">계정 복구</button>
+          <button v-if="member.status !== 'deleted'" @click="confirmDelete" class="btn-delete">삭제</button>
         </template>
         <template v-else>
           <button @click="saveChanges" class="btn-save">저장</button>
@@ -27,7 +28,7 @@
             {{ getRoleDisplay(member) }}
           </span>
           <span class="status-badge" :class="member.status || 'active'">
-            {{ (member.status === 'active' || !member.status) ? '활성' : '비활성' }}
+            {{ getStatusLabel(member.status) }}
           </span>
           <h1>{{ member.name }}</h1>
         </div>
@@ -325,6 +326,15 @@ const getRoleDisplay = (m) => {
   return detailLabel ? `${typeLabel} · ${detailLabel}` : typeLabel
 }
 
+const getStatusLabel = (status) => {
+  switch(status) {
+    case 'active': return '활성'
+    case 'inactive': return '비활성'
+    case 'deleted': return '삭제'
+    default: return '활성'
+  }
+}
+
 const isMemberActive = computed(() => {
   return !member.value || member.value.status === 'active' || !member.value.status
 })
@@ -363,6 +373,15 @@ const confirmRestore = () => {
     member.value.status = 'active'
     originalMember.value.status = 'active'
     alert('계정이 복구되었습니다.')
+  }
+}
+
+const confirmDelete = () => {
+  if (confirm('이 회원 계정을 정말로 삭제하시겠습니까? 삭제된 회원은 복구할 수 없습니다.')) {
+    member.value.status = 'deleted'
+    originalMember.value.status = 'deleted'
+    alert('계정이 삭제되었습니다.')
+    router.push('/admin/members')
   }
 }
 
@@ -437,6 +456,19 @@ const onPhotoChange = (e) => {
 }
 .btn-deactivate:hover {
   background: #fff1f2;
+}
+
+.btn-delete {
+  padding: 0.6rem 1.5rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-delete:hover {
+  background: #dc2626;
 }
 
 .btn-restore {
@@ -633,6 +665,7 @@ const onPhotoChange = (e) => {
 }
 .status-badge.active { background: #dcfce7; color: #166534; }
 .status-badge.inactive { background: #f1f5f9; color: #64748b; }
+.status-badge.deleted { background: #fee2e2; color: #b91c1c; }
 
 @media (max-width: 900px) {
   .card-body {

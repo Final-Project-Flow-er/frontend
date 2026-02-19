@@ -39,6 +39,7 @@
             <option value="all">상태: 전체</option>
             <option value="active">활성</option>
             <option value="inactive">비활성</option>
+            <option value="deleted">삭제</option>
           </select>
           <select v-model="regionFilter" class="filter-select">
             <option value="all">지역: 전체</option>
@@ -105,17 +106,47 @@
               <td>{{ company.contractStart }}</td>
               <td>{{ company.contractEnd }}</td>
               <td>
-                <span :class="['status-badge', company.status === 'active' ? 'active' : 'inactive']">
-                  {{ company.status === 'active' ? '활성' : '비활성' }}
+                <span :class="['status-badge', getStatusClass(company.status)]">
+                  {{ getStatusLabel(company.status) }}
                 </span>
               </td>
               <td @click.stop>
                 <div class="row-actions">
-                  <button v-if="company.status === 'active'" @click="deleteItem('company', company.id)" class="btn-icon-delete" title="비활성화">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                  <button
+                    v-if="company.status === 'active' || !company.status"
+                    @click="deleteItem('company', company.id)"
+                    class="btn-icon-action deactivate"
+                    title="비활성화"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
                   </button>
-                  <button v-else @click="restoreItem('company', company.id)" class="btn-icon-restore" title="복구">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  <button
+                    v-else-if="company.status === 'inactive'"
+                    @click="restoreItem('company', company.id)"
+                    class="btn-icon-action restore"
+                    title="복구"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                  </button>
+                  <button
+                    v-if="company.status !== 'deleted'"
+                    @click="confirmHardDelete('company', company)"
+                    class="btn-icon-action delete"
+                    title="삭제"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
                   </button>
                 </div>
               </td>
@@ -196,17 +227,47 @@
               <td>{{ vehicle.driverName }}</td>
               <td>{{ vehicle.driverPhone }}</td>
               <td>
-                <span :class="['status-badge', vehicle.status === 'active' ? 'normal' : 'inactive']">
-                  {{ vehicle.status === 'active' ? '운행가능' : '비활성' }}
+                <span :class="['status-badge', getStatusClass(vehicle.status)]">
+                  {{ getStatusLabel(vehicle.status, 'vehicle') }}
                 </span>
               </td>
               <td @click.stop>
                 <div class="row-actions">
-                  <button v-if="vehicle.status === 'active'" @click="deleteItem('vehicle', vehicle.id)" class="btn-icon-delete" title="비활성화">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                  <button
+                    v-if="vehicle.status === 'active' || !vehicle.status"
+                    @click="deleteItem('vehicle', vehicle.id)"
+                    class="btn-icon-action deactivate"
+                    title="비활성화"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
                   </button>
-                  <button v-else @click="restoreItem('vehicle', vehicle.id)" class="btn-icon-restore" title="복구">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  <button
+                    v-else-if="vehicle.status === 'inactive'"
+                    @click="restoreItem('vehicle', vehicle.id)"
+                    class="btn-icon-action restore"
+                    title="복구"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                  </button>
+                  <button
+                    v-if="vehicle.status !== 'deleted'"
+                    @click="confirmHardDelete('vehicle', vehicle)"
+                    class="btn-icon-action delete"
+                    title="삭제"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
                   </button>
                 </div>
               </td>
@@ -278,6 +339,24 @@ const getVehicleTypeText = (type) => {
     'bike': '이륜차'
   }
   return types[type] || type
+}
+
+const getStatusLabel = (status, type = 'company') => {
+  switch(status) {
+    case 'active': return type === 'vehicle' ? '운행가능' : '활성'
+    case 'inactive': return '비활성'
+    case 'deleted': return '삭제'
+    default: return type === 'vehicle' ? '운행가능' : '활성'
+  }
+}
+
+const getStatusClass = (status) => {
+  switch(status) {
+    case 'active': return 'active'
+    case 'inactive': return 'inactive'
+    case 'deleted': return 'deleted'
+    default: return 'active'
+  }
 }
 
 const filteredCompanies = computed(() => {
@@ -389,6 +468,15 @@ const restoreItem = (type, id) => {
       const idx = vehicles.value.findIndex(v => v.id === id)
       if (idx !== -1) vehicles.value[idx].status = 'active'
     }
+  }
+}
+
+const confirmHardDelete = (type, item) => {
+  const targetName = type === 'company' ? '운송 업체' : '차량'
+  const name = type === 'company' ? item.name : item.vehicleNo
+  if (confirm(`'${name}' ${targetName}를 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.`)) {
+    item.status = 'deleted'
+    alert(`${targetName}가 삭제되었습니다.`)
   }
 }
 </script>
@@ -561,6 +649,17 @@ const restoreItem = (type, id) => {
   text-align: center;
 }
 
+/* 첫 번째/마지막 컬럼 여백 대칭 */
+.logistics-table th:first-child,
+.logistics-table td:first-child {
+  padding-left: 2rem;
+}
+
+.logistics-table th:last-child,
+.logistics-table td:last-child {
+  padding-right: 2rem;
+}
+
 .logistics-table th {
   background: #f8fafc;
   font-weight: 600;
@@ -591,6 +690,7 @@ const restoreItem = (type, id) => {
 .status-badge.active { background: #dcfce7; color: #166534; }
 .status-badge.normal { background: #e0f2fe; color: #0369a1; }
 .status-badge.inactive { background: #f1f5f9; color: #64748b; }
+.status-badge.deleted { background: #fee2e2; color: #b91c1c; }
 
 .row-actions {
   display: flex;
@@ -598,24 +698,50 @@ const restoreItem = (type, id) => {
   gap: 0.5rem;
 }
 
-.btn-icon-delete, .btn-icon-restore {
-  width: 28px;
-  height: 28px;
-  display: flex;
+.btn-icon-action {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   cursor: pointer;
+  border: 1px solid transparent;
   transition: all 0.2s;
 }
 
-.btn-icon-delete { color: #ef4444; }
-.btn-icon-delete:hover { background: #fef2f2; border-color: #fecaca; }
+.btn-icon-action.deactivate {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
 
-.btn-icon-restore { color: #10b981; }
-.btn-icon-restore:hover { background: #ecfdf5; border-color: #d1fae5; }
+.btn-icon-action.deactivate:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.btn-icon-action.delete {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fee2e2;
+}
+
+.btn-icon-action.delete:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.btn-icon-action.restore {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.btn-icon-action.restore:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
 
 .fade-in { animation: fadeIn 0.3s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

@@ -27,6 +27,7 @@
             <option value="edit">정보 수정</option>
             <option value="deactivate">계정 비활성화</option>
             <option value="restore">계정 복구</option>
+            <option value="delete">계정 삭제</option>
           </select>
         </div>
 
@@ -129,7 +130,8 @@ const getTypeLabel = (type) => {
     register: '신규 등록',
     edit: '정보 수정',
     deactivate: '계정 비활성화',
-    restore: '계정 복구'
+    restore: '계정 복구',
+    delete: '계정 삭제'
   }
   return labels[type] || type
 }
@@ -326,8 +328,9 @@ const resetFilters = () => {
 
 .type-badge.register { background: #dcfce7; color: #166534; }
 .type-badge.edit { background: #e0f2fe; color: #0369a1; }
-.type-badge.deactivate { background: #fee2e2; color: #991b1b; }
+.type-badge.deactivate { background: #f1f5f9; color: #64748b; }
 .type-badge.restore { background: #fef3c7; color: #92400e; }
+.type-badge.delete { background: #fee2e2; color: #991b1b; }
 
 .empty-row {
   text-align: center;

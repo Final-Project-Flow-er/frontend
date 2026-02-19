@@ -77,6 +77,16 @@
             >
           </div>
 
+          <div class="form-group">
+            <label>가맹점주명 <span class="required">*</span></label>
+            <input 
+              type="text" 
+              v-model="storeData.representative" 
+              placeholder="점주님 성함을 입력하세요"
+              required
+            >
+          </div>
+
 
           <div class="form-group full-width">
             <label>운영 요일 <span class="required">*</span></label>
@@ -268,6 +278,8 @@ const storeData = reactive({
   name: '',
   address: '',
   phone: '',
+  representative: '',
+  warningCount: 0,
   operatingDays: [],
   openTime: '',
   closeTime: '',
@@ -339,8 +351,12 @@ const registerStore = () => {
     return
   }
   if (!storeData.openTime || !storeData.closeTime) {
-    alert('운영 시간을 입력해주세요.')
-    return
+    alert('운영 시간을 입력해주세요.');
+    return;
+  }
+  if (!storeData.representative) {
+    alert('가맹점주명을 입력해주세요.');
+    return;
   }
 
   // TODO: API 호출로 가맹점 등록

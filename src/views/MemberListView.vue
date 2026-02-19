@@ -24,6 +24,7 @@
             <option value="all">전체</option>
             <option value="active">활성</option>
             <option value="inactive">비활성</option>
+            <option value="deleted">삭제</option>
           </select>
         </div>
 
@@ -42,7 +43,7 @@
           </div>
         </div>
 
-        <div class="filter-group">
+        <div class="filter-group org-group">
           <label>소속</label>
           <input 
             type="text" 
@@ -105,7 +106,7 @@
             <td>{{ member.phone }}</td>
             <td>
               <span class="status-badge" :class="member.status || 'active'">
-                {{ (member.status === 'active' || !member.status) ? '활성' : '비활성' }}
+                {{ getStatusLabel(member.status) }}
               </span>
             </td>
             <td class="td-actions" @click.stop>
@@ -113,16 +114,16 @@
                 <button
                   v-if="member.status === 'active' || !member.status"
                   @click="toggleMemberStatus(member)"
-                  class="btn-icon-action delete"
+                  class="btn-icon-action deactivate"
                   title="계정 비활성화"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
                 </button>
                 <button
-                  v-else
+                  v-else-if="member.status === 'inactive'"
                   @click="toggleMemberStatus(member)"
                   class="btn-icon-action restore"
                   title="계정 복구"
@@ -130,6 +131,20 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="1 4 1 10 7 10"></polyline>
                     <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                </button>
+                <button
+                  v-if="member.status !== 'deleted'"
+                  @click="deleteMember(member)"
+                  class="btn-icon-action delete"
+                  title="계정 삭제"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
                   </svg>
                 </button>
               </div>
@@ -250,6 +265,15 @@ const getRoleLabel = (role) => {
   }
 }
 
+const getStatusLabel = (status) => {
+  switch(status) {
+    case 'active': return '활성'
+    case 'inactive': return '비활성'
+    case 'deleted': return '삭제'
+    default: return '활성'
+  }
+}
+
 const getRoleDisplay = (member) => {
   const typeLabel = getRoleLabel(member.role)
   const detailLabel = member.roleDetail ? ROLE_DETAIL_LABELS[member.roleDetail] : null
@@ -269,6 +293,15 @@ const toggleMemberStatus = (member) => {
   const name = member.name
   if (confirm(`'${name}' 회원을 ${action}하시겠습니까?`)) {
     member.status = isActive ? 'inactive' : 'active'
+    alert(`'${name}' 회원이 ${action}되었습니다.`)
+  }
+}
+
+const deleteMember = (member) => {
+  const name = member.name
+  if (confirm(`'${name}' 회원을 삭제하시겠습니까? 삭제된 회원은 복구할 수 없습니다.`)) {
+    member.status = 'deleted'
+    alert(`'${name}' 회원이 삭제되었습니다.`)
   }
 }
 
@@ -280,7 +313,7 @@ const goToDetail = (empNum) => {
 <style scoped>
 .member-list-container {
   padding: 1.5rem 2rem;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -360,6 +393,14 @@ const goToDetail = (empNum) => {
   padding-left: 2.5rem;
 }
 
+.org-group {
+  flex: 1;
+}
+
+.org-group input {
+  width: 100%;
+}
+
 .btn-reset-filter {
   margin-left: auto;
   padding: 0.6rem 1.25rem;
@@ -387,12 +428,12 @@ const goToDetail = (empNum) => {
 .member-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: left;
+  text-align: center;
 }
 
 .member-table th {
   background: #f8fafc;
-  padding: 1rem;
+  padding: 1rem 0.75rem;
   font-size: 0.85rem;
   font-weight: 600;
   color: #475569;
@@ -400,10 +441,22 @@ const goToDetail = (empNum) => {
 }
 
 .member-table td {
-  padding: 1rem;
+  padding: 1rem 0.75rem;
   font-size: 0.9rem;
   color: #0f172a;
   border-bottom: 1px solid #f1f5f9;
+}
+
+/* 첫 번째 컬럼(사원번호) 좌측 여유 */
+.member-table th:first-child,
+.member-table td:first-child {
+  padding-left: 2rem;
+}
+
+/* 마지막 컬럼(상세) 우측 여유 */
+.member-table th:last-child,
+.member-table td:last-child {
+  padding-right: 2rem;
 }
 
 .member-row {
@@ -424,6 +477,7 @@ const goToDetail = (empNum) => {
 .name-cell {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
   font-weight: normal;
 }
@@ -470,6 +524,10 @@ const goToDetail = (empNum) => {
   background: #f1f5f9;
   color: #64748b;
 }
+.status-badge.deleted {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
 .td-actions {
   padding: 0.5rem 1rem !important;
@@ -478,7 +536,7 @@ const goToDetail = (empNum) => {
 .action-buttons-wrap {
   display: flex;
   gap: 0.5rem;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
 }
 .btn-icon-action {
@@ -500,7 +558,16 @@ const goToDetail = (empNum) => {
 }
 .btn-icon-action.delete:hover {
   background: #fee2e2;
-  border-color: #fecaca;
+  border-color: #fca5a5;
+}
+.btn-icon-action.deactivate {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+.btn-icon-action.deactivate:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 .btn-icon-action.restore {
   background: #f0fdf4;
