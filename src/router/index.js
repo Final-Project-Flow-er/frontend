@@ -229,6 +229,11 @@ const router = createRouter({
             name: 'franchise-product-sales-form',
             component: ProductSalesView
         },
+        {
+            path: '/franchise/products/sales/:salesCode',
+            name: 'franchise-sales-detail',
+            component: () => import('../views/franchise/SalesDetailView.vue')
+        },
 
         // --- Head Office Routes ---
         {
