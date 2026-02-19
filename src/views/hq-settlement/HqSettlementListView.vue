@@ -2,8 +2,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import html2pdf from 'html2pdf.js'
-import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
-import SettlementBatchReceiptModal from '@/components/settlement/SettlementBatchReceiptModal.vue'
 
 const router = useRouter()
 
@@ -65,10 +63,10 @@ const totals = computed(() => {
   }
 })
 const totalFinal = computed(() =>
-  totals.value.sales - (totals.value.orderCost + totals.value.shipping + totals.value.commission + totals.value.loss) + totals.value.refund
+  totals.value.orderCost + totals.value.commission + totals.value.shipping - totals.value.refund - totals.value.loss
 )
 
-const getFinal = (s) => s.sales - (s.orderCost + s.shipping + s.commission + s.loss) + s.refund
+const getFinal = (s) => s.orderCost + s.commission + s.shipping - s.refund - s.loss
 
 /* ── 포맷 ── */
 const fmt = (n) => new Intl.NumberFormat('ko-KR').format(n)
@@ -343,36 +341,32 @@ const getDetailedDesc = (field, idx, storeId) => {
     <!-- 최종 합계 (상단) -->
     <div class="final-card">
       <div class="fc-left">
-        <span class="fc-label">전체 가맹점 최종 정산 합계</span>
-        <span class="fc-count">{{ filteredStores.length }}개 가맹점</span>
+        <span class="fc-label">최종 정산 금액</span>
+        <span class="fc-formula">발주 대금 + 수수료 + 배송비 - 반품 차감액 - 본사 부담 손실</span>
       </div>
       <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
     </div>
 
     <section class="summary-grid">
-      <div class="summary-card primary clickable" @click="goToSummaryDetail('sales')">
-        <span class="s-label">총 매출</span>
-        <p class="s-value">₩ {{ fmt(totals.sales) }}</p>
-      </div>
-      <div class="summary-card refund-card clickable" @click="goToSummaryDetail('refund')">
-        <span class="s-label">반품 환급</span>
-        <p class="s-value primary-color">₩ {{ fmt(totals.refund) }}</p>
-      </div>
       <div class="summary-card clickable" @click="goToSummaryDetail('orderCost')">
-        <span class="s-label">발주 대금</span>
-        <p class="s-value negative">₩ {{ fmt(totals.orderCost) }}</p>
-      </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('shipping')">
-        <span class="s-label">배송비</span>
-        <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
-      </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('loss')">
-        <span class="s-label">손실</span>
-        <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
+        <span class="s-label">발주 매출</span>
+        <p class="s-value positive">₩ {{ fmt(totals.orderCost) }}</p>
       </div>
       <div class="summary-card clickable" @click="goToSummaryDetail('commission')">
-        <span class="s-label">수수료</span>
-        <p class="s-value negative">₩ {{ fmt(totals.commission) }}</p>
+        <span class="s-label">수수료 수익</span>
+        <p class="s-value positive">₩ {{ fmt(totals.commission) }}</p>
+      </div>
+      <div class="summary-card clickable" @click="goToSummaryDetail('shipping')">
+        <span class="s-label">배송 수익</span>
+        <p class="s-value positive">₩ {{ fmt(totals.shipping) }}</p>
+      </div>
+      <div class="summary-card refund-card clickable" @click="goToSummaryDetail('refund')">
+        <span class="s-label">반품 차감액</span>
+        <p class="s-value negative">₩ {{ fmt(totals.refund) }}</p>
+      </div>
+      <div class="summary-card clickable" @click="goToSummaryDetail('loss')">
+        <span class="s-label">본사 손실</span>
+        <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
       </div>
     </section>
 
@@ -449,25 +443,137 @@ const getDetailedDesc = (field, idx, storeId) => {
     </div>
   </div>
 
-  <!-- PDF 출력을 위한 숨겨진 가맹점 영수증 템플릿 -->
-  <div style="display: none;">
-    <div class="hq-individual-pdf-wrap">
-      <SettlementReceiptModal
-        :is-open="true"
-        :store="selectedReceiptStore"
-        :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
-      />
+  <!-- PDF: 개별 가맹점 영수증 -->
+  <div style="position:absolute;left:-9999px;top:0;">
+    <div class="hq-individual-pdf-wrap" v-if="selectedReceiptStore" style="width:800px;padding:40px;background:white;font-family:sans-serif;color:#000;">
+      <div style="border:1px solid #e2e8f0;border-radius:20px;padding:40px;background:white;">
+        <div style="text-align:center;margin-bottom:30px;">
+          <h2 style="font-size:24px;font-weight:800;margin:0;">정산 영수증</h2>
+          <div style="font-size:14px;color:#94a3b8;font-weight:600;margin:5px 0;">RECEIPT</div>
+          <div style="font-size:13px;color:#64748b;">Chain-G 정산 시스템</div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;"><span style="font-weight:700;">가맹점 :</span><span style="font-weight:600;">{{ selectedReceiptStore.name }} ({{ selectedReceiptStore.id }})</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;"><span style="font-weight:700;">정산 기간 :</span><span style="font-weight:600;">{{ activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth) }}</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;"><span style="font-weight:700;">발행일 :</span><span style="font-weight:600;">{{ new Date().toLocaleString('ko-KR') }}</span></div>
+        </div>
+        <div style="height:2px;background:#000;margin:20px 0;"></div>
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">매출 내역</h3>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 매출</span><span style="color:#ef4444;">{{ fmt(selectedReceiptStore.sales) }}원</span></div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">차감 내역</h3>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>발주 대금</span><span style="color:#ef4444;">-{{ fmt(selectedReceiptStore.orderCost) }}원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>배송비</span><span style="color:#ef4444;">-{{ fmt(selectedReceiptStore.shipping) }}원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>수수료</span><span style="color:#ef4444;">-{{ fmt(selectedReceiptStore.commission) }}원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>손실</span><span style="color:#ef4444;">-{{ fmt(selectedReceiptStore.loss) }}원</span></div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">환급 내역</h3>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>반품 환급</span><span style="color:#10b981;">+{{ fmt(selectedReceiptStore.refund) }}원</span></div>
+        </div>
+        <div style="height:2px;background:#000;margin:20px 0;"></div>
+        <div style="background:#eff6ff;border-radius:16px;padding:20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <span style="font-weight:800;font-size:18px;">최종 정산 금액</span>
+          <span style="font-weight:800;font-size:24px;">{{ fmt(getFinal(selectedReceiptStore)) }}</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:50px;padding:12px;text-align:center;font-size:12px;color:#475569;font-weight:600;margin-bottom:30px;">총 매출 - (발주대금+배송비+수수료+손실)+반품 환급</div>
+        <div style="height:2px;background:#000;margin:20px 0;"></div>
+        <div style="text-align:center;font-size:12px;color:#64748b;"><p>본 문서는 공식 정산 영수증입니다.</p><p>세무 신고 및 회계 처리 시 보관하시기 바랍니다.</p></div>
+      </div>
     </div>
   </div>
 
-  <!-- PDF 출력을 위한 숨겨진 전체 가맹점 요약 템플릿 -->
-  <div style="display: none;">
-    <div class="hq-batch-pdf-wrap">
-      <SettlementBatchReceiptModal
-        :is-open="true"
-        :stores="filteredStores"
-        :date="activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth)"
-      />
+  <!-- PDF: 전체 가맹점 정산 요약 영수증 -->
+  <div style="position:absolute;left:-9999px;top:0;">
+    <div class="hq-batch-pdf-wrap" style="width:800px;padding:40px;background:white;font-family:sans-serif;color:#000;">
+      <div style="border:2px solid #334155;border-radius:20px;padding:40px;background:#f8fafc;">
+        <!-- 헤더 -->
+        <div style="text-align:center;margin-bottom:30px;">
+          <h2 style="font-size:24px;font-weight:800;margin:0;">전체 가맹점 정산 요약 영수증</h2>
+          <div style="font-size:14px;color:#94a3b8;font-weight:600;margin:5px 0;">TOTAL SUMMARY RECEIPT</div>
+          <div style="font-size:13px;color:#64748b;">Chain-G 정산 시스템</div>
+        </div>
+
+        <!-- 기본 정보 -->
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;"><span style="font-weight:700;">대상 :</span><span style="font-weight:600;">전체 가맹점 ({{ filteredStores.length }}개 지점)</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;"><span style="font-weight:700;">정산 기간 :</span><span style="font-weight:600;">{{ activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth) }}</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;"><span style="font-weight:700;">발행일 :</span><span style="font-weight:600;">{{ new Date().toLocaleString('ko-KR') }}</span></div>
+        </div>
+
+        <div style="height:2px;background:#000;margin:20px 0;"></div>
+
+        <!-- 전체 합산 -->
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">전체 매출 합계</h3>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 주문 매출</span><span style="color:#ef4444;">{{ fmt(totals.sales) }}원</span></div>
+          <div style="background:#eff6ff;border-radius:50px;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;margin:10px 0 30px;">
+            <span style="font-weight:800;font-size:16px;">전체 매출</span>
+            <span style="font-weight:800;font-size:20px;">{{ fmt(totals.sales) }}</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">전체 차감 합계</h3>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 발주 대금</span><span style="color:#ef4444;">-{{ fmt(totals.orderCost) }}원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 배송비</span><span style="color:#ef4444;">-{{ fmt(totals.shipping) }}원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 수수료</span><span style="color:#ef4444;">-{{ fmt(totals.commission) }}원</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 손실</span><span style="color:#ef4444;">-{{ fmt(totals.loss) }}원</span></div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">전체 환급 합계</h3>
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600;"><span>총 반품 환급</span><span style="color:#10b981;">+{{ fmt(totals.refund) }}원</span></div>
+        </div>
+
+        <div style="height:2px;background:#000;margin:20px 0;"></div>
+
+        <!-- 최종 정산 -->
+        <div style="background:#334155;border-radius:16px;padding:20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <span style="font-weight:800;font-size:18px;color:white;">전체 최종 정산 합계</span>
+          <span style="font-weight:800;font-size:24px;color:white;">{{ fmt(totalFinal) }}</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:50px;padding:12px;text-align:center;font-size:12px;color:#475569;font-weight:600;margin-bottom:30px;">발주대금 + 수수료 + 배송비 - 반품차감액 - 본사부담손실</div>
+
+        <div style="height:2px;background:#000;margin:20px 0;"></div>
+
+        <!-- 가맹점별 상세 테이블 -->
+        <h3 style="font-size:16px;font-weight:800;margin-bottom:15px;">가맹점별 정산 내역</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:30px;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="padding:10px 12px;text-align:left;font-weight:700;border-bottom:2px solid #cbd5e1;">가맹점</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">매출</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">발주</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">배송비</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">수수료</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">환급</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">손실</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:700;border-bottom:2px solid #cbd5e1;">최종 정산</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in filteredStores" :key="'pdf-'+s.id" style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:8px 12px;font-weight:700;">{{ s.name }}</td>
+              <td style="padding:8px 12px;text-align:right;color:#6366f1;">{{ fmt(s.sales) }}</td>
+              <td style="padding:8px 12px;text-align:right;color:#ef4444;">{{ fmt(s.orderCost) }}</td>
+              <td style="padding:8px 12px;text-align:right;color:#ef4444;">{{ fmt(s.shipping) }}</td>
+              <td style="padding:8px 12px;text-align:right;color:#ef4444;">{{ fmt(s.commission) }}</td>
+              <td style="padding:8px 12px;text-align:right;color:#6366f1;">{{ fmt(s.refund) }}</td>
+              <td style="padding:8px 12px;text-align:right;color:#ef4444;">{{ fmt(s.loss) }}</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:800;color:#6366f1;">{{ fmt(getFinal(s)) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="text-align:center;font-size:12px;color:#64748b;">
+          <p style="margin:2px 0;">위 내역은 해당 기간 모든 가맹점의 정산 합계입니다.</p>
+          <p style="margin:2px 0;">총 {{ filteredStores.length }}개 지점의 데이터가 포함되었습니다.</p>
+          <p style="margin:2px 0;">본 문서는 공식 정산 영수증입니다.</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -504,9 +610,9 @@ const getDetailedDesc = (field, idx, storeId) => {
 .search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); margin-bottom: 1.25rem; max-width: 300px; }
 .search-input { border: none; outline: none; font-size: 0.9rem; width: 100%; color: var(--text-dark); }
 
-.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
-.summary-grid .summary-card:nth-child(1),
-.summary-grid .summary-card:nth-child(2) { grid-column: span 2; }
+.summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.summary-grid .summary-card:nth-child(-n+3) { grid-column: span 2; }
+.summary-grid .summary-card:nth-child(n+4) { grid-column: span 3; }
 .summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); transition: transform 0.15s, box-shadow 0.15s; }
 .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .summary-card.clickable { cursor: pointer; }
@@ -516,11 +622,12 @@ const getDetailedDesc = (field, idx, storeId) => {
 .s-label { font-size: 0.85rem; color: var(--text-light); display: block; margin-bottom: 0.3rem; }
 .s-value { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-dark); text-align: right; }
 .s-value.negative { color: #ef4444; }
-.s-value.positive { color: #10b981; }
+.s-value.positive { color: #6366f1; }
 
 .final-card { background: linear-gradient(135deg, #334155 0%, #475569 100%); color: white; padding: 1.25rem 2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(51,65,85,0.3); }
-.fc-left { display: flex; align-items: center; gap: 1rem; }
+.fc-left { display: flex; flex-direction: column; gap: 0.3rem; }
 .fc-label { font-size: 1rem; font-weight: 700; }
+.fc-formula { font-size: 0.8rem; opacity: 0.7; font-weight: 500; }
 .fc-count { font-size: 0.8rem; opacity: 0.8; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 999px; }
 .fc-amount { font-size: 1.85rem; font-weight: 800; margin: 0; }
 
@@ -597,7 +704,7 @@ const getDetailedDesc = (field, idx, storeId) => {
 .text-center { text-align: center; }
 .store-cell { font-weight: 700; color: var(--text-dark); }
 .negative { color: #ef4444 !important; }
-.positive { color: #10b981 !important; }
+.positive { color: #6366f1 !important; }
 .primary-color { color: var(--primary) !important; }
 .final-cell { font-weight: 800; color: var(--primary) !important; }
 .status-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
