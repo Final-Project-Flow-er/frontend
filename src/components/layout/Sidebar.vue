@@ -106,7 +106,7 @@ const menuGroups = ref([
           { name: '발주 관리', path: '/head-office/orders' },
           { name: '발주 요청 접수', path: '/head-office/orders/reception' },
           { name: '발주 요청 관리', path: '/head-office/orders/request' },
-          { name: '차량 배정', path: '/factory/orders/vehicle-assignment' }
+          { name: '차량 배정', path: '/head-office/orders/vehicle-assignment' }
         ]
       },
       // [수정] 반품 관리 하위에 '차량 배정' 추가
@@ -116,7 +116,7 @@ const menuGroups = ref([
         children: [
           { name: '반품 요청 접수', path: '/head-office/returns/reception' },
           { name: '반품 요청 관리', path: '/head-office/returns' },
-          { name: '차량 배정', path: '/factory/returns/vehicle-assignment' }
+          { name: '차량 배정', path: '/head-office/returns/vehicle-assignment' }
         ]
       },
       { name: '정산 관리', path: '/hq/settlement' },
@@ -148,15 +148,7 @@ const menuGroups = ref([
         isOpen: false,
         children: [
           { name: '발주 요청 접수', path: '/factory/orders' },
-          { name: '발주 요청 관리', path: '/factory/orders/request' },
-          { name: '차량 배정', path: '/factory/orders/vehicle-assignment' }
-        ]
-      },
-      {
-        name: '반품 관리',
-        isOpen: false,
-        children: [
-          { name: '차량 배정', path: '/factory/returns/vehicle-assignment' }
+          { name: '발주 요청 관리', path: '/factory/orders/request' }
         ]
       },
       { name: '로그 관리', path: '/hq/inventory/logs/factory' },

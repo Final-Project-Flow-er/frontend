@@ -20,9 +20,9 @@
             <label>상태</label>
             <select v-model="filter.status">
             <option value="">전체</option>
-            <option value="SAFE">안전 (SAFE)</option>
-            <option value="WARNING">부족 (WARNING)</option>
-            <option value="DANGER">위험 (DANGER)</option>
+            <option value="SAFE">안전</option>
+            <option value="WARNING">부족</option>
+            <option value="DANGER">위험</option>
             </select>
         </div>
         </div>
@@ -499,8 +499,17 @@ const saveSettings = () => {
 .danger-text { color: #e53e3e; font-weight: 800; }
 
 /* Data Table */
-.data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
-.data-table { width: 100%; border-collapse: collapse; }
+.data-table-card { 
+    background: white; 
+    border-radius: 16px; 
+    border: 1px solid var(--border-color); 
+    overflow-x: auto; /* 가로 스크롤 허용 */
+}
+.data-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    min-width: 1000px; /* 창이 좁아져도 가로 형태 유지 */
+}
 .data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
 .data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
@@ -570,4 +579,20 @@ const saveSettings = () => {
 .sub-code { color: var(--text-light); font-weight: 500; font-size: 1rem; margin-left: 0.5rem; }
 .production-tag { background: var(--primary); color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem; margin-left: 1rem; vertical-align: middle; }
 .number-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* 커스텀 가로 스크롤바 */
+.data-table-card::-webkit-scrollbar {
+    height: 8px;
+}
+.data-table-card::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 0 0 16px 16px;
+}
+.data-table-card::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.data-table-card::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
 </style>

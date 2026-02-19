@@ -20,23 +20,50 @@
           <label>상태</label>
           <select v-model="filter.status">
             <option value="">전체</option>
-            <option value="SAFE">안전 (SAFE)</option>
-            <option value="WARNING">부족 (WARNING)</option>
-            <option value="DANGER">위험 (DANGER)</option>
+            <option value="SAFE">안전</option>
+            <option value="WARNING">부족</option>
+            <option value="DANGER">위험</option>
           </select>
         </div>
       </div>
 
       <!-- Safety Stock Alert Section -->
-      <div v-if="lowStockItems.length > 0" class="alert-section">
-        <div class="alert-title">⚠ 안전재고 부족 알림</div>
-        <ul>
-          <li v-for="item in lowStockItems" :key="item.productCode">
-            <strong>{{ item.productName }} ({{ item.productCode }})</strong>의 재고가 
-            <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. 
-            (안전재고: {{ item.safeStock }})
-          </li>
-        </ul>
+      <div v-if="lowStockItems.length > 0 || expiringItems.length > 0" class="alert-section">
+        <div class="alert-header">
+            <div class="alert-title">⚠ 재고 경고 알림</div>
+            <button v-if="hasMoreAlerts" class="toggle-alert-btn" @click="toggleAlertExpand">
+                {{ isAlertExpanded ? '접기 ▲' : '더보기 ▼' }}
+            </button>
+        </div>
+        <!-- Summary Header when Collapsed -->
+        <div v-if="!isAlertExpanded" class="alert-summary pl-2">
+            <span v-if="expiringItems.length > 0">유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
+            <span v-if="lowStockItems.length > 0 && expiringItems.length > 0" class="mx-2">|</span>
+            <span v-if="lowStockItems.length > 0">안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
+        </div>
+
+        <!-- Detailed Lists (Only when Expanded) -->
+        <template v-if="isAlertExpanded">
+            <!-- Expiration Alert -->
+            <div v-if="expiringItems.length > 0" class="expiration-warning" style="border-top: none; padding-top: 0; margin-top: 0; margin-bottom: 1rem;">
+                <div class="sub-alert-title">⏳ 유통기한 임박 (3일 이내)</div>
+                <ul>
+                    <li v-for="group in expiringItems" :key="group.key">
+                        <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Low Stock -->
+            <div v-if="lowStockItems.length > 0" :class="{ 'mt-3 pt-3 border-top-dashed': expiringItems.length > 0 }">
+                <div class="sub-alert-title">⚠️ 안전재고 부족</div>
+                <ul>
+                    <li v-for="item in lowStockItems" :key="item.productCode">
+                        <strong>{{ item.productName }}</strong>의 재고가 <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. (안전재고 미달)
+                    </li>
+                </ul>
+            </div>
+        </template>
       </div>
       <div v-else class="alert-section safe">
         <div class="alert-title">✅ 모든 재고가 안전합니다.</div>
@@ -240,6 +267,11 @@ const currentStep = ref(1)
 const selectedProduct = ref(null)
 const selectedProductionDate = ref(null)
 const selectedItems = ref([])
+const isAlertExpanded = ref(false)
+
+const toggleAlertExpand = () => {
+    isAlertExpanded.value = !isAlertExpanded.value
+}
 
 const filter = ref({
   productCode: '',
@@ -394,6 +426,59 @@ const filteredProducts = computed(() => {
 
 const lowStockItems = computed(() => {
   return products.value.filter(item => item.quantity <= item.safeStock)
+})
+
+// Expiration Logic: Mfg Date + 14 Days
+const expiringItems = computed(() => {
+    const today = new Date()
+    const alertList = []
+
+    // Group by Product & MfgDate
+    const groups = {}
+
+    inventoryItems.value.forEach(item => {
+        if (item.status !== 'AVAILABLE') return
+
+        const mfg = new Date(item.productionDate)
+        const exp = new Date(mfg)
+        exp.setDate(mfg.getDate() + 14) // +14 Days Expiration policy
+        
+        const diffTime = exp - today
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+        if (diffDays <= 3 && diffDays >= 0) {
+            const key = `${item.productCode}-${item.productionDate}`
+            if (!groups[key]) {
+                const prod = products.value.find(p => p.productCode === item.productCode)
+                groups[key] = {
+                    key,
+                    productName: prod ? prod.productName : item.productCode,
+                    productionDate: item.productionDate,
+                    count: 0,
+                    daysLeft: diffDays
+                }
+            }
+            groups[key].count++
+        }
+    })
+    // 3개만 보이게 제한 (보여주기 식)
+    return Object.values(groups).slice(0, 3)
+})
+
+const visibleLowStockItems = computed(() => {
+    if (isAlertExpanded.value) return lowStockItems.value
+    return lowStockItems.value.slice(0, 3)
+})
+
+const visibleExpiringItems = computed(() => {
+    if (isAlertExpanded.value) return expiringItems.value
+    // If low stock took up all 3 slots, show 0 expiring. Or split usage?
+    // Let's allow max 3 total effectively or just max 3 per category for simplicity as requested "about 3 items"
+    return expiringItems.value.slice(0, 3) 
+})
+
+const hasMoreAlerts = computed(() => {
+    return lowStockItems.value.length > 0 || expiringItems.value.length > 0
 })
 
 // Step 2 Compute
@@ -601,6 +686,20 @@ const saveSettings = () => {
 .alert-section ul { margin: 0; padding-left: 1.5rem; }
 .alert-section li { margin-bottom: 0.25rem; color: #742a2a; }
 .danger-text { color: #e53e3e; font-weight: 700; }
+.alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.toggle-alert-btn { background: none; border: none; font-size: 0.85rem; color: #718096; cursor: pointer; text-decoration: underline; }
+.alert-summary { font-size: 0.95rem; color: #c53030; margin-bottom: 0.5rem; }
+.pl-2 { padding-left: 0.5rem; }
+.mx-2 { margin: 0 0.5rem; color: #fed7d7; }
+
+.expiration-warning { margin-top: 1rem; border-top: 1px dashed #feb2b2; padding-top: 1rem; }
+.sub-alert-title { font-weight: 700; color: #c05621; margin-bottom: 0.5rem; }
+
+.mt-3 { margin-top: 0.75rem; }
+.pt-3 { padding-top: 0.75rem; }
+.border-top-dashed { border-top: 1px dashed #fed7d7; }
+.no-list-style { list-style: none; padding-left: 0.5rem; }
+
 
 /* Data Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }

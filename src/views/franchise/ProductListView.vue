@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const filter = ref({
   salesCode: '',
@@ -32,8 +35,8 @@ const filteredSales = computed(() => {
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
-const cancelSale = () => {
-  alert('취소 완료')
+const goToSalesDetail = (salesCode) => {
+  router.push({ name: 'franchise-sales-detail', params: { salesCode } })
 }
 </script>
 
@@ -80,11 +83,10 @@ const cancelSale = () => {
             <th class="text-right">수량</th>
             <th class="text-right">단가</th>
             <th class="text-right">총 금액</th>
-            <th class="text-center">관리</th>
           </tr>
           </thead>
           <tbody>
-          <tr v-for="(item, index) in filteredSales" :key="index">
+          <tr v-for="(item, index) in filteredSales" :key="index" class="clickable-row" @click="goToSalesDetail(item.salesCode)">
             <!-- [변경] 판매 코드: code-cell 제거 후 sku-cell (파란색) 적용 -->
             <td class="sku-cell">{{ item.salesCode }}</td>
             <td>{{ item.date }}</td>
@@ -93,9 +95,6 @@ const cancelSale = () => {
             <td class="text-right">{{ item.quantity }}</td>
             <td class="text-right">{{ formatPrice(item.unitPrice) }}</td>
             <td class="text-right total-cell">{{ formatPrice(item.totalPrice) }}</td>
-            <td class="text-center">
-              <button class="action-btn" @click="cancelSale">취소</button>
-            </td>
           </tr>
           </tbody>
         </table>
@@ -135,11 +134,10 @@ const cancelSale = () => {
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 
-.action-btn {
-  background: white; border: 1px solid #fee2e2; color: #ef4444;
-  padding: 0.3rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
-}
-.action-btn:hover { background: #fee2e2; }
+
+
+.clickable-row { cursor: pointer; transition: background 0.15s; }
+.clickable-row:hover { background: #f8fafc; }
 
 :root {
   --primary: #4f46e5;
