@@ -40,11 +40,51 @@
             <label>상태</label>
             <select v-model="filter.status">
               <option value="">전체</option>
-              <option value="SAFE">안전 (SAFE)</option>
-              <option value="WARNING">부족 (WARNING)</option>
-              <option value="DANGER">위험 (DANGER)</option>
+              <option value="SAFE">안전</option>
+              <option value="WARNING">부족</option>
+              <option value="DANGER">위험</option>
             </select>
           </div>
+        </div>
+
+        <!-- Safety Stock & Expiration Alert Section (Collapsible) -->
+        <div v-if="lowStockItems.length > 0 || expiringItems.length > 0" class="alert-section">
+            <div class="alert-header">
+                <div class="alert-title">⚠ 재고 경고 알림</div>
+                <button v-if="hasMoreAlerts" class="toggle-alert-btn" @click="toggleAlertExpand">
+                    {{ isAlertExpanded ? '접기 ▲' : '더보기 ▼' }}
+                </button>
+            </div>
+            
+            <!-- Summary Header when Collapsed -->
+            <div v-if="!isAlertExpanded" class="alert-summary pl-2">
+                <span v-if="expiringItems.length > 0">유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
+                <span v-if="lowStockItems.length > 0 && expiringItems.length > 0" class="mx-2">|</span>
+                <span v-if="lowStockItems.length > 0">안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
+            </div>
+
+            <!-- Detailed Lists (Only when Expanded) -->
+            <template v-if="isAlertExpanded">
+                <!-- Expiration Alert -->
+                <div v-if="expiringItems.length > 0" class="expiration-warning" style="border-top: none; padding-top: 0; margin-top: 0; margin-bottom: 1rem;">
+                    <div class="sub-alert-title">⏳ 유통기한 임박 (3일 이내)</div>
+                    <ul>
+                        <li v-for="group in expiringItems" :key="group.key">
+                            <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Low Stock -->
+                <div v-if="lowStockItems.length > 0" :class="{ 'mt-3 pt-3 border-top-dashed': expiringItems.length > 0 }">
+                    <div class="sub-alert-title">⚠️ 안전재고 부족</div>
+                    <ul>
+                        <li v-for="item in lowStockItems" :key="item.productCode">
+                            <strong>{{ item.productName }}</strong> ({{item.productCode}}): 재고 <span class="danger-text">{{ item.quantity }}</span> (안전재고: {{item.safeStock}})
+                        </li>
+                    </ul>
+                </div>
+            </template>
         </div>
 
         <!-- Data Table -->
@@ -227,10 +267,14 @@ const selectStore = (store) => {
 }
 
 // Inventory Logic
-// Redesign State
 const currentStep = ref(1)
 const selectedProduct = ref(null)
 const selectedProductionDate = ref(null)
+const isAlertExpanded = ref(false)
+
+const toggleAlertExpand = () => {
+    isAlertExpanded.value = !isAlertExpanded.value
+}
 
 const filter = ref({
   productCode: '',
@@ -261,43 +305,39 @@ const generateMockInventory = () => {
     const spices = [ { code: '01', name: '순한맛' }, { code: '02', name: '기본맛' } ]
     const sizes = [ { code: '01', name: '1~2인분', portion: 1 }, { code: '03', name: '3~4인분', portion: 3 } ]
 
-    const dates = ['2026-02-01', '2026-02-05', '2026-02-08', '2026-02-10']
+    // Force dates to trigger expiration (Today is 02-19, Mfg 02-06~02-08 triggers 14-day limit)
+    const dates = ['2026-02-01', '2026-02-07', '2026-02-10'] 
     const storeCode = selectedStore.value.code
     const regionCode = 'UL01'
     const factoryCode = 'FA01'
     const productionLines = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9']
 
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
+    types.forEach((t, tIdx) => {
+        spices.forEach((s, sIdx) => {
+            sizes.forEach((sz, szIdx) => {
                 const code = `${t.code}${s.code}${sz.code}`
                 const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
                 
-                const safe = 10
+                // Force safeStock to be high for the first item to trigger low stock alert
+                const safe = (tIdx === 0 && sIdx === 0 && szIdx === 0) ? 200 : 10
                 let totalQty = 0
 
                 dates.forEach(d => {
-                    // Pick a random line for this production batch
                     const line = productionLines[Math.floor(Math.random() * productionLines.length)]
                     
-                    const batchQty = 25 // Force 25 to show 2 boxes (20+5)
+                    const batchQty = 25 
                     totalQty += batchQty
 
-                    // Pre-determine status for each box in this batch
-                    const boxStatuses = {} // boxIndex -> status
+                    const boxStatuses = {} 
 
                     for(let i=0; i<batchQty; i++) {
                         const boxIndex = Math.floor(i/20) + 1
                         const itemIndex = (i % 20) + 1
-                        
-                        // Box Code (Store based): [StoreCode + FactoryCode + ProductionLine + ProductCode + Box Index]
                         const boxCode = `${storeCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}`
-                        
-                        // Identification Code (Region based): [RegionCode + FactoryCode + ProductionLine + ProductCode + Box Index + Item Index]
                         const serialCode = `${regionCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}-${itemIndex.toString().padStart(2, '0')}`
 
                         if (boxStatuses[boxIndex] === undefined) {
-                            boxStatuses[boxIndex] = Math.random() < 0.05 ? 'RETURN_PENDING' : 'AVAILABLE'
+                            boxStatuses[boxIndex] = 'AVAILABLE'
                         }
 
                         iList.push({
@@ -357,6 +397,10 @@ const filteredProducts = computed(() => {
   })
 })
 
+const lowStockItems = computed(() => {
+  return products.value.filter(item => item.quantity <= item.safeStock)
+})
+
 const sortedBatches = computed(() => {
     if (!selectedProduct.value) return []
     const dates = {}
@@ -374,6 +418,47 @@ const sortedBatches = computed(() => {
     return Object.entries(dates)
         .map(([date, counts]) => ({ productionDate: date, ...counts }))
         .sort((a, b) => a.productionDate.localeCompare(b.productionDate)) // FIFO
+})
+
+// Expiration Logic: Mfg Date + 14 Days
+const expiringItems = computed(() => {
+    const today = new Date()
+    const alertList = []
+
+    // Group by Product & MfgDate
+    const groups = {}
+
+    inventoryItems.value.forEach(item => {
+        if (item.status !== 'AVAILABLE') return
+
+        const mfg = new Date(item.productionDate)
+        const exp = new Date(mfg)
+        exp.setDate(mfg.getDate() + 14) // +14 Days Expiration policy
+        
+        const diffTime = exp - today
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+        if (diffDays <= 3 && diffDays >= 0) {
+            const key = `${item.productCode}-${item.productionDate}`
+            if (!groups[key]) {
+                const prod = products.value.find(p => p.productCode === item.productCode)
+                groups[key] = {
+                    key,
+                    productName: prod ? prod.productName : item.productCode,
+                    productionDate: item.productionDate,
+                    count: 0,
+                    daysLeft: diffDays
+                }
+            }
+            groups[key].count++
+        }
+    })
+    // 3개만 보이게 제한 (보여주기 식)
+    return Object.values(groups).slice(0, 3)
+})
+
+const hasMoreAlerts = computed(() => {
+    return lowStockItems.value.length > 0 || expiringItems.value.length > 0
 })
 
 const granularItems = computed(() => {
@@ -427,8 +512,17 @@ const goToDetail = (code) => {
 .search-btn { background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; }
 
 /* Table */
-.data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
-.data-table { width: 100%; border-collapse: collapse; }
+.data-table-card { 
+    background: white; 
+    border-radius: 16px; 
+    border: 1px solid var(--border-color); 
+    overflow-x: auto; /* 가로 스크롤 허용 */
+}
+.data-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    min-width: 1000px; /* 창이 좁아져도 형태 유지 */
+}
 .data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
 .data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
@@ -480,5 +574,59 @@ const goToDetail = (code) => {
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
 .status-item-badge.available { background: #e6fffa; color: #2c7a7b; }
 .status-item-badge.return_pending { background: #fff5f5; color: #e53e3e; }
+
+
+/* Alert Section */
+.alert-section {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.alert-section.safe {
+  background: #f0fff4;
+  border-color: #c6f6d5;
+}
+.alert-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #c53030;
+}
+.safe .alert-title { color: #2f855a; margin-bottom: 0; }
+.alert-section ul { margin: 0; padding-left: 1.5rem; }
+.alert-section li { margin-bottom: 0.25rem; color: #742a2a; }
+.danger-text { color: #e53e3e; font-weight: 700; }
+.alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.toggle-alert-btn { background: none; border: none; font-size: 0.85rem; color: #718096; cursor: pointer; text-decoration: underline; }
+.alert-summary { font-size: 0.95rem; color: #c53030; margin-bottom: 0.5rem; }
+.pl-2 { padding-left: 0.5rem; }
+.mx-2 { margin: 0 0.5rem; color: #fed7d7; }
+
+.expiration-warning { margin-top: 1rem; border-top: 1px dashed #feb2b2; padding-top: 1rem; }
+.sub-alert-title { font-weight: 700; color: #c05621; margin-bottom: 0.5rem; }
+
+.mt-3 { margin-top: 0.75rem; }
+.pt-3 { padding-top: 0.75rem; }
+.border-top-dashed { border-top: 1px dashed #fed7d7; }
+.no-list-style { list-style: none; padding-left: 0.5rem; }
+
+
+/* 커스텀 가로 스크롤바 */
+.data-table-card::-webkit-scrollbar {
+    height: 8px;
+}
+.data-table-card::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 0 0 16px 16px;
+}
+.data-table-card::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.data-table-card::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
 
 </style>
