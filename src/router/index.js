@@ -24,7 +24,6 @@ import HeadOfficeVehicleAssignmentView from '../views/head-office/VehicleAssignm
 import HeadOfficeReturnVehicleAssignmentView from '../views/head-office/ReturnVehicleAssignmentView.vue'
 import MyPageView from '../views/MyPageView.vue'
 import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
-import OrganizationListView from '../views/OrganizationListView.vue'
 import FranchiseListView from '../views/FranchiseListView.vue'
 import FactoryListView from '../views/FactoryListView.vue'
 import HeadOfficeManagementView from '../views/HeadOfficeManagementView.vue'
@@ -130,8 +129,7 @@ const router = createRouter({
         },
         {
             path: '/organizations',
-            name: 'organization-list',
-            component: OrganizationListView
+            redirect: '/registration'
         },
         {
             path: '/admin/organizations/franchise',
