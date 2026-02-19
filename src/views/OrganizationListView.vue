@@ -24,6 +24,7 @@
             <option value="all">전체</option>
             <option value="active">운영중</option>
             <option value="inactive">운영중지</option>
+            <option value="deleted">폐업/삭제</option>
           </select>
         </div>
 
@@ -72,9 +73,12 @@
             <th>상태</th>
             <th>코드</th>
             <th>이름</th>
+            <th>대표자</th>
             <th>운영 요일</th>
             <th>주소</th>
             <th>전화번호</th>
+            <th>경고</th>
+            <th>반품 제한</th>
             <th>관리</th>
             <th>상세</th>
           </tr>
@@ -93,11 +97,12 @@
             </td>
             <td class="center-text">
               <span class="status-badge" :class="org.status || 'active'">
-                {{ (org.status === 'active' || !org.status) ? '운영중' : '중지' }}
+                {{ getStatusLabel(org.status) }}
               </span>
             </td>
             <td class="org-code center-text">{{ org.code }}</td>
             <td class="org-name center-text">{{ org.name }}</td>
+            <td class="center-text">{{ org.representative || '-' }}</td>
             <td class="center-text">
               <div v-if="org.type === 'store'" class="days-pill-list">
                 <span v-for="day in weekDays" :key="day.value" 
@@ -110,31 +115,58 @@
             </td>
             <td class="org-address center-text">{{ org.address }}</td>
             <td class="center-text">{{ org.phone }}</td>
+            <td class="center-text">
+              <span v-if="org.type === 'store'" class="warning-count" :class="{ 'danger': org.warningCount >= 3 }">
+                {{ org.warningCount || 0 }}회
+              </span>
+              <span v-else class="text-muted">-</span>
+            </td>
+            <td class="center-text">
+              <span v-if="org.type === 'store'" class="restriction-badge" :class="org.warningCount >= 3 ? 'restricted' : 'normal'">
+                {{ org.warningCount >= 3 ? '반품 제한' : '정상' }}
+              </span>
+              <span v-else class="text-muted">-</span>
+            </td>
             <td class="center-text" @click.stop>
-              <div class="action-buttons-center">
-                <button 
-                  v-if="org.status === 'active' || !org.status" 
-                  @click.stop="toggleStatus(org)" 
-                  class="btn-icon-action delete"
-                  title="운영 중지"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                </button>
-                <button 
-                  v-else
-                  @click.stop="toggleStatus(org)" 
-                  class="btn-icon-action restore"
-                  title="운영 재개"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="1 4 1 10 7 10"></polyline>
-                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                  </svg>
-                </button>
-              </div>
+                <div v-if="org.type !== 'headOffice'" class="action-buttons-center">
+                  <button 
+                    v-if="org.status === 'active' || !org.status" 
+                    @click.stop="toggleStatus(org)" 
+                    class="btn-icon-action deactivate"
+                    title="운영 중지"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    v-else-if="org.status === 'inactive'"
+                    @click.stop="toggleStatus(org)" 
+                    class="btn-icon-action restore"
+                    title="운영 재개"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    v-if="org.status !== 'deleted'" 
+                    @click.stop="deleteOrganization(org)" 
+                    class="btn-icon-action delete"
+                    title="사업장 삭제"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                  </button>
+                </div>
+                <span v-else class="text-muted">-</span>
             </td>
             <td class="center-text">
               <button class="btn-detail">
@@ -187,11 +219,12 @@ const weekDays = [
 // 샘플 데이터 (실제로는 API에서 가져와야 함)
 const organizations = ref([
   {
-    code: 'HEAD',
+    code: 'HQ01',
     type: 'headOffice',
     name: '본사',
     address: '서울특별시 강남구 테헤란로 1',
     phone: '02-0000-0000',
+    representative: '김본사',
     status: 'active',
     operatingDays: [],
     openTime: '09:00',
@@ -204,6 +237,8 @@ const organizations = ref([
     name: '서울점',
     address: '서울특별시 강남구 테헤란로 123',
     phone: '02-1234-5678',
+    representative: '홍길동',
+    warningCount: 1,
     status: 'active',
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
     openTime: '09:00',
@@ -216,6 +251,8 @@ const organizations = ref([
     name: '부산점',
     address: '부산광역시 해운대구 센텀중앙로 78',
     phone: '051-9876-5432',
+    representative: '이순신',
+    warningCount: 3,
     status: 'active',
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
     openTime: '10:00',
@@ -239,6 +276,8 @@ const organizations = ref([
     name: '대구점',
     address: '대구광역시 수성구 동대구로 456',
     phone: '053-7777-8888',
+    representative: '강감찬',
+    warningCount: 0,
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     openTime: '08:00',
     closeTime: '23:00',
@@ -267,7 +306,8 @@ const filteredOrganizations = computed(() => {
     result = result.filter(org => 
       org.name.toLowerCase().includes(query) ||
       org.code.toLowerCase().includes(query) ||
-      org.address.toLowerCase().includes(query)
+      org.address.toLowerCase().includes(query) ||
+      (org.representative && org.representative.toLowerCase().includes(query))
     )
   }
 
@@ -306,20 +346,33 @@ const getTypeLabel = (type) => {
   return map[type] || type
 }
 
+const getStatusLabel = (status) => {
+  switch(status) {
+    case 'active': return '운영중'
+    case 'inactive': return '운영중지'
+    case 'deleted': return '삭제'
+    default: return '운영중'
+  }
+}
+
 const getDayLabel = (value) => {
   const day = weekDays.find(d => d.value === value)
   return day ? day.label : value
 }
 
 const toggleStatus = (org) => {
-  if (org.status === 'active') {
-    if (confirm(`'${org.name}'의 운영을 중지하시겠습니까?`)) {
-      org.status = 'inactive'
-    }
-  } else {
-    if (confirm(`'${org.name}'의 운영을 재개하시겠습니까?`)) {
-      org.status = 'active'
-    }
+  const isActive = org.status === 'active' || !org.status
+  const action = isActive ? '운영 중지' : '운영 재개'
+  if (confirm(`'${org.name}'의 ${action}하시겠습니까?`)) {
+    org.status = isActive ? 'inactive' : 'active'
+    alert(`'${org.name}'의 ${action}가 처리되었습니다.`)
+  }
+}
+
+const deleteOrganization = (org) => {
+  if (confirm(`'${org.name}'을(를) 삭제하시겠습니까? 삭제된 사업장은 복구할 수 없습니다.`)) {
+    org.status = 'deleted'
+    alert(`'${org.name}'이(가) 삭제되었습니다.`)
   }
 }
 </script>
@@ -502,12 +555,11 @@ const toggleStatus = (org) => {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow-x: auto; /* 넓은 표 대응을 위한 가로 스크롤 허용 */
+  overflow: hidden;
 }
 
 .org-table {
   width: 100%;
-  min-width: 1200px; /* 표가 너무 좁아져서 겹치지 않도록 최소 너비 설정 */
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -528,16 +580,19 @@ const toggleStatus = (org) => {
   white-space: nowrap;
 }
 
-/* 열 너비 고정으로 완벽하게 일정한 간격 유지 */
+/* 열 너비 고정 */
 .org-table th:nth-child(1) { width: 90px; }  /* 유형 */
-.org-table th:nth-child(2) { width: 90px; }  /* 상태 */
+.org-table th:nth-child(2) { width: 95px; }  /* 상태 */
 .org-table th:nth-child(3) { width: 100px; } /* 코드 */
-.org-table th:nth-child(4) { width: 160px; } /* 이름 */
-.org-table th:nth-child(5) { width: 220px; } /* 운영 요일 */
-.org-table th:nth-child(6) { width: 320px; } /* 주소 (너비 고정) */
-.org-table th:nth-child(7) { width: 140px; } /* 전화번호 */
-.org-table th:nth-child(8) { width: 80px; }  /* 관리 */
-.org-table th:nth-child(9) { width: 70px; }  /* 상세 */
+.org-table th:nth-child(4) { width: 140px; } /* 이름 */
+.org-table th:nth-child(5) { width: 90px; }  /* 대표자 */
+.org-table th:nth-child(6) { width: 140px; } /* 운영 요일 */
+.org-table th:nth-child(7) { width: auto; }  /* 주소 (공간에 맞춰 조절) */
+.org-table th:nth-child(8) { width: 140px; } /* 전화번호 */
+.org-table th:nth-child(9) { width: 60px; }  /* 경고 */
+.org-table th:nth-child(10) { width: 100px; } /* 반품 제한 */
+.org-table th:nth-child(11) { width: 100px; } /* 관리 */
+.org-table th:nth-child(12) { width: 70px; }  /* 상세 */
 
 .org-table tbody tr {
   border-bottom: 1px solid #e2e8f0;
@@ -610,6 +665,39 @@ const toggleStatus = (org) => {
   color: #64748b;
 }
 
+.status-badge.deleted {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.warning-count {
+  font-weight: 700;
+  color: #64748b;
+}
+
+.warning-count.danger {
+  color: #ef4444;
+}
+
+.restriction-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.restriction-badge.normal {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.restriction-badge.restricted {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fee2e2;
+}
+
 .org-code {
   font-weight: 500;
   color: #64748b;
@@ -657,18 +745,30 @@ const toggleStatus = (org) => {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-icon-action {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
+}
+
+.btn-icon-action.deactivate {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.btn-icon-action.deactivate:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .btn-icon-action.delete {

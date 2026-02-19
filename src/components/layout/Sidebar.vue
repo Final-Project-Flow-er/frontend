@@ -58,7 +58,9 @@ const menuGroups = ref([
         isOpen: false,
         children: [
           { name: '사업장 등록', path: '/registration' },
-          { name: '사업장 조회', path: '/organizations' }
+          { name: '본사 조회', path: '/admin/head-office/management' },
+          { name: '가맹점 조회', path: '/admin/organizations/franchise' },
+          { name: '공장 조회', path: '/admin/organizations/factory' }
         ]
       },
       {

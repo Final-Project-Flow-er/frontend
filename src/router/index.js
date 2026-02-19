@@ -25,6 +25,9 @@ import FactoryReturnVehicleAssignmentView from '../views/factory/ReturnVehicleAs
 import MyPageView from '../views/MyPageView.vue'
 import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
 import OrganizationListView from '../views/OrganizationListView.vue'
+import FranchiseListView from '../views/FranchiseListView.vue'
+import FactoryListView from '../views/FactoryListView.vue'
+import HeadOfficeManagementView from '../views/HeadOfficeManagementView.vue'
 import OrganizationDetailView from '../views/OrganizationDetailView.vue'
 import MemberListView from '../views/MemberListView.vue'
 import MemberDetailView from '../views/MemberDetailView.vue'
@@ -129,6 +132,21 @@ const router = createRouter({
             path: '/organizations',
             name: 'organization-list',
             component: OrganizationListView
+        },
+        {
+            path: '/admin/organizations/franchise',
+            name: 'franchise-list',
+            component: FranchiseListView
+        },
+        {
+            path: '/admin/organizations/factory',
+            name: 'factory-list',
+            component: FactoryListView
+        },
+        {
+            path: '/admin/head-office/management',
+            name: 'head-office-management',
+            component: HeadOfficeManagementView
         },
         {
             path: '/organization/:code',

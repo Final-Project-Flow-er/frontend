@@ -2,10 +2,15 @@
   <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-content fade-in" :class="{ 'edit-mode': isEditMode }">
       <div class="modal-header">
-        <h2>
-          {{ type === 'company' ? '운송 업체' : '배송 차량' }} 
-          {{ isEditMode ? '정보 수정' : '상세 정보' }}
-        </h2>
+        <div class="header-left">
+          <h2>
+            {{ type === 'company' ? '운송 업체' : '배송 차량' }} 
+            {{ isEditMode ? '정보 수정' : '상세 정보' }}
+          </h2>
+          <span v-if="data.status" :class="['status-badge', getStatusClass(data.status)]">
+            {{ getStatusLabel(data.status) }}
+          </span>
+        </div>
         <button class="close-btn" @click="$emit('close')">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
@@ -170,11 +175,18 @@
 
       <div class="modal-footer">
         <template v-if="!isEditMode">
-          <button class="btn-cancel" @click="$emit('close')">닫기</button>
-          <button class="btn-edit-toggle" @click="isEditMode = true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            정보 수정
-          </button>
+          <div class="footer-left">
+            <button v-if="data.status === 'active' || !data.status" @click="confirmDeactivate" class="btn-deactivate">비활성화</button>
+            <button v-else-if="data.status === 'inactive'" @click="confirmRestore" class="btn-restore">복구하기</button>
+            <button v-if="data.status !== 'deleted'" @click="confirmDelete" class="btn-delete">삭제</button>
+          </div>
+          <div class="footer-right">
+            <button class="btn-cancel" @click="$emit('close')">닫기</button>
+            <button class="btn-edit-toggle" @click="isEditMode = true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              정보 수정
+            </button>
+          </div>
         </template>
         <template v-else>
           <button class="btn-cancel" @click="isEditMode = false">취소</button>
@@ -222,6 +234,48 @@ const save = () => {
   emit('save', { type: props.type, data: formData.value })
   isEditMode.value = false
 }
+
+const getStatusLabel = (status) => {
+  switch(status) {
+    case 'active': return props.type === 'vehicle' ? '운행가능' : '활성'
+    case 'inactive': return '비활성'
+    case 'deleted': return '삭제됨'
+    default: return props.type === 'vehicle' ? '운행가능' : '활성'
+  }
+}
+
+const getStatusClass = (status) => {
+  switch(status) {
+    case 'active': return 'active'
+    case 'inactive': return 'inactive'
+    case 'deleted': return 'deleted'
+    default: return 'active'
+  }
+}
+
+const confirmDeactivate = () => {
+  const targetName = props.type === 'company' ? '운송 업체' : '차량'
+  if (confirm(`${targetName}를 비활성화하시겠습니까?`)) {
+    formData.value.status = 'inactive'
+    save()
+  }
+}
+
+const confirmRestore = () => {
+  const targetName = props.type === 'company' ? '운송 업체' : '차량'
+  if (confirm(`${targetName}를 다시 활성화하시겠습니까?`)) {
+    formData.value.status = 'active'
+    save()
+  }
+}
+
+const confirmDelete = () => {
+  const targetName = props.type === 'company' ? '운송 업체' : '차량'
+  if (confirm(`이 ${targetName}를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.`)) {
+    formData.value.status = 'deleted'
+    save()
+  }
+}
 </script>
 
 <style scoped>
@@ -247,7 +301,23 @@ const save = () => {
   display: flex; justify-content: space-between; align-items: center;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .modal-header h2 { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; }
+
+.status-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.status-badge.active { background: #dcfce7; color: #166534; }
+.status-badge.inactive { background: #f1f5f9; color: #64748b; }
+.status-badge.deleted { background: #fee2e2; color: #b91c1c; }
 
 .close-btn {
   background: none; border: none; color: #94a3b8; cursor: pointer;
@@ -283,7 +353,12 @@ const save = () => {
 
 .modal-footer {
   padding: 1.5rem 2rem; border-top: 1px solid #f1f5f9;
-  display: flex; justify-content: flex-end; gap: 0.75rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.footer-left, .footer-right {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .btn-cancel {
@@ -296,6 +371,24 @@ const save = () => {
   display: flex; align-items: center; gap: 0.5rem;
 }
 .btn-edit-toggle:hover, .btn-save:hover { background: #1e293b; transform: translateY(-1px); }
+
+.btn-deactivate {
+  padding: 0.75rem 1.5rem; background: white; color: #ef4444; border: 1.5px solid #ef4444;
+  border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-deactivate:hover { background: #fff1f2; }
+
+.btn-restore {
+  padding: 0.75rem 1.5rem; background: #15803d; color: white; border: none;
+  border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-restore:hover { background: #166534; transform: translateY(-1px); }
+
+.btn-delete {
+  padding: 0.75rem 1.5rem; background: #ef4444; color: white; border: none;
+  border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-delete:hover { background: #dc2626; transform: translateY(-1px); }
 
 .fade-in { animation: fadeIn 0.3s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
