@@ -454,18 +454,20 @@ const getDetailedDesc = (field, idx, storeId) => {
           <div style="font-size:13px;color:#64748b;">Chain-G 정산 시스템</div>
         </div>
         <table style="width:100%;margin-bottom:20px;font-size:14px;border-collapse:collapse;">
-          <tr>
-            <td style="padding:8px 0;font-weight:700;color:#334155;width:120px;">가맹점 :</td>
-            <td style="padding:8px 0;font-weight:600;text-align:right;">{{ selectedReceiptStore.name }} ({{ selectedReceiptStore.id }})</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;font-weight:700;color:#334155;width:120px;">정산 기간 :</td>
-            <td style="padding:8px 0;font-weight:600;text-align:right;">{{ activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth) }}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;font-weight:700;color:#334155;width:120px;">발행일 :</td>
-            <td style="padding:8px 0;font-weight:600;text-align:right;">{{ new Date().toLocaleString('ko-KR') }}</td>
-          </tr>
+          <tbody>
+            <tr>
+              <td style="padding:8px 0;font-weight:700;color:#334155;width:120px;">가맹점 :</td>
+              <td style="padding:8px 0;font-weight:600;text-align:right;">{{ selectedReceiptStore.name }} ({{ selectedReceiptStore.id }})</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;font-weight:700;color:#334155;width:120px;">정산 기간 :</td>
+              <td style="padding:8px 0;font-weight:600;text-align:right;">{{ activeTab === 'daily' ? formatDate(selectedDate) : formatMonth(selectedMonth) }}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;font-weight:700;color:#334155;width:120px;">발행일 :</td>
+              <td style="padding:8px 0;font-weight:600;text-align:right;">{{ new Date().toLocaleString('ko-KR') }}</td>
+            </tr>
+          </tbody>
         </table>
         <div style="border-top:1px dashed #000;margin:20px 0;"></div>
         <div style="margin-bottom:20px;padding-right:10px;">
