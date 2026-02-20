@@ -198,5 +198,5 @@ const submitVoucher = () => {
 .time-cell { color: var(--text-light); font-size: 0.85rem; }
 .type-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; color: #475569; }
 .negative { color: #ef4444; font-weight: 700; }
-.positive { color: #10b981; font-weight: 700; }
+.positive { color: #3b82f6; font-weight: 700; }
 </style>
