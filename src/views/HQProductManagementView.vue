@@ -4,7 +4,7 @@
       <h2>본사 상품 관리</h2>
       <div class="header-actions">
         <!-- Add Buttons -->
-        <button class="action-btn secondary mr-1" @click="openTypeModal">제품 타입 추가</button>
+        <button class="action-btn secondary mr-1" @click="openTypeModal">상품 타입 추가</button>
         <button class="action-btn primary" @click="openAddModal">상품 추가</button>
       </div>
     </div>
@@ -96,7 +96,7 @@
           <!-- Row 1: Basic Info -->
           <div class="form-row three-col">
              <div class="form-group">
-              <label>제품 타입</label>
+              <label>상품 타입</label>
               <select v-model="form.type" :disabled="isEditMode" @change="updateCodeAndName">
                 <option v-for="t in productTypes" :key="t.code" :value="t.code">{{ t.name }}</option>
               </select>
@@ -122,7 +122,7 @@
           <!-- Row 2: Code & Name (Auto) -->
           <div class="form-row">
             <div class="form-group">
-              <label>상품 코드 (자동)</label>
+              <label>상품 코드</label>
               <input type="text" v-model="form.productCode" disabled class="readonly-input" />
             </div>
              <div class="form-group flex-2">
@@ -212,20 +212,35 @@
     <!-- Product Type Add Modal -->
     <div v-if="showTypeModal" class="modal-overlay">
       <div class="modal-content type-modal">
-        <h3>제품 타입 추가</h3>
+        <h3>상품 타입 추가</h3>
         <div class="modal-body">
           <div class="form-group mb-1">
-            <label>제품 타입 이름</label>
+            <label>상품 타입 이름</label>
             <input type="text" v-model="typeForm.name" placeholder="예: 바질" />
           </div>
           <div class="form-group">
-            <label>제품 타입 코드 (두 자리 영문)</label>
+            <label>상품 타입 코드 (두 자리 영문)</label>
             <input type="text" v-model="typeForm.code" placeholder="예: BA" maxlength="2" />
           </div>
         </div>
         <div class="modal-actions">
           <button @click="closeTypeModal">취소</button>
           <button class="primary" @click="addType">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Password Verification Popup -->
+    <div v-if="showPasswordPopup" class="modal-overlay">
+      <div class="modal-content type-modal">
+        <h3>관리자 확인</h3>
+        <p class="modal-hint">관리자 비밀번호를 입력하세요.</p>
+        <div class="form-group">
+          <input type="password" v-model="adminPassword" placeholder="비밀번호 입력" @keyup.enter="handlePasswordConfirmation" />
+        </div>
+        <div class="modal-actions">
+          <button @click="closePasswordPopup">취소</button>
+          <button class="primary" @click="handlePasswordConfirmation">확인</button>
         </div>
       </div>
     </div>
@@ -246,6 +261,13 @@ const filter = ref({
 const showModal = ref(false)
 const showTypeModal = ref(false)
 const isEditMode = ref(false)
+
+// Admin Password State
+const showPasswordPopup = ref(false)
+const adminPassword = ref('')
+const pendingAction = ref(null) // 'ADD_PRODUCT', 'EDIT_PRODUCT', 'ADD_TYPE'
+const pendingData = ref(null)
+
 
 const productTypes = ref([
     { code: 'OR', name: '오리지널' },
@@ -387,7 +409,36 @@ const updateCodeAndName = () => {
     form.value.kcal = sz === '01' ? 1400 : 2800
 }
 
+// Password Verification Logic
+const requestVerification = (action, data = null) => {
+    pendingAction.value = action
+    pendingData.value = data
+    adminPassword.value = ''
+    showPasswordPopup.value = true
+}
+
+const handlePasswordConfirmation = () => {
+    if (adminPassword.value === '1234') {
+        showPasswordPopup.value = false
+        if (pendingAction.value === 'ADD_PRODUCT') executeOpenAddModal()
+        else if (pendingAction.value === 'EDIT_PRODUCT') executeOpenEditModal(pendingData.value)
+        else if (pendingAction.value === 'ADD_TYPE') executeOpenTypeModal()
+    } else {
+        alert('비밀번호가 틀렸습니다.')
+    }
+}
+
+const closePasswordPopup = () => {
+    showPasswordPopup.value = false
+    pendingAction.value = null
+    pendingData.value = null
+}
+
 const openAddModal = () => {
+  requestVerification('ADD_PRODUCT')
+}
+
+const executeOpenAddModal = () => {
   isEditMode.value = false
   form.value = {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
@@ -401,6 +452,10 @@ const openAddModal = () => {
 }
 
 const openEditModal = (product) => {
+    requestVerification('EDIT_PRODUCT', product)
+}
+
+const executeOpenEditModal = (product) => {
   isEditMode.value = true
   // Deconstruct code to fill form
   const type = product.productCode.substring(0, 2)
@@ -431,6 +486,10 @@ const saveProduct = () => {
 
 // Type Modal Logic
 const openTypeModal = () => {
+    requestVerification('ADD_TYPE')
+}
+
+const executeOpenTypeModal = () => {
     typeForm.value = { name: '', code: '' }
     showTypeModal.value = true
 }
@@ -527,14 +586,14 @@ const handleImageUpload = (event) => {
 .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 600px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
 .modal-content.type-modal { width: 400px; }
 .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; }
-.modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 0.5rem; }
+.modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 1.25rem; }
 .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; width: 100%; }
 .form-row.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 .form-group { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
 .form-group.flex-2 { flex: 2; }
 .form-group.full-width { width: 100%; margin-bottom: 1rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: #64748b; }
-.form-group input, .form-group select, .form-group textarea { padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; }
 .readonly-input { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; cursor: not-allowed; }
 .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
 .modal-actions button { padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: 600; }
