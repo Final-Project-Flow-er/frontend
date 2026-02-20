@@ -126,22 +126,26 @@
 
             <div class="info-field full-width">
               <label>운영 요일</label>
-              <div v-if="!isEditing" class="days-pill-display">
-                <span v-for="day in weekDays" :key="day.value" 
-                      class="day-pill" 
-                      :class="{ active: organization.operatingDays && organization.operatingDays.includes(day.value) }">
-                  {{ day.label }}
-                </span>
-              </div>
-              <div v-else class="days-selector">
-                <label v-for="day in weekDays" :key="day.value" class="day-checkbox">
-                  <input 
-                    type="checkbox" 
-                    :value="day.value" 
-                    v-model="organization.operatingDays"
-                  >
-                  <span>{{ day.label }}</span>
-                </label>
+              <div class="days-container">
+                <div v-if="!isEditing" class="days-readonly">
+                  <span v-for="day in weekDays" :key="day.value" 
+                        class="day-box" 
+                        :class="{ active: organization.operatingDays && organization.operatingDays.includes(day.value) }">
+                    {{ day.label }}
+                  </span>
+                </div>
+                <div v-else class="days-interactive">
+                  <label v-for="day in weekDays" :key="day.value" 
+                         class="day-check-box"
+                         :class="{ checked: organization.operatingDays && organization.operatingDays.includes(day.value) }">
+                    <input 
+                      type="checkbox" 
+                      :value="day.value" 
+                      v-model="organization.operatingDays"
+                    >
+                    <span>{{ day.label }}</span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -463,7 +467,19 @@ const removePhoto = () => {
 
 // 목록으로 돌아가기
 const goBack = () => {
-  router.push('/organizations')
+  if (organization.value) {
+    if (organization.value.type === 'store') {
+      router.push('/admin/organizations/franchise')
+    } else if (organization.value.type === 'factory') {
+      router.push('/admin/organizations/factory')
+    } else if (organization.value.type === 'headOffice') {
+      router.push('/admin/head-office/management')
+    } else {
+      router.push('/organizations')
+    }
+  } else {
+    router.back()
+  }
 }
 
 onMounted(() => {
@@ -884,39 +900,69 @@ const getOrgNameLabel = (type) => {
   font-weight: 700;
 }
 
-.days-selector {
+/* 운영 요일 스타일 개선 */
+.days-container {
+  padding: 0.5rem 0;
+}
+
+.days-readonly, .days-interactive {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
-.day-checkbox {
+.day-box {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border: 1.2px solid #e2e8f0;
+  justify-content: center;
   border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
   font-size: 0.8rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  transition: all 0.2s;
 }
 
-.day-checkbox:hover {
+.day-box.active {
+  background: #0f172a;
+  color: white;
+  border-color: #0f172a;
+}
+
+.day-check-box {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.day-check-box:hover {
   border-color: #cbd5e1;
   background: #f8fafc;
 }
 
-.day-checkbox input[type="checkbox"] {
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
+.day-check-box.checked {
+  background: #0f172a;
+  color: white;
+  border-color: #0f172a;
 }
 
-.day-checkbox input[type="checkbox"]:checked + span {
-  color: #0f172a;
-  font-weight: 700;
+.day-check-box input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* 사진 섹션 */

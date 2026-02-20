@@ -250,6 +250,41 @@
         </div>
       </div>
     </div>
+    <!-- 결과 안내 모달 -->
+    <div v-if="showResultModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>{{ registrationType === 'store' ? '가맹점' : '공장' }} 등록 완료</h2>
+        </div>
+        <div class="modal-body">
+          <div class="success-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <p class="modal-desc">축하합니다! {{ registrationType === 'store' ? '가맹점' : '공장' }}이 성공적으로 등록되었습니다.</p>
+          
+          <div class="result-details">
+            <div class="result-item">
+              <span class="label">{{ registrationType === 'store' ? '가맹점명' : '공장명' }}:</span>
+              <span class="valueHighlight">{{ resultData.name }}</span>
+            </div>
+            <div class="result-item">
+              <span class="label">식별 코드:</span>
+              <span class="value">{{ resultData.code }}</span>
+            </div>
+            <div class="result-item">
+              <span class="label">대표자:</span>
+              <span class="value">{{ resultData.representative }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeModal" class="btn-confirm">확인</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -258,6 +293,14 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+// 등록 결과 모달 상태
+const showResultModal = ref(false)
+const resultData = reactive({
+  name: '',
+  code: '',
+  representative: ''
+})
 
 // 등록 타입 (store 또는 factory)
 const registrationType = ref('store')
@@ -365,9 +408,13 @@ const registerStore = () => {
     ...storeData
   })
 
-  alert(`가맹점이 등록되었습니다.\n가맹점 코드: ${generatedStoreCode.value}`)
+  // 결과 데이터 설정 및 모달 표시
+  resultData.name = storeData.name
+  resultData.code = generatedStoreCode.value
+  resultData.representative = storeData.representative
+  
+  showResultModal.value = true
   storeCounter.value++
-  resetStoreForm()
 }
 
 // 공장 등록
@@ -404,9 +451,22 @@ const registerFactory = () => {
     ...factoryData
   })
 
-  alert(`공장이 등록되었습니다.\n공장 코드: ${generatedFactoryCode.value}`)
+  // 결과 데이터 설정 및 모달 표시
+  resultData.name = factoryData.name
+  resultData.code = generatedFactoryCode.value
+  resultData.representative = factoryData.representative
+
+  showResultModal.value = true
   factoryCounter.value++
-  resetFactoryForm()
+}
+
+const closeModal = () => {
+  showResultModal.value = false
+  if (registrationType.value === 'store') {
+    resetStoreForm()
+  } else {
+    resetFactoryForm()
+  }
 }
 
 // 가맹점 폼 초기화
@@ -721,4 +781,63 @@ const resetFactoryForm = () => {
     flex-direction: column;
   }
 }
+
+/* 모달 스타일 */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 450px;
+  padding: 2.5rem;
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header h2 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }
+.modal-body { margin-top: 1.5rem; }
+.success-icon { margin-bottom: 1.5rem; }
+.modal-desc { color: #64748b; line-height: 1.6; margin-bottom: 1.5rem; }
+
+.result-details {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.result-item { display: flex; justify-content: space-between; align-items: center; }
+.result-item .label { font-weight: 600; color: #64748b; font-size: 0.9rem; }
+.result-item .value { font-family: monospace; font-weight: 700; color: #0f172a; font-size: 1rem; }
+.valueHighlight { font-weight: 800; color: #2563eb; font-size: 1.1rem; }
+
+.btn-confirm {
+  width: 100%;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-confirm:hover { background: #1e293b; }
 </style>
