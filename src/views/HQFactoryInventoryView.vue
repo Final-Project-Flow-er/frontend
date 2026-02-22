@@ -428,10 +428,10 @@ const closeSettingsPopup = () => {
 }
 
 const saveSettings = () => {
-  const item = inventory.value.find(p => p.productCode === settingForm.value.productCode)
+  const item = products.value.find(p => p.productCode === settingForm.value.productCode)
   if (item) {
       item.safeStock = settingForm.value.safeStock
-      alert('안전재고 설정이 저장되었습니다.')
+      alert('안전재고 설정이 변경되었습니다.')
       closeSettingsPopup()
   }
 }

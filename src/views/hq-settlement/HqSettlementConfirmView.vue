@@ -110,6 +110,12 @@ const confirmAll = () => {
       </div>
     </section>
 
+    <!-- 안내 -->
+    <div class="notice-bar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>정산은 작성중 → 확정요청 → 최종확정 순으로 진행됩니다.<br>확정요청 단계에서만 수정이 가능합니다.</span>
+    </div>
+
     <!-- 가맹점 목록 -->
     <div class="data-table-card">
       <div class="table-header">
@@ -156,11 +162,6 @@ const confirmAll = () => {
       </table>
     </div>
 
-    <!-- 안내 -->
-    <div class="notice-bar">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span>작성중 → 확정 요청 → 최종 확정 순서로 진행됩니다. 확정 요청 단계에서 수정이 가능합니다.</span>
-    </div>
   </div>
 </template>
 
@@ -215,5 +216,6 @@ const confirmAll = () => {
 .btn-revert:hover { background: #f8fafc; }
 .no-action { color: #cbd5e1; font-weight: 600; }
 
-.notice-bar { display: flex; align-items: center; gap: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.85rem; }
+.notice-bar { display: flex; align-items: flex-start; gap: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.85rem; }
+.notice-bar svg { flex-shrink: 0; margin-top: 2px; }
 </style>

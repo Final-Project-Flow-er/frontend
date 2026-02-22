@@ -13,18 +13,18 @@ const filterTypes = [
 
 /* ── 로그 Mock ── */
 const allLogs = ref([
-  { id: 1, type: 'confirm', typeName: '정산 확정', store: '강남점', desc: '2026년 1월 정산 확정', user: '김관리', date: '2026-02-01 10:30:22' },
-  { id: 2, type: 'confirm', typeName: '정산 확정', store: '홍대점', desc: '2026년 1월 정산 확정', user: '김관리', date: '2026-02-01 10:31:05' },
-  { id: 3, type: 'document', typeName: '문서 생성', store: '강남점', desc: '2026년 1월 정산서 PDF 생성', user: '김관리', date: '2026-02-01 10:35:10' },
-  { id: 4, type: 'adjust', typeName: '조정 전표', store: '명동점', desc: '본사 프로모션 보전금 +₩30,000 등록', user: '정산관리자', date: '2026-02-05 14:20:33' },
-  { id: 5, type: 'adjust', typeName: '조정 전표', store: '홍대점', desc: '배송 파손 보상 −₩25,000 등록', user: '정산관리자', date: '2026-02-07 09:15:41' },
-  { id: 6, type: 'confirm', typeName: '정산 확정', store: '신촌점', desc: '2026년 2월 정산 확정', user: '김관리', date: '2026-02-08 11:00:18' },
-  { id: 7, type: 'document', typeName: '문서 생성', store: '잠실점', desc: '2026년 1월 전표 Excel 생성', user: '정산관리자', date: '2026-02-08 11:05:55' },
-  { id: 8, type: 'adjust', typeName: '조정 전표', store: '강남점', desc: '본사 프로모션 보전금 +₩50,000 등록', user: '정산관리자', date: '2026-02-08 15:20:12' },
-  { id: 9, type: 'cancel', typeName: '취소', store: '이태원점', desc: '2026년 2월 정산 확정 취소', user: '김관리', date: '2026-02-09 09:10:05' },
-  { id: 10, type: 'confirm', typeName: '정산 확정', store: '건대점', desc: '2026년 2월 정산 확정', user: '김관리', date: '2026-02-10 10:00:00' },
-  { id: 11, type: 'confirm', typeName: '정산 확정', store: '합정점', desc: '2026년 2월 정산 확정', user: '김관리', date: '2026-02-10 10:01:30' },
-  { id: 12, type: 'document', typeName: '문서 생성', store: '건대점', desc: '2026년 2월 정산서 PDF 생성', user: '김관리', date: '2026-02-10 10:05:44' },
+  { id: 1, type: 'confirm', typeName: '정산 확정', store: '강남점', desc: '2026년 1월 정산 확정', user: '정산 관리자', date: '2026-02-01 10:30:22' },
+  { id: 2, type: 'confirm', typeName: '정산 확정', store: '홍대점', desc: '2026년 1월 정산 확정', user: '정산 관리자', date: '2026-02-01 10:31:05' },
+  { id: 3, type: 'document', typeName: '문서 생성', store: '강남점', desc: '2026년 1월 정산서 PDF 생성', user: '정산 관리자', date: '2026-02-01 10:35:10' },
+  { id: 4, type: 'adjust', typeName: '조정 전표', store: '명동점', desc: '본사 프로모션 보전금 +₩30,000 등록', user: '정산 관리자', date: '2026-02-05 14:20:33' },
+  { id: 5, type: 'adjust', typeName: '조정 전표', store: '홍대점', desc: '배송 파손 보상 −₩25,000 등록', user: '정산 관리자', date: '2026-02-07 09:15:41' },
+  { id: 6, type: 'confirm', typeName: '정산 확정', store: '신촌점', desc: '2026년 2월 정산 확정', user: '정산 관리자', date: '2026-02-08 11:00:18' },
+  { id: 7, type: 'document', typeName: '문서 생성', store: '잠실점', desc: '2026년 1월 전표 Excel 생성', user: '정산 관리자', date: '2026-02-08 11:05:55' },
+  { id: 8, type: 'adjust', typeName: '조정 전표', store: '강남점', desc: '본사 프로모션 보전금 +₩50,000 등록', user: '정산 관리자', date: '2026-02-08 15:20:12' },
+  { id: 9, type: 'cancel', typeName: '취소', store: '이태원점', desc: '2026년 2월 정산 확정 취소', user: '정산 관리자', date: '2026-02-09 09:10:05' },
+  { id: 10, type: 'confirm', typeName: '정산 확정', store: '건대점', desc: '2026년 2월 정산 확정', user: '정산 관리자', date: '2026-02-10 10:00:00' },
+  { id: 11, type: 'confirm', typeName: '정산 확정', store: '합정점', desc: '2026년 2월 정산 확정', user: '정산 관리자', date: '2026-02-10 10:01:30' },
+  { id: 12, type: 'document', typeName: '문서 생성', store: '건대점', desc: '2026년 2월 정산서 PDF 생성', user: '정산 관리자', date: '2026-02-10 10:05:44' },
 ])
 
 const filteredLogs = computed(() => {
