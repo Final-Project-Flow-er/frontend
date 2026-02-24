@@ -55,6 +55,8 @@
           </div>
           <div class="card-info-row">
             <span class="info-label">칼로리:</span> {{ product.kcal }}kcal
+            <span class="divider">|</span>
+            <span class="info-label">무게:</span> {{ product.weight }}g
           </div>
           <div class="card-info-row">
             <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
@@ -137,6 +139,10 @@
               <label>판매가</label>
               <input type="number" v-model="form.price" />
             </div>
+            <div class="form-group">
+              <label>무게 (g)</label>
+              <input type="number" v-model="form.weight" />
+            </div>
           </div>
           
            <!-- Image Upload -->
@@ -194,6 +200,7 @@ const form = ref({
   price: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
+  weight: 0
 })
 
 const products = ref([])
@@ -237,6 +244,7 @@ const generateMockProducts = () => {
                     servingSize: sz.serving,
                     spiceLevel: s.code,
                     kcal: sz.serving === 1 ? 1400 : 2800, 
+                    weight: sz.code === '01' ? 500 : 1000,
                     startDate: '2024-01-01', 
                     endDate: '2025-12-31',
                     baseSafeStock: 10,
@@ -292,13 +300,16 @@ const updateCodeAndName = () => {
     // Auto-set price
     if (t === 'OR') form.value.price = (sz === '01') ? 10000 : 18000
     else form.value.price = (sz === '01') ? 12000 : 22000
+
+    // Auto-set weight
+    form.value.weight = sz === '01' ? 500 : 1000
 }
 
 const openAddModal = () => {
   isEditMode.value = false
   form.value = {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
-      productCode: '', name: '', description: '', imageUrl: '', price: 0, status: 'ON_SALE', servingSize: 1
+      productCode: '', name: '', description: '', imageUrl: '', price: 0, weight: 0, status: 'ON_SALE', servingSize: 1
   }
   updateCodeAndName()
   showModal.value = true

@@ -61,6 +61,8 @@
           </div>
           <div class="card-info-row">
             <span class="info-label">칼로리:</span> {{ product.kcal }}kcal
+            <span class="divider">|</span>
+            <span class="info-label">무게:</span> {{ product.weight }}g
           </div>
           <div class="card-info-row">
             <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
@@ -161,6 +163,10 @@
             <div class="form-group">
               <label>칼로리 (kcal)</label>
               <input type="number" v-model="form.kcal" min="0" />
+            </div>
+            <div class="form-group">
+              <label>무게 (g)</label>
+              <input type="number" v-model="form.weight" min="0" />
             </div>
           </div>
           
@@ -294,7 +300,8 @@ const form = ref({
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
   baseSafeStock: 10,
-  kcal: 0
+  kcal: 0,
+  weight: 0
 })
 
 const products = ref([])
@@ -339,6 +346,7 @@ const generateMockProducts = () => {
                     servingSize: sz.serving,
                     spiceLevel: s.code,
                     kcal: sz.serving === 1 ? 1400 : 2800, 
+                    weight: sz.code === '01' ? 500 : 1000,
                     startDate: '2024-01-01', 
                     endDate: '2025-12-31',
                     baseSafeStock: 10,
@@ -407,6 +415,9 @@ const updateCodeAndName = () => {
 
     // Auto-set kcal
     form.value.kcal = sz === '01' ? 1400 : 2800
+
+    // Auto-set weight
+    form.value.weight = sz === '01' ? 500 : 1000
 }
 
 // Password Verification Logic
@@ -444,7 +455,7 @@ const executeOpenAddModal = () => {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
       productCode: '', name: '', description: '', imageUrl: '', 
       price: 0, costPrice: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
-      kcal: 0,
+      kcal: 0, weight: 0,
       startDate: '2024-01-01', endDate: '2025-12-31'
   }
   updateCodeAndName()
