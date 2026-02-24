@@ -119,7 +119,15 @@ const menuGroups = ref([
           { name: '차량 배정', path: '/head-office/returns/vehicle-assignment' }
         ]
       },
-      { name: '정산 관리', path: '/hq/settlement' },
+      {
+        name: '정산 관리',
+        path: '/hq/settlement',
+        isOpen: false,
+        children: [
+          { name: '전표조정', path: '/hq/settlement/voucher-manage' },
+          { name: '정산 로그', path: '/hq/settlement/logs' }
+        ]
+      },
       { name: '공지사항', path: '/notice' }
     ]
   },
@@ -180,6 +188,9 @@ watch(() => route.path, (newPath) => {
 const toggleItem = (item) => {
   if (item.children) {
     item.isOpen = !item.isOpen
+    if (item.path) {
+      router.push(item.path)
+    }
   } else if (item.path) {
     router.push(item.path)
   }
