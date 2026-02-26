@@ -29,9 +29,6 @@ const goToVouchers = (filterType) => {
     <!-- 페이지 헤더 -->
     <div class="page-header">
       <div class="header-left">
-        <button class="back-btn" @click="$router.push('/store/settlement')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
         <div>
           <h1 class="page-title">정산 항목 요약</h1>
           <p class="page-desc">항목별 건수 및 합계를 조회합니다. 클릭 시 전표 목록으로 이동합니다.</p>
@@ -103,8 +100,7 @@ const goToVouchers = (filterType) => {
 /* ── 페이지 헤더 ── */
 .page-header { margin-bottom: 1.5rem; }
 .header-left { display: flex; align-items: center; gap: 0.75rem; }
-.back-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-color); background: white; cursor: pointer; color: var(--text-light); transition: all 0.2s; }
-.back-btn:hover { border-color: var(--primary); color: var(--primary); background: #f5f3ff; }
+
 .page-title { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0 0 0.25rem; }
 .page-desc { color: var(--text-light); font-size: 0.9rem; margin: 0; }
 

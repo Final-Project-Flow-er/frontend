@@ -337,6 +337,16 @@ const router = createRouter({
             component: () => import('@/views/store-settlement/StoreSettlementVoucherListView.vue')
         },
         {
+            path: '/store/settlement/sales-all',
+            name: 'store-settlement-sales-all',
+            component: () => import('@/views/store-settlement/StoreSettlementSalesListView.vue')
+        },
+        {
+            path: '/store/settlement/orders-all',
+            name: 'store-settlement-orders-all',
+            component: () => import('@/views/store-settlement/StoreSettlementOrderListView.vue')
+        },
+        {
             path: '/hq/settlement',
             name: 'hq-settlement-list',
             component: () => import('@/views/hq-settlement/HqSettlementListView.vue')

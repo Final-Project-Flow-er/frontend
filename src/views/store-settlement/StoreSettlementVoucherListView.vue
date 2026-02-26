@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import * as XLSX from 'xlsx'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,13 +24,20 @@ const filterTypes = [
   { key: 'commission', label: '수수료' },
   { key: 'refund', label: '반품' },
   { key: 'loss', label: '손실' },
-  { key: 'adjust', label: '기타' },
 ]
 const selectedFilter = ref('all')
 
 onMounted(() => {
   if (route.query.filter) {
     selectedFilter.value = route.query.filter
+  }
+  if (route.query.date) {
+    activeTab.value = 'daily'
+    selectedDate.value = route.query.date
+    selectedMonth.value = route.query.date.substring(0, 7)
+  } else if (route.query.month) {
+    activeTab.value = 'monthly'
+    selectedMonth.value = route.query.month
   }
 })
 
@@ -46,7 +54,6 @@ const allVouchers = ref([
   { id: 'SL-20260210-005', type: 'sales', typeName: '판매', product: '오리지널 떡볶이 밀키트', qty: 3, unitPrice: 12900, amount: 38700, date: '2026-02-10 15:22:18' },
   { id: 'SL-20260210-006', type: 'sales', typeName: '판매', product: '마라 떡볶이 밀키트', qty: 2, unitPrice: 14900, amount: 29800, date: '2026-02-10 16:50:41' },
   { id: 'LS-20260210-001', type: 'loss', typeName: '손실', product: '로제 떡볶이 밀키트 (유통기한 만료 폐기)', qty: 1, unitPrice: 13900, amount: 13900, date: '2026-02-10 17:00:00' },
-  { id: 'AD-20260210-001', type: 'adjust', typeName: '기타', product: '본사 프로모션 보전금', qty: null, unitPrice: null, amount: -15000, date: '2026-02-10 18:00:00' },
 ])
 
 const filteredVouchers = computed(() => {
@@ -97,7 +104,34 @@ const downloadPDF = () => {
 
 /* ── Excel 다운로드 ── */
 const downloadExcel = () => {
-  alert(`전표 내역 Excel 다운로드: ${selectedMonth.value}\n(실제 API 연동 시 구현)`)
+  const filterLabel = filterTypes.find(f => f.key === selectedFilter.value)?.label || '전체'
+  const rows = filteredVouchers.value.map(v => ({
+    '전표번호': v.id,
+    '유형': v.typeName,
+    '상품/내역': v.product,
+    '수량': v.qty != null ? v.qty : '-',
+    '금액': v.amount,
+    '발생일시': v.date,
+  }))
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+
+  /* 컬럼 너비 설정 */
+  ws['!cols'] = [
+    { wch: 20 },  // 전표번호
+    { wch: 8 },   // 유형
+    { wch: 35 },  // 상품/내역
+    { wch: 8 },   // 수량
+    { wch: 14 },  // 금액
+    { wch: 20 },  // 발생일시
+  ]
+
+  /* 자동 필터 설정 */
+  ws['!autofilter'] = { ref: `A1:F${rows.length + 1}` }
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, `전표_${filterLabel}`)
+  XLSX.writeFile(wb, `전표상세_${selectedMonth.value}_${filterLabel}.xlsx`)
 }
 </script>
 
@@ -106,22 +140,15 @@ const downloadExcel = () => {
     <!-- 페이지 헤더 -->
     <div class="page-header">
       <div class="header-left">
-        <button class="back-btn" @click="$router.push('/store/settlement')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
         <div>
           <h1 class="page-title">전표 상세 목록</h1>
           <p class="page-desc">전표를 유형별로 조회하고 다운로드하세요.</p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="action-btn pdf" @click="downloadPDF">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          PDF 다운로드
-        </button>
-        <button v-if="activeTab === 'monthly'" class="action-btn excel" @click="downloadExcel">
+        <button class="action-btn excel" @click="downloadExcel">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-          Excel 다운로드
+          전표 Excel 다운로드
         </button>
       </div>
     </div>
@@ -129,13 +156,11 @@ const downloadExcel = () => {
     <!-- 탭 + 날짜 선택 -->
     <div class="control-bar">
       <div class="tab-group">
-        <button :class="{ active: activeTab === 'daily' }" @click="activeTab = 'daily'">일별 전표</button>
-        <button :class="{ active: activeTab === 'monthly' }" @click="activeTab = 'monthly'">월별 전표</button>
+        <button :class="{ active: activeTab === 'daily' }" @click="activeTab = 'daily'">일별 정산</button>
+        <button :class="{ active: activeTab === 'monthly' }" @click="activeTab = 'monthly'">월별 정산</button>
       </div>
-      <div class="date-picker-area">
-        <input v-if="activeTab === 'daily'" type="date" v-model="selectedDate" class="date-input" />
-        <input v-else type="month" v-model="selectedMonth" class="date-input" />
-      </div>
+      <input v-if="activeTab === 'daily'" type="date" v-model="selectedDate" class="date-input" />
+      <input v-else type="month" v-model="selectedMonth" class="date-input" />
     </div>
 
     <!-- 유형별 필터 -->
@@ -163,7 +188,6 @@ const downloadExcel = () => {
             <th>유형</th>
             <th>상품/내역</th>
             <th class="text-right">수량</th>
-            <th class="text-right">단가</th>
             <th class="text-right">금액</th>
             <th>발생일시</th>
           </tr>
@@ -174,21 +198,20 @@ const downloadExcel = () => {
             <td><span :class="['type-tag', getTypeClass(v.type)]">{{ v.typeName }}</span></td>
             <td>{{ v.product }}</td>
             <td class="text-right">{{ v.qty != null ? v.qty : '−' }}</td>
-            <td class="text-right">{{ v.unitPrice != null ? '₩ ' + fmt(v.unitPrice) : '−' }}</td>
             <td class="text-right amount-cell" :class="{ refund: v.type === 'refund', loss: v.type === 'loss' || v.amount < 0 }">
               {{ v.amount < 0 ? '−' : '' }}₩ {{ fmt(v.amount) }}
             </td>
             <td class="time-cell">{{ v.date }}</td>
           </tr>
           <tr v-if="filteredVouchers.length === 0">
-            <td colspan="7" class="empty-cell">해당 기간에 전표가 없습니다.</td>
+            <td colspan="5" class="empty-cell">해당 기간에 전표가 없습니다.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- 월별 그래프 (월별 탭만) -->
-    <div v-if="activeTab === 'monthly'" class="graph-section">
+    <div class="graph-section">
       <div class="table-header">
         <h3>월별 매출 추이</h3>
         <button class="graph-toggle" @click="showGraph = !showGraph">
@@ -237,8 +260,7 @@ const downloadExcel = () => {
 /* ── 페이지 헤더 ── */
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
 .header-left { display: flex; align-items: center; gap: 0.75rem; }
-.back-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-color); background: white; cursor: pointer; color: var(--text-light); transition: all 0.2s; }
-.back-btn:hover { border-color: var(--primary); color: var(--primary); background: #f5f3ff; }
+
 .page-title { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0 0 0.25rem; }
 .page-desc { color: var(--text-light); font-size: 0.9rem; margin: 0; }
 
@@ -250,10 +272,10 @@ const downloadExcel = () => {
 .action-btn.excel:hover { background: #059669; transform: translateY(-1px); }
 
 /* ── 컨트롤 바 ── */
-.control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+.control-bar { display: flex; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
 .tab-group { display: flex; background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; }
 .tab-group button { padding: 0.65rem 1.5rem; border: none; background: transparent; cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--text-light); transition: all 0.2s; }
-.tab-group button.active { background: var(--primary); color: white; }
+.tab-group button.active { background: #475569; color: white; }
 .tab-group button:hover:not(.active) { background: #f8fafc; }
 .date-input { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.9rem; background: white; color: var(--text-dark); cursor: pointer; outline: none; }
 .date-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
