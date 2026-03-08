@@ -17,7 +17,7 @@
         </div>
 
         <div class="user-detail">
-          <p class="u-name">유저</p>
+          <p class="u-name">{{ authStore.userName }}</p>
           <p class="u-role">{{ roleDisplayName }}</p>
         </div>
 
@@ -38,33 +38,38 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 
 defineProps(['modelValue'])
 defineEmits(['update:modelValue'])
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-const userRole = sessionStorage.getItem('userRole')
+const userRole = computed(() => authStore.userRole)
 
 const roleMapping = {
   admin: { header: '통합 관리', display: '총관리자' },
   headOffice: { header: '본사', display: '본사 관리자' },
   factory: { header: '공장', display: '공장 관리자' },
-  franchise: { header: '가맹점', display: '가맹점주' }
+  franchise: { header: '가맹점', display: '가맹점주' },
+  HQ_ADMIN: { header: '통합 관리', display: '총관리자' },
+  HQ_USER: { header: '본사', display: '본사 관리자' },
+  FACTORY_ADMIN: { header: '공장', display: '공장 관리자' },
+  FRANCHISE_ADMIN: { header: '가맹점', display: '가맹점주' }
 }
 
 const headerTitle = computed(() => {
-  return roleMapping[userRole]?.header || '재고 관리 현황'
+  return roleMapping[userRole.value]?.header || '재고 관리 현황'
 })
 
 const roleDisplayName = computed(() => {
-  return roleMapping[userRole]?.display || '사용자'
+  return roleMapping[userRole.value]?.display || '사용자'
 })
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if(confirm('로그아웃 하시겠습니까?')) {
-    sessionStorage.removeItem('isLoggedIn')
-    sessionStorage.removeItem('userRole')
+    await authStore.logout()
     router.push('/login')
   }
 }

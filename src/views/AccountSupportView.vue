@@ -41,13 +41,21 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useAuthStore } from '../stores/auth'
 
+const authStore = useAuthStore()
 const userId = ref('')
 const email = ref('')
-const requestReset = () => {
+const requestReset = async () => {
   if (!userId.value) return alert('아이디를 입력해주세요.')
   if (!email.value) return alert('이메일을 입력해주세요.')
-  alert('입력하신 정보를 확인하여 안내 메일이 발송되었습니다.')
+  
+  try {
+    const message = await authStore.resetPassword(userId.value, email.value)
+    alert(message)
+  } catch (error) {
+    alert('비밀번호 재설정 요청 중 오류가 발생했습니다. 입력 정보를 확인해주세요.')
+  }
 }
 </script>
 
