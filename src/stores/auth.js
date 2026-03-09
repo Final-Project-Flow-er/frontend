@@ -29,20 +29,18 @@ export const useAuthStore = defineStore('auth', {
 
                     // Legacy mapping for UI compatibility
                     const roleMap = {
-                        'HQ_ADMIN': 'admin',
-                        'HQ_USER': 'headOffice',
-                        'FACTORY_ADMIN': 'factory',
-                        'FRANCHISE_ADMIN': 'franchise'
+                        'HQ': 'headOffice',
+                        'FACTORY': 'factory',
+                        'FRANCHISE': 'franchise'
                     }
                     const uiRole = roleMap[userRole] || 'headOffice'
                     sessionStorage.setItem('userRole', uiRole)
                     sessionStorage.setItem('isLoggedIn', 'true')
 
                     const nameMap = {
-                        'HQ_ADMIN': '본사 관리자',
-                        'HQ_USER': '본사 직원',
-                        'FACTORY_ADMIN': '공장 관리자',
-                        'FRANCHISE_ADMIN': '가맹점주'
+                        'HQ': '본사 직원',
+                        'FACTORY': '공장 직원',
+                        'FRANCHISE': '가맹점 직원'
                     }
                     this.userName = nameMap[userRole] || '사용자'
                     sessionStorage.setItem('userName', this.userName)
