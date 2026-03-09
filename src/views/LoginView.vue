@@ -1,47 +1,29 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const loginData = reactive({
   id: '',
   pw: ''
 })
 
-const handleLogin = () => {
+const handleLogin = async () => {
   if (!loginData.id || !loginData.pw) {
     alert('아이디와 비밀번호를 입력해주세요.')
     return
   }
 
-  let role = ''
-  if (loginData.id === 'admin' && loginData.pw === 'admin') {
-    role = 'admin'
-  } else if (loginData.id === 'headOffice' && loginData.pw === 'headOffice') {
-    role = 'headOffice'
-  } else if (loginData.id === 'factory' && loginData.pw === 'factory') {
-    role = 'factory'
-  } else if (loginData.id === 'franchise01' && loginData.pw === 'franchise01') {
-    role = 'franchise'
-  }
-
-  if (role) {
-    // 로그인 성공 시 세션 저장소에 로그인 상태 및 역할 저장
-    sessionStorage.setItem('isLoggedIn', 'true')
-    sessionStorage.setItem('userRole', role)
-    
-    // 작성자 자동 입력을 위해 이름 저장
-    const nameMap = {
-      admin: '본사 관리자',
-      headOffice: '본사 관리자',
-      factory: '공장 관리자',
-      franchise: '가맹점 관리자'
+  try {
+    const success = await authStore.login(loginData.id, loginData.pw)
+    if (success) {
+      await authStore.getMyInfo()
+      router.push('/')
     }
-    sessionStorage.setItem('userName', nameMap[role] || '사용자')
-    
-    router.push('/')
-  } else {
+  } catch (error) {
     alert('아이디 또는 비밀번호가 올바르지 않습니다.')
   }
 }

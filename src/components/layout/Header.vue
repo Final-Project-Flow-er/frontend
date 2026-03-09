@@ -10,14 +10,15 @@
 
       <div class="user-card" @click="$router.push('/mypage')">
         <div class="user-avatar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <img v-if="authStore.userPhoto" :src="authStore.userPhoto" alt="Profile" class="avatar-img">
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
 
         <div class="user-detail">
-          <p class="u-name">유저</p>
+          <p class="u-name">{{ authStore.userName }}</p>
           <p class="u-role">{{ roleDisplayName }}</p>
         </div>
 
@@ -38,15 +39,21 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 
 defineProps(['modelValue'])
 defineEmits(['update:modelValue'])
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-const userRole = sessionStorage.getItem('userRole')
+const userRole = computed(() => authStore.userRole)
 
 const roleMapping = {
+  ADMIN: { header: '통합 관리', display: '총관리자' },
+  HQ: { header: '본사', display: '본사 관리자' },
+  FACTORY: { header: '공장', display: '공장 관리자' },
+  FRANCHISE: { header: '가맹점', display: '가맹점주' },
   admin: { header: '통합 관리', display: '총관리자' },
   headOffice: { header: '본사', display: '본사 관리자' },
   factory: { header: '공장', display: '공장 관리자' },
@@ -54,17 +61,16 @@ const roleMapping = {
 }
 
 const headerTitle = computed(() => {
-  return roleMapping[userRole]?.header || '재고 관리 현황'
+  return roleMapping[userRole.value]?.header || '재고 관리 현황'
 })
 
 const roleDisplayName = computed(() => {
-  return roleMapping[userRole]?.display || '사용자'
+  return roleMapping[userRole.value]?.display || '사용자'
 })
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if(confirm('로그아웃 하시겠습니까?')) {
-    sessionStorage.removeItem('isLoggedIn')
-    sessionStorage.removeItem('userRole')
+    await authStore.logout()
     router.push('/login')
   }
 }
@@ -94,6 +100,7 @@ const handleLogout = () => {
   background-color: #f8fafc;
   border-color: #cbd5e1;
 }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .user-avatar {
   width: 38px;

@@ -11,8 +11,8 @@
         <template v-if="!isEditing">
           <button @click="startEdit" class="btn-edit">수정</button>
           <button v-if="isMemberActive" @click="confirmDeactivate" class="btn-deactivate">비활성화</button>
-          <button v-else-if="member.status === 'inactive'" @click="confirmRestore" class="btn-restore">계정 복구</button>
-          <button v-if="member.status !== 'deleted'" @click="confirmDelete" class="btn-delete">삭제</button>
+          <button v-else-if="member.status === 'INACTIVE'" @click="confirmRestore" class="btn-restore">계정 복구</button>
+          <button v-if="member.status !== 'DELETED'" @click="confirmDelete" class="btn-delete">삭제</button>
         </template>
         <template v-else>
           <button @click="saveChanges" class="btn-save">저장</button>
@@ -24,10 +24,10 @@
     <div v-if="member" class="detail-card">
       <div class="card-header">
         <div class="header-left">
-          <span class="role-badge" :class="member.role">
+          <span class="role-badge" :class="member.role ? member.role.toLowerCase() : ''">
             {{ getRoleDisplay(member) }}
           </span>
-          <span class="status-badge" :class="member.status || 'active'">
+          <span class="status-badge" :class="member.status ? member.status.toLowerCase() : 'active'">
             {{ getStatusLabel(member.status) }}
           </span>
           <h1>{{ member.name }}</h1>
@@ -66,7 +66,7 @@
             <div class="info-grid">
               <div class="info-field">
                 <label>아이디</label>
-                <input type="text" :value="member.id" disabled class="input-disabled">
+                <input type="text" :value="member.loginId" disabled class="input-disabled">
               </div>
               <div class="info-field">
                 <label>이름</label>
@@ -89,10 +89,12 @@
               <div class="info-field">
                 <label>연락처</label>
                 <input 
-                  type="tel" 
+                  type="text" 
                   v-model="member.phone" 
+                  @input="e => member.phone = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)"
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
+                  maxlength="11"
                 >
               </div>
               <div class="info-field">
@@ -117,9 +119,9 @@
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
                 >
-                  <option value="hq">본사</option>
-                  <option value="franchise">가맹점</option>
-                  <option value="factory">공장</option>
+                  <option value="HQ">본사</option>
+                  <option value="FRANCHISE">가맹점</option>
+                  <option value="FACTORY">공장</option>
                 </select>
               </div>
               <div class="info-field">
@@ -137,28 +139,28 @@
               </div>
               
               <!-- 가맹점/공장 관리자용 소속 검색 -->
-              <div v-if="member.role !== 'hq'" class="info-field">
-                <label>{{ member.role === 'franchise' ? '가맹점명' : '공장명' }}</label>
+              <div v-if="member.role !== 'HQ'" class="info-field">
+                <label>{{ member.role === 'FRANCHISE' ? '가맹점명' : '공장명' }}</label>
                 <select 
                   v-model="member.orgName" 
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
                 >
-                  <template v-if="member.role === 'franchise'">
-                    <option v-for="org in franchiseOptions" :key="org.code" :value="org.name">
+                  <template v-if="member.role === 'FRANCHISE'">
+                    <option v-for="org in franchiseOptions" :key="org.id" :value="org.name">
                       {{ org.name }}
                     </option>
                   </template>
-                  <template v-else-if="member.role === 'factory'">
-                    <option v-for="org in factoryOptions" :key="org.code" :value="org.name">
+                  <template v-else-if="member.role === 'FACTORY'">
+                    <option v-for="org in factoryOptions" :key="org.id" :value="org.name">
                       {{ org.name }}
                     </option>
                   </template>
                 </select>
               </div>
 
-              <div v-if="member.role !== 'hq'" class="info-field">
-                <label>{{ member.role === 'franchise' ? '가맹점 코드' : '공장 코드' }}</label>
+              <div v-if="member.role !== 'HQ'" class="info-field">
+                <label>{{ member.role === 'FRANCHISE' ? '가맹점 코드' : '공장 코드' }}</label>
                 <input type="text" v-model="member.orgCode" disabled class="input-disabled">
               </div>
             </div>
@@ -168,8 +170,15 @@
     </div>
 
     <!-- 로딩 상태 -->
-    <div v-else class="loading-state">
-      <p>회원 정보를 불러오는 중...</p>
+    <div v-else-if="isLoading" class="loading-state">
+      <p class="loading-spinner">회원 정보를 불러오는 중...</p>
+    </div>
+
+    <!-- 오류 상태 -->
+    <div v-else class="loading-state error-state">
+      <div class="error-icon">⚠️</div>
+      <p>회원 정보를 찾을 수 없거나 불러오는데 실패했습니다.</p>
+      <button @click="goBack" class="btn-back-error">목록으로 돌아가기</button>
     </div>
   </div>
 </template>
@@ -177,113 +186,120 @@
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useUserManagementStore } from '../stores/userManagement'
 
 const router = useRouter()
 const route = useRoute()
+const userManagementStore = useUserManagementStore()
 const photoInput = ref(null)
+const selectedPhotoFile = ref(null)
 
 const isEditing = ref(false)
+const isLoading = ref(true)
 const member = ref(null)
 const originalMember = ref(null)
 
-const franchiseOptions = [
-  { name: '서울본점', code: 'SE01' },
-  { name: '경기분점', code: 'GE01' },
-  { name: '부산분점', code: 'BU01' }
-]
+// 사업장 옵션 (백엔드 연동)
+const franchiseOptions = computed(() => userManagementStore.businessUnits.franchise)
+const factoryOptions = computed(() => userManagementStore.businessUnits.factory)
 
-const factoryOptions = [
-  { name: '경기공장', code: 'FA01' },
-  { name: '충청공장', code: 'FA02' }
-]
-
-// 권한별 세부 역할
+// 권한별 세부 역할 (백엔드 UserPosition 매핑)
 const roleDetailsByType = {
-  hq: [
-    { value: 'hq_hr', label: '인사 관리자' },
-    { value: 'hq_settlement', label: '정산 관리자' },
-    { value: 'hq_logistics', label: '물류 관리자' },
-    { value: 'hq_system', label: '시스템 관리자' }
+  HQ: [
+    { value: 'HR_MANAGER', label: '인사 관리자' },
+    { value: 'FINANCE_MANAGER', label: '정산 관리자' },
+    { value: 'LOGISTICS_MANAGER', label: '물류 관리자' },
+    { value: 'SYSTEM_MANAGER', label: '시스템 관리자' }
   ],
-  franchise: [
-    { value: 'fr_owner', label: '점주' },
-    { value: 'fr_manager', label: '매니저' },
-    { value: 'fr_staff', label: '직원' }
+  FRANCHISE: [
+    { value: 'OWNER', label: '점주' },
+    { value: 'STORE_MANAGER', label: '매니저' },
+    { value: 'STAFF', label: '직원' }
   ],
-  factory: [
-    { value: 'fa_production', label: '생산 관리자' },
-    { value: 'fa_logistics', label: '물류 관리자' },
-    { value: 'fa_factory', label: '공장 관리자' }
+  FACTORY: [
+    { value: 'PRODUCTION_MANAGER', label: '생산 관리자' },
+    { value: 'FACTORY_LOGISTICS_MANAGER', label: '공장 물류 관리자' },
+    { value: 'FACTORY_MANAGER', label: '공장 관리자' }
   ]
 }
 
-const ROLE_DETAIL_LABELS = {
-  hq_hr: '인사 관리자',
-  hq_settlement: '정산 관리자',
-  hq_logistics: '물류 관리자',
-  hq_system: '시스템 관리자',
-  fr_owner: '점주',
-  fr_manager: '매니저',
-  fr_staff: '직원',
-  fa_production: '생산 관리자',
-  fa_logistics: '물류 관리자',
-  fa_factory: '공장 관리자'
+const POSITION_LABELS = {
+  HR_MANAGER: '인사 관리자',
+  FINANCE_MANAGER: '정산 관리자',
+  LOGISTICS_MANAGER: '물류 관리자',
+  SYSTEM_MANAGER: '시스템 관리자',
+  OWNER: '점주',
+  STORE_MANAGER: '매니저',
+  STAFF: '직원',
+  PRODUCTION_MANAGER: '생산 관리자',
+  FACTORY_LOGISTICS_MANAGER: '공장 물류 관리자',
+  FACTORY_MANAGER: '공장 관리자'
 }
 
 const roleDetailOptions = computed(() => member.value ? roleDetailsByType[member.value.role] || [] : [])
 
-onMounted(() => {
-  const empNum = route.params.employeeNumber
-  // API 모드 (샘플 데이터 매칭)
-  const sampleMembers = [
-    {
-      employeeNumber: '10001',
-      name: '본사유저',
-      id: 'hq_admin',
-      role: 'hq',
-      roleDetail: 'hq_hr',
-      orgName: '본사',
-      orgCode: '',
-      email: 'admin@company.com',
-      phone: '010-1111-2222',
-      birthdate: '1985-05-15',
-      photoUrl: '',
-      status: 'active'
-    },
-    {
-      employeeNumber: '20001',
-      name: '가맹점유저',
-      id: 'admin123',
-      role: 'franchise',
-      roleDetail: 'fr_owner',
-      orgName: '서울본점',
-      orgCode: 'SE01',
-      email: 'admin@example.com',
-      phone: '010-1234-5678',
-      birthdate: '2002-06-26',
-      photoUrl: '',
-      status: 'active'
-    },
-    {
-      employeeNumber: '30001',
-      name: '공장유저',
-      id: 'factory_mgr',
-      role: 'factory',
-      roleDetail: 'fa_factory',
-      orgName: '경기공장',
-      orgCode: 'FA01',
-      email: 'factory@factory.com',
-      phone: '010-5555-6666',
-      birthdate: '1990-11-20',
-      photoUrl: '',
-      status: 'inactive'
+const fetchDetail = async () => {
+  const userId = route.params.id
+  isLoading.value = true
+  try {
+    const data = await userManagementStore.fetchUserDetail(userId)
+    if (data) {
+      // API 응답 필드와 UI 필드 매핑
+      member.value = {
+        userId: data.userId || data.id,
+        loginId: data.loginId,
+        name: data.username,
+        email: data.email,
+        phone: data.phone,
+        birthdate: data.birthDate,
+        employeeNumber: data.employeeNumber,
+        photoUrl: data.profileImageUrl,
+        role: data.role,
+        roleDetail: data.position,
+        status: data.status,
+        businessUnitId: data.businessUnitId,
+        orgName: data.businessUnitName || (data.role === 'HQ' ? '본사' : '-')
+      }
+      
+      // 소속 코드는 옵션에서 찾아야 함
+      updateOrgCodeFromOptions()
+      
+      originalMember.value = JSON.parse(JSON.stringify(member.value))
     }
-  ]
+  } catch (error) {
+    console.error('Fetch detail error:', error)
+    alert('회원 정보를 불러오는데 실패했습니다.')
+    router.push('/admin/members')
+  } finally {
+    isLoading.value = false
+  }
+}
 
-  const found = sampleMembers.find(m => m.employeeNumber === empNum)
-  if (found) {
-    member.value = JSON.parse(JSON.stringify(found))
-    originalMember.value = JSON.parse(JSON.stringify(found))
+const updateOrgCodeFromOptions = () => {
+  if (!member.value || member.value.role === 'HQ' || !member.value.businessUnitId) {
+    member.value.orgCode = '-'
+    return
+  }
+  
+  const options = member.value.role === 'FRANCHISE' ? franchiseOptions.value : factoryOptions.value
+  const org = options.find(o => o.id === member.value.businessUnitId)
+  if (org) {
+    member.value.orgCode = org.code || '-'
+  }
+}
+
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    await Promise.all([
+      userManagementStore.fetchBusinessUnits('franchise'),
+      userManagementStore.fetchBusinessUnits('factory'),
+      fetchDetail()
+    ])
+  } catch (error) {
+    console.error('onMounted initialization error:', error)
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -293,50 +309,50 @@ watch(() => member.value?.role, (newRole, oldRole) => {
   if (newRole !== oldRole) {
     const opts = roleDetailsByType[newRole]
     member.value.roleDetail = opts && opts.length ? opts[0].value : ''
-    member.value.orgName = newRole === 'hq' ? '본사' : ''
+    member.value.orgName = newRole === 'HQ' ? '본사' : ''
     member.value.orgCode = ''
+    member.value.businessUnitId = null
   }
 })
 
-// 조직 선택 시 코드 자동 업데이트
+// 조직 선택 시 코드/ID 자동 업데이트
 watch(() => member.value?.orgName, (newVal) => {
   if (!member.value || !isEditing.value) return
   
-  if (member.value.role === 'franchise') {
-    const org = franchiseOptions.find(o => o.name === newVal)
-    member.value.orgCode = org ? org.code : ''
-  } else if (member.value.role === 'factory') {
-    const org = factoryOptions.find(o => o.name === newVal)
-    member.value.orgCode = org ? org.code : ''
+  const options = member.value.role === 'FRANCHISE' ? franchiseOptions.value : factoryOptions.value
+  const org = options.find(o => o.name === newVal)
+  if (org) {
+    member.value.businessUnitId = org.id
+    member.value.orgCode = org.code || ''
   }
 })
 
 const getRoleLabel = (role) => {
   switch(role) {
-    case 'hq': return '본사'
-    case 'franchise': return '가맹점'
-    case 'factory': return '공장'
+    case 'HQ': return '본사'
+    case 'FRANCHISE': return '가맹점'
+    case 'FACTORY': return '공장'
     default: return role
   }
 }
 
 const getRoleDisplay = (m) => {
   const typeLabel = getRoleLabel(m.role)
-  const detailLabel = m.roleDetail ? ROLE_DETAIL_LABELS[m.roleDetail] : null
+  const detailLabel = m.roleDetail ? POSITION_LABELS[m.roleDetail] : null
   return detailLabel ? `${typeLabel} · ${detailLabel}` : typeLabel
 }
 
 const getStatusLabel = (status) => {
   switch(status) {
-    case 'active': return '활성'
-    case 'inactive': return '비활성'
-    case 'deleted': return '삭제'
+    case 'ACTIVE': return '활성'
+    case 'INACTIVE': return '비활성'
+    case 'DELETED': return '삭제'
     default: return '활성'
   }
 }
 
 const isMemberActive = computed(() => {
-  return !member.value || member.value.status === 'active' || !member.value.status
+  return !member.value || member.value.status === 'ACTIVE'
 })
 
 const goBack = () => {
@@ -351,42 +367,85 @@ const cancelEdit = () => {
   if (confirm('수정한 내용을 취소하시겠습니까?')) {
     member.value = JSON.parse(JSON.stringify(originalMember.value))
     isEditing.value = false
+    selectedPhotoFile.value = null
   }
 }
 
-const saveChanges = () => {
-  alert('회원 정보가 성공적으로 수정되었습니다.')
-  originalMember.value = JSON.parse(JSON.stringify(member.value))
-  isEditing.value = false
+const saveChanges = async () => {
+  if (!member.value.name?.trim() || !member.value.email?.trim() || !member.value.phone?.trim() || !member.value.birthdate) {
+    alert('모든 필수 정보를 입력해주세요.');
+    return;
+  }
+  
+  if (member.value.phone.trim().length !== 11) {
+    alert('연락처는 11자리 숫자로 입력해주세요.');
+    return;
+  }
+
+  try {
+    const updateData = {
+      username: member.value.name,
+      email: member.value.email,
+      phone: member.value.phone,
+      birthDate: member.value.birthdate,
+      role: member.value.role,
+      position: member.value.roleDetail,
+      businessUnitId: member.value.businessUnitId
+    }
+
+    await userManagementStore.updateUser(member.value.userId, updateData, selectedPhotoFile.value)
+    alert('회원 정보가 성공적으로 수정되었습니다.')
+    await fetchDetail()
+    isEditing.value = false
+    selectedPhotoFile.value = null
+  } catch (error) {
+    alert('정보 수정에 실패했습니다.')
+  }
 }
 
-const confirmDeactivate = () => {
+const confirmDeactivate = async () => {
   if (confirm('이 회원 계정을 비활성화하시겠습니까? 비활성화된 계정은 로그인할 수 없습니다.')) {
-    member.value.status = 'inactive'
-    originalMember.value.status = 'inactive'
-    alert('계정이 비활성화되었습니다.')
+    try {
+      await userManagementStore.updateUserStatus(member.value.userId, 'INACTIVE')
+      alert('계정이 비활성화되었습니다.')
+      await fetchDetail()
+    } catch (error) {
+      alert('상태 변경 실패')
+    }
   }
 }
 
-const confirmRestore = () => {
+const confirmRestore = async () => {
   if (confirm('이 회원 계정을 복구하시겠습니까?')) {
-    member.value.status = 'active'
-    originalMember.value.status = 'active'
-    alert('계정이 복구되었습니다.')
+    try {
+      await userManagementStore.updateUserStatus(member.value.userId, 'ACTIVE')
+      alert('계정이 복구되었습니다.')
+      await fetchDetail()
+    } catch (error) {
+      alert('상태 변경 실패')
+    }
   }
 }
 
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (confirm('이 회원 계정을 정말로 삭제하시겠습니까? 삭제된 회원은 복구할 수 없습니다.')) {
-    member.value.status = 'deleted'
-    originalMember.value.status = 'deleted'
-    alert('계정이 삭제되었습니다.')
-    router.push('/admin/members')
+    try {
+      await userManagementStore.deleteUser(member.value.userId)
+      alert('계정이 삭제되었습니다.')
+      router.push('/admin/members')
+    } catch (error) {
+      alert('삭제 실패')
+    }
   }
 }
 
-const resendCredentials = () => {
-  alert('해당 회원의 이메일로 계정 정보가 재발송되었습니다.')
+const resendCredentials = async () => {
+  try {
+    await userManagementStore.resendUserInfo(member.value.userId)
+    alert('해당 회원의 이메일로 계정 정보가 재발송되었습니다.')
+  } catch (error) {
+    alert('재발송 실패')
+  }
 }
 
 const triggerPhotoUpload = () => {
@@ -396,6 +455,7 @@ const triggerPhotoUpload = () => {
 const onPhotoChange = (e) => {
   const file = e.target.files[0]
   if (file) {
+    selectedPhotoFile.value = file
     const reader = new FileReader()
     reader.onload = (event) => {
       member.value.photoUrl = event.target.result
@@ -436,62 +496,79 @@ const onPhotoChange = (e) => {
 }
 
 .btn-edit, .btn-save {
-  padding: 0.6rem 1.5rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
   background: #0f172a;
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-edit:hover, .btn-save:hover {
+  background: #1e293b;
 }
 
 .btn-deactivate {
-  padding: 0.6rem 1.5rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
   background: white;
-  color: #ef4444;
-  border: 1.5px solid #ef4444;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 .btn-deactivate:hover {
-  background: #fff1f2;
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .btn-delete {
-  padding: 0.6rem 1.5rem;
-  background: #ef4444;
-  color: white;
-  border: none;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 .btn-delete:hover {
-  background: #dc2626;
+  background: #fef2f2;
 }
 
 .btn-restore {
-  padding: 0.6rem 1.5rem;
-  background: #15803d;
-  color: white;
-  border: none;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #10b981;
+  border: 1px solid #6ee7b7;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 .btn-restore:hover {
-  background: #166534;
+  background: #ecfdf5;
 }
 
 .btn-cancel {
-  padding: 0.6rem 1.5rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
   background: white;
   color: #64748b;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-cancel:hover {
+  background: #f8fafc;
 }
 
 /* 카드 영역 */
@@ -525,7 +602,6 @@ const onPhotoChange = (e) => {
 }
 
 .emp-number-large {
-  font-family: monospace;
   font-size: 1.5rem;
   font-weight: 800;
   color: #2563eb;
@@ -671,5 +747,33 @@ const onPhotoChange = (e) => {
   .card-body {
     grid-template-columns: 1fr;
   }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 0;
+  color: #64748b;
+}
+
+.error-state {
+  color: #ef4444;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.btn-back-error {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>

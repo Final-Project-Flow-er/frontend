@@ -15,11 +15,23 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Sidebar from './components/layout/Sidebar.vue'
 import Header from './components/layout/Header.vue'
+import { useAuthStore } from './stores/auth'
 
+const authStore = useAuthStore()
 const searchQuery = ref('')
+
+onMounted(async () => {
+  if (authStore.isLoggedIn) {
+     try {
+       await authStore.getMyInfo()
+     } catch (e) {
+       console.error('Initial user info fetch failed')
+     }
+  }
+})
 </script>
 
 <style>
