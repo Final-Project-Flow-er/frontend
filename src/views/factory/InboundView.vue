@@ -1,31 +1,38 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 
-// Mock Data - Flattened Inbound Items
-const inboundItems = ref([
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `SE01-FA01-A1-OR0101-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'OR0101',
-    name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    productionDate: '2026-02-01',
-    expiryDate: '2026-02-15'
-  })),
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `SE01-FA01-A1-MA0301-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'MA0301',
-    name: '마라 떡볶이 밀키트 매운맛 1,2인분',
-    productionDate: '2026-02-02',
-    expiryDate: '2026-02-16'
-  })),
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `SE01-FA01-A1-RO0201-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'RO0201',
-    name: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    productionDate: '2026-02-03',
-    expiryDate: '2026-02-17'
-  })),
-])
+const inboundItems = ref([])
+
+const fetchInboundItems = async () => {
+  try {
+    const response = await fetch('/api/v1/inbounds/items', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      }
+    })
+    const result = await response.json()
+    if (response.ok && result.success) {
+      inboundItems.value = result.data.map(item => ({
+        id: item.serialCode,
+        productCode: item.productCode || item.productId,
+        name: item.productName,
+        productionDate: item.manufactureDate
+      }))
+    } else if (result.code === 'IV006') {
+      inboundItems.value = []
+    } else {
+      openModal('오류', '데이터를 불러오는 데 실패했습니다.', null, false)
+    }
+  } catch (error) {
+    console.error('Error fetching inbound items:', error)
+    openModal('오류', '서버와 통신하는 데 실패했습니다.', null, false)
+  }
+}
+
+onMounted(() => {
+  fetchInboundItems()
+})
 
 const selectedItemIds = ref(new Set())
 
@@ -61,12 +68,35 @@ const approveInbound = () => {
   )
 }
 
-const performApprove = () => {
-  // Remove the approved items from the list
-  inboundItems.value = inboundItems.value.filter(item => !selectedItemIds.value.has(item.id))
-  // Clear selection
-  selectedItemIds.value.clear()
-  openModal('알림', '입고 승인 되었습니다.', null, false)
+const performApprove = async () => {
+  try {
+    const serialCodes = Array.from(selectedItemIds.value)
+    const response = await fetch('/api/v1/inbounds/confirm', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      },
+      body: JSON.stringify({ serialCodes })
+    })
+    
+    if (response.status === 401 || response.status === 403) {
+      openModal('오류', '권한이 없습니다 (액세스 토큰 확인 필요).', null, false)
+      return
+    }
+
+    const result = await response.json()
+    if (response.ok && result.success) {
+      await fetchInboundItems()
+      selectedItemIds.value.clear()
+      openModal('알림', '입고 승인 되었습니다.', null, false)
+    } else {
+      openModal('오류', result.message || '입고 승인에 실패했습니다.', null, false)
+    }
+  } catch (error) {
+    console.error('Error confirming inbound:', error)
+    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+  }
 }
 
 // Modal State
@@ -116,7 +146,6 @@ const handleModalClose = () => {
                   <th>제품 코드</th>
                   <th>제품명</th>
                   <th>생산일</th>
-                  <th>유통기한</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,10 +157,9 @@ const handleModalClose = () => {
                   <td>{{ item.productCode }}</td>
                   <td class="name-cell">{{ item.name }}</td>
                   <td>{{ item.productionDate }}</td>
-                  <td>{{ item.expiryDate }}</td>
                 </tr>
                 <tr v-if="inboundItems.length === 0">
-                  <td colspan="6" class="empty-state">입고 대기 항목이 없습니다.</td>
+                  <td colspan="5" class="empty-state">입고 대기 항목이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
