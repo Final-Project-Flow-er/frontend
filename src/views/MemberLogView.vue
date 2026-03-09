@@ -23,11 +23,12 @@
           <label>변동 유형</label>
           <select v-model="filters.type" class="filter-select">
             <option value="all">전체</option>
-            <option value="register">신규 등록</option>
-            <option value="edit">정보 수정</option>
-            <option value="deactivate">계정 비활성화</option>
-            <option value="restore">계정 복구</option>
-            <option value="delete">계정 삭제</option>
+            <option value="REGISTER">신규 등록</option>
+            <option value="INFO_UPDATE">정보 수정</option>
+            <option value="PASSWORD_UPDATE">비밀번호 변경</option>
+            <option value="DEACTIVATE">계정 비활성화</option>
+            <option value="RESTORE">계정 복구</option>
+            <option value="DELETE">계정 삭제</option>
           </select>
         </div>
 
@@ -57,10 +58,10 @@
       <table class="log-table">
         <thead>
           <tr>
-            <th style="width: 22%">일시</th>
+            <th style="width: 18%">일시</th>
             <th style="width: 12%">변동 유형</th>
             <th style="width: 9%">사원번호</th>
-            <th style="width: 8%">이름</th>
+            <th style="width: 12%">이름</th>
             <th style="width: 8%">아이디</th>
             <th style="width: 19%">이메일</th>
             <th style="width: 12%">연락처</th>
@@ -92,7 +93,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useUserManagementStore } from '../stores/userManagement'
+
+const userManagementStore = useUserManagementStore()
 
 const filters = reactive({
   startDate: '',
@@ -101,37 +105,69 @@ const filters = reactive({
   query: ''
 })
 
-const logs = ref([
-  { id: 1, timestamp: '2026-02-10 16:45:22', type: 'register', empNo: '20001', name: '홍길동', userId: 'hong123', email: 'hong@email.com', phone: '010-1234-5678', birth: '1995-05-15' },
-  { id: 2, timestamp: '2026-02-10 15:30:10', type: 'edit', empNo: '30001', name: '김철수', userId: 'chulsoo', email: 'kim@email.com', phone: '010-9876-5432', birth: '1992-12-01' },
-  { id: 3, timestamp: '2026-02-09 10:20:05', type: 'deactivate', empNo: '20002', name: '이영희', userId: 'yhlee', email: 'lee@email.com', phone: '010-5555-6666', birth: '1998-02-28' },
-  { id: 4, timestamp: '2026-02-08 14:12:44', type: 'restore', empNo: '20002', name: '이영희', userId: 'yhlee', email: 'lee@email.com', phone: '010-5555-6666', birth: '1998-02-28' },
-  { id: 5, timestamp: '2026-02-08 09:05:12', type: 'register', empNo: '20003', name: '박지민', userId: 'jiminP', email: 'park@email.com', phone: '010-2222-3333', birth: '1994-11-20' },
-])
+const isLoading = ref(false)
 
-const filteredLogs = computed(() => {
-  return logs.value.filter(log => {
-    const typeMatch = filters.type === 'all' || log.type === filters.type
-    const searchMatch = !filters.query || 
-      log.name.includes(filters.query) || 
-      log.userId.includes(filters.query) || 
-      log.empNo.includes(filters.query)
-    
-    let dateMatch = true
-    if (filters.startDate) dateMatch = dateMatch && log.timestamp >= filters.startDate
-    if (filters.endDate) dateMatch = dateMatch && log.timestamp <= filters.endDate + ' 23:59:59'
+const fetchLogs = async () => {
+  isLoading.value = true
+  try {
+    const params = {
+      action: filters.type !== 'all' ? filters.type : null,
+      targetUsername: filters.query || null,
+      // startDate/endDate 연동은 백엔드 UserLogSearchRequest에 따라 다름 (현재는 createdAt만 있음)
+      // 일단 query 검색 위주로 처리
+    }
+    await userManagementStore.fetchUserLogs(params)
+  } catch (error) {
+    alert('로그를 불러오는데 실패했습니다.')
+  } finally {
+    isLoading.value = false
+  }
+}
 
-    return typeMatch && searchMatch && dateMatch
-  })
+onMounted(fetchLogs)
+
+watch(() => [filters.type], fetchLogs)
+watch(() => filters.query, (newVal) => {
+  if (newVal.length === 0 || newVal.length >= 2) {
+    fetchLogs()
+  }
 })
+
+// 백엔드 데이터를 UI 형식에 맞게 가공
+const formattedLogs = computed(() => {
+  return userManagementStore.userLogs.map(log => ({
+    id: log.logId,
+    timestamp: formatDate(log.createdAt),
+    type: log.action,
+    empNo: log.employeeNumber,
+    name: log.targetUsername,
+    userId: log.email.split('@')[0], // 아이디 예시로 이메일 앞자리 사용 (로그에 아이디 필드가 부족함)
+    email: log.email,
+    phone: log.phone,
+    birth: log.birthDate
+  }))
+})
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const seconds = String(d.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
 
 const getTypeLabel = (type) => {
   const labels = {
-    register: '신규 등록',
-    edit: '정보 수정',
-    deactivate: '계정 비활성화',
-    restore: '계정 복구',
-    delete: '계정 삭제'
+    REGISTER: '신규 등록',
+    INFO_UPDATE: '정보 수정',
+    PASSWORD_UPDATE: '비밀번호 변경',
+    DEACTIVATE: '계정 비활성화',
+    RESTORE: '계정 복구',
+    DELETE: '계정 삭제'
   }
   return labels[type] || type
 }
@@ -141,7 +177,14 @@ const resetFilters = () => {
   filters.endDate = ''
   filters.type = 'all'
   filters.query = ''
+  fetchLogs()
 }
+
+const filteredLogs = computed(() => {
+  // Since fetchLogs already applies filters via API, we just return the formatted logs.
+  // Frontend date filtering is removed as per instruction comment.
+  return formattedLogs.value
+})
 </script>
 
 <style scoped>
@@ -156,8 +199,8 @@ const resetFilters = () => {
 }
 
 .header-left h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 500;
   color: #0f172a;
   margin-bottom: 0.25rem;
 }
@@ -282,8 +325,8 @@ const resetFilters = () => {
   background: #f8fafc;
   color: #475569;
   padding: 1.1rem 0.75rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   text-align: center;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -293,10 +336,9 @@ const resetFilters = () => {
   font-size: 0.9rem;
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   text-align: center;
+  word-break: break-all;
+  white-space: normal;
 }
 
 .log-row:hover {
@@ -304,8 +346,7 @@ const resetFilters = () => {
 }
 
 .date-cell {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: #1e293b;
 }
@@ -316,21 +357,22 @@ const resetFilters = () => {
 }
 
 .name-text {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .type-badge {
   padding: 0.25rem 0.6rem;
   border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
-.type-badge.register { background: #dcfce7; color: #166534; }
-.type-badge.edit { background: #e0f2fe; color: #0369a1; }
-.type-badge.deactivate { background: #f1f5f9; color: #64748b; }
-.type-badge.restore { background: #fef3c7; color: #92400e; }
-.type-badge.delete { background: #fee2e2; color: #991b1b; }
+.type-badge.REGISTER { background: #dcfce7; color: #166534; }
+.type-badge.INFO_UPDATE { background: #e0f2fe; color: #0369a1; }
+.type-badge.PASSWORD_UPDATE { background: #e0f2fe; color: #0369a1; }
+.type-badge.DEACTIVATE { background: #f1f5f9; color: #64748b; }
+.type-badge.RESTORE { background: #fef3c7; color: #92400e; }
+.type-badge.DELETE { background: #fee2e2; color: #991b1b; }
 
 .empty-row {
   text-align: center;
