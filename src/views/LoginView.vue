@@ -20,6 +20,7 @@ const handleLogin = async () => {
   try {
     const success = await authStore.login(loginData.id, loginData.pw)
     if (success) {
+      await authStore.getMyInfo()
       router.push('/')
     }
   } catch (error) {

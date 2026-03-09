@@ -5,7 +5,8 @@ export const useAuthStore = defineStore('auth', {
     state: () => ({
         userRole: localStorage.getItem('userRole') || null,
         isLoggedIn: !!localStorage.getItem('accessToken'),
-        userName: sessionStorage.getItem('userName') || '사용자'
+        userName: sessionStorage.getItem('userName') || '사용자',
+        userPhoto: sessionStorage.getItem('userPhoto') || null
     }),
     actions: {
         async login(loginId, password) {
@@ -84,6 +85,86 @@ export const useAuthStore = defineStore('auth', {
                 return response.data.message || '임시 비밀번호가 메일로 발송되었습니다.'
             } catch (error) {
                 console.error('Reset password failed:', error)
+                throw error
+            }
+        },
+
+        async getMyInfo() {
+            try {
+                const response = await api.get('/users/me')
+                if (response.data.success) {
+                    const data = response.data.data
+                    this.userName = data.username
+                    this.userPhoto = data.profileImageUrl
+                    sessionStorage.setItem('userName', this.userName)
+                    if (this.userPhoto) sessionStorage.setItem('userPhoto', this.userPhoto)
+                    return data
+                }
+            } catch (error) {
+                console.error('Failed to fetch my info:', error)
+                throw error
+            }
+        },
+
+        async updateMyInfo(info, profileImage) {
+            try {
+                const formData = new FormData()
+                formData.append('request', new Blob([JSON.stringify(info)], { type: 'application/json' }))
+                if (profileImage) {
+                    formData.append('profileImage', profileImage)
+                }
+
+                const response = await api.patch('/users/me', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+                if (response.data.success) {
+                    this.userName = response.data.data.username
+                    this.userPhoto = response.data.data.profileImageUrl
+                    sessionStorage.setItem('userName', this.userName)
+                    if (this.userPhoto) sessionStorage.setItem('userPhoto', this.userPhoto)
+                    return response.data.data
+                }
+            } catch (error) {
+                console.error('Failed to update my info:', error)
+                throw error
+            }
+        },
+
+        async changePassword(currentPassword, newPassword) {
+            try {
+                const response = await api.patch('/users/me/password', {
+                    currentPassword,
+                    newPassword
+                })
+                return response.data.success
+            } catch (error) {
+                console.error('Failed to change password:', error)
+                throw error
+            }
+        },
+
+        async getMyWorkplaceInfo() {
+            try {
+                const response = await api.get('/users/me/workplace')
+                if (response.data.success) {
+                    return response.data.data
+                }
+            } catch (error) {
+                console.error('Failed to fetch workplace info:', error)
+                throw error
+            }
+        },
+
+        async updateMyWorkplaceInfo(info) {
+            try {
+                const response = await api.patch('/users/me/workplace', info)
+                if (response.data.success) {
+                    return response.data.data
+                }
+            } catch (error) {
+                console.error('Failed to update workplace info:', error)
                 throw error
             }
         }

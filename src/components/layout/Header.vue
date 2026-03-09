@@ -10,7 +10,8 @@
 
       <div class="user-card" @click="$router.push('/mypage')">
         <div class="user-avatar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <img v-if="authStore.userPhoto" :src="authStore.userPhoto" alt="Profile" class="avatar-img">
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
@@ -49,14 +50,14 @@ const authStore = useAuthStore()
 const userRole = computed(() => authStore.userRole)
 
 const roleMapping = {
+  ADMIN: { header: '통합 관리', display: '총관리자' },
+  HQ: { header: '본사', display: '본사 관리자' },
+  FACTORY: { header: '공장', display: '공장 관리자' },
+  FRANCHISE: { header: '가맹점', display: '가맹점주' },
   admin: { header: '통합 관리', display: '총관리자' },
   headOffice: { header: '본사', display: '본사 관리자' },
   factory: { header: '공장', display: '공장 관리자' },
-  franchise: { header: '가맹점', display: '가맹점주' },
-  HQ_ADMIN: { header: '통합 관리', display: '총관리자' },
-  HQ_USER: { header: '본사', display: '본사 관리자' },
-  FACTORY_ADMIN: { header: '공장', display: '공장 관리자' },
-  FRANCHISE_ADMIN: { header: '가맹점', display: '가맹점주' }
+  franchise: { header: '가맹점', display: '가맹점주' }
 }
 
 const headerTitle = computed(() => {
@@ -99,6 +100,7 @@ const handleLogout = async () => {
   background-color: #f8fafc;
   border-color: #cbd5e1;
 }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .user-avatar {
   width: 38px;
