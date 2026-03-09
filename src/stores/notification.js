@@ -97,6 +97,10 @@ export const useNotificationStore = defineStore('notification', {
                     })
                 }
             })
+            this.eventSource.addEventListener('refresh', () => {
+                // 삭제 등의 사유로 목록을 조용히 새로고침해야 할 때 호출
+                this.fetchNotifications()
+            })
 
             this.eventSource.onerror = (error) => {
                 console.error('SSE Error:', error)
