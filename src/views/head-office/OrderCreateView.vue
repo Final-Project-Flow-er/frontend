@@ -85,25 +85,32 @@ const getStatusClass = (s) => ({
   '안전': 'status-ok'
 }[s] || '')
 
-const createOrder = () => {
+const createOrder = async () => {
   const selectedItems = stocks.value.filter(s => s.inputQty > 0)
   if (selectedItems.length === 0) {
     alert('발주할 수량을 입력해주세요.')
     return
   }
-  
   if (!orderInfo.value.deadline) {
     alert('마감 기한을 입력해주세요.')
     return
   }
 
-  // Simulation
-  console.log('Creating Order:', {
-    info: orderInfo.value,
-    items: selectedItems
-  })
-  alert('발주가 성공적으로 생성되었습니다.')
-  router.push({ name: 'head-office-order-list' })
+  try {
+    const { createOrder: createOrderApi } = await import('@/api/hqOrders.js')
+    await createOrderApi({
+      username: orderInfo.value.managerName,
+      phoneNumber: orderInfo.value.managerPhone,
+      description: orderInfo.value.requirements,
+      isRegular: orderInfo.value.type === '정기',
+      manufactureDate: orderInfo.value.deadline + 'T00:00:00',
+      items: selectedItems.map(s => ({ productId: s.id, quantity: s.inputQty }))
+    })
+    alert('발주가 성공적으로 생성되었습니다.')
+    router.push({ name: 'head-office-order-list' })
+  } catch (e) {
+    alert(e.message || '발주 생성에 실패했습니다.')
+  }
 }
 
 </script>

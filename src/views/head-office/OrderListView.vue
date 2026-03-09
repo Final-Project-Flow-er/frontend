@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getOrderList } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
@@ -15,68 +16,42 @@ const filter = ref({
   arrivalTime: ''
 })
 
-const orders = ref([
-  { 
-    orderStatus: '대기', 
-    orderDate: '2023-10-25', 
-    orderCode: 'HEAD20231025001', 
-    products: [
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50, amount: 10000 },
-      { productCode: 'OR0103', productName: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 20, amount: 18000 }
-    ],
-    totalAmount: 860000, 
-    managerName: '김민기', 
-    managerPhone: '010-1111-2222', 
-    stockInDate: '2023-10-27', 
-    arrivalDate: '2023-10-27', 
-    arrivalTime: '10:00' 
-  },
-  { 
-    orderStatus: '배송중', 
-    orderDate: '2023-10-24', 
-    orderCode: 'HEAD20231024005', 
-    products: [
-      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 30, amount: 12000 },
-      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 10, amount: 12000 }
-    ],
-    totalAmount: 480000, 
-    managerName: '송지은', 
-    managerPhone: '010-3333-4444', 
-    stockInDate: '2023-10-26', 
-    arrivalDate: '2023-10-26', 
-    arrivalTime: '14:30' 
-  },
-  { 
-    orderStatus: '배송완료', 
-    orderDate: '2023-10-23', 
-    orderCode: 'HEAD20231023020', 
-    products: [
-      { productCode: 'MA0303', productName: '마라 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 200, amount: 22000 },
-      { productCode: 'RO0103', productName: '로제 떡볶이 밀키트 순한맛 3,4인분', quantity: 50, amount: 22000 }
-    ],
-    totalAmount: 5500000, 
-    managerName: '박원규', 
-    managerPhone: '010-5555-6666', 
-    stockInDate: '2023-10-25', 
-    arrivalDate: '2023-10-25', 
-    arrivalTime: '09:00' 
-  },
-  { 
-    orderStatus: '취소', 
-    orderDate: '2023-10-22', 
-    orderCode: 'HEAD20231022030', 
-    products: [
-      { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 30, amount: 18000 },
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 10, amount: 10000 }
-    ],
-    totalAmount: 640000, 
-    managerName: '김민수', 
-    managerPhone: '010-7777-8888', 
-    stockInDate: '-', 
-    arrivalDate: '2023-10-24', 
-    arrivalTime: '11:00' 
-  },
-])
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const orders = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getOrderList()
+    // Group by orderCode
+    const map = {}
+    ;(data || []).forEach(item => {
+      if (!map[item.orderCode]) {
+        map[item.orderCode] = {
+          orderCode: item.orderCode,
+          orderStatus: item.status,
+          orderDate: formatDate(item.requestedDate),
+          managerName: item.username || '',
+          managerPhone: item.phoneNumber || '',
+          stockInDate: item.storedDate || '',
+          arrivalDate: '',
+          arrivalTime: '',
+          totalAmount: 0,
+          products: []
+        }
+      }
+      map[item.orderCode].products.push({
+        productCode: item.productCode,
+        productName: '',
+        quantity: item.quantity,
+        amount: 0
+      })
+    })
+    orders.value = Object.values(map)
+  } catch (e) {
+    alert(e.message)
+  }
+})
 
 const filteredOrders = computed(() => {
   return orders.value.filter(item => {

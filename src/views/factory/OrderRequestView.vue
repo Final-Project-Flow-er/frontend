@@ -1,33 +1,34 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getOrderList } from '@/api/factoryOrders.js'
 
-// Mock Data
-const orders = ref([
-  { 
-    id: 1, orderCode: 'HEAD20231101001', status: '대기', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', 
-    quantity: 100, unitPrice: 10000, totalAmount: 1000000, 
-    managerName: '이지은', managerPhone: '010-1111-2222', employeeId: '30001', 
-    orderDate: '2023-11-01', inboundDate: '2023-11-05', type: '정기'
-  },
-  { 
-    id: 2, orderCode: 'HEAD20231101005', status: '접수', productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', 
-    quantity: 50, unitPrice: 12000, totalAmount: 600000, 
-    managerName: '박서준', managerPhone: '010-3333-4444', employeeId: '30002', 
-    orderDate: '2023-11-01', inboundDate: '2023-11-06', type: '비정기'
-  },
-  { 
-    id: 3, orderCode: 'HEAD20231102010', status: '입고 완료', productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', 
-    quantity: 200, unitPrice: 12000, totalAmount: 2400000, 
-    managerName: '최유리', managerPhone: '010-5555-6666', employeeId: '30003', 
-    orderDate: '2023-11-02', inboundDate: '2023-11-04', type: '정기'
-  },
-  { 
-    id: 4, orderCode: 'HEAD20231103015', status: '반려', productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', 
-    quantity: 30, unitPrice: 18000, totalAmount: 540000, 
-    managerName: '김도현', managerPhone: '010-7777-8888', employeeId: '30004', 
-    orderDate: '2023-11-03', inboundDate: '2023-11-08', type: '비정기'
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const orders = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getOrderList(true)
+    orders.value = (data || []).map((item, i) => ({
+      id: item.orderCode,
+      orderCode: item.orderCode,
+      status: item.status,
+      productCode: item.productCode,
+      productName: '',
+      quantity: item.quantity,
+      unitPrice: 0,
+      totalAmount: 0,
+      managerName: item.username || '',
+      managerPhone: item.phoneNumber || '',
+      employeeId: '',
+      orderDate: formatDate(item.requestedDate),
+      inboundDate: formatDate(item.storedDate),
+      type: item.isRegular ? '정기' : '비정기'
+    }))
+  } catch (e) {
+    alert(e.message)
   }
-])
+})
 
 const filter = ref({
   orderCode: '',
