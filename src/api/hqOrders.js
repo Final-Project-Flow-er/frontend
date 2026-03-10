@@ -15,3 +15,10 @@ export const updateOrderStatus = (data) => request(BASE, {
   body: JSON.stringify(data),
 })
 export const cancelOrder = (orderCode) => request(`${BASE}/${orderCode}/cancellation`, { method: 'PATCH' })
+export const updateOrder = (orderCode, data) => request(`${BASE}/${orderCode}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data),
+})
+export const getRequestedOrders = (isPending) =>
+  request(`${BASE}/requested?isPending=${isPending}`)
