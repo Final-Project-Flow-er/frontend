@@ -94,9 +94,9 @@
                 <input 
                   type="text" 
                   v-model="formData.phone" 
-                  @input="e => formData.phone = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)"
+                  @input="handlePhoneInput"
                   placeholder="전화번호를 입력하세요."
-                  maxlength="11"
+                  maxlength="13"
                   required
                 >
               </div>
@@ -298,13 +298,24 @@ const onPhotoChange = (e) => {
   }
 }
 
+// 전화번호 자동 하이픈
+const handlePhoneInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7, 11);
+  }
+  formData.phone = val;
+}
+
 const handleRegister = async () => {
   if (!formData.roleDetail) {
     alert('역할을 선택해주세요.')
     return
   }
 
-  if (formData.phone.trim().length !== 11) {
+  if (formData.phone.replace(/-/g, '').length !== 11) {
     alert('연락처는 11자리 숫자로 입력해주세요.')
     return
   }
