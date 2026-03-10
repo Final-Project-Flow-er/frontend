@@ -59,12 +59,16 @@
 
           <div class="form-group full-width">
             <label>주소 <span class="required">*</span></label>
-            <input 
-              type="text" 
-              v-model="storeData.address" 
-              placeholder="주소를 입력하세요"
-              required
-            >
+            <div class="address-input-group">
+              <input 
+                type="text" 
+                v-model="storeData.address" 
+                placeholder="주소를 검색하세요"
+                readonly
+                @click="openPostcode('store')"
+              >
+              <button type="button" @click="openPostcode('store')" class="btn-address-search">주소 검색</button>
+            </div>
           </div>
 
           <div class="form-group">
@@ -72,19 +76,56 @@
             <input 
               type="tel" 
               v-model="storeData.phone" 
+              @input="handlePhoneInput($event, 'store')"
               placeholder="02-1234-5678"
+              maxlength="13"
               required
             >
           </div>
 
           <div class="form-group">
-            <label>가맹점주명 <span class="required">*</span></label>
+            <label>대표자명 <span class="required">*</span></label>
             <input 
               type="text" 
-              v-model="storeData.representative" 
+              v-model="storeData.representativeName" 
               placeholder="점주님 성함을 입력하세요"
               required
             >
+          </div>
+
+          <div class="form-group">
+            <label>사업자 등록 번호 <span class="required">*</span></label>
+            <input 
+              type="text" 
+              v-model="storeData.businessNumber" 
+              @input="handleBizNumInput($event, 'store')"
+              placeholder="000-00-00000"
+              maxlength="12"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label>매장 지역 <span class="required">*</span></label>
+            <select v-model="storeData.region" required>
+              <option value="SEOUL">서울</option>
+              <option value="GYEONGGI">경기</option>
+              <option value="INCHEON">인천</option>
+              <option value="BUSAN">부산</option>
+              <option value="DAEGU">대구</option>
+              <option value="DAEJEON">대전</option>
+              <option value="GWANGJU">광주</option>
+              <option value="ULSAN">울산</option>
+              <option value="SEJONG">세종</option>
+              <option value="GANGWON">강원</option>
+              <option value="CHUNGBUK">충북</option>
+              <option value="CHUNGNAM">충남</option>
+              <option value="JEONBUK">전북</option>
+              <option value="JEONNAM">전남</option>
+              <option value="GYEONGBUK">경북</option>
+              <option value="GYEONGNAM">경남</option>
+              <option value="JEJU">제주</option>
+            </select>
           </div>
 
 
@@ -180,12 +221,16 @@
 
           <div class="form-group full-width">
             <label>주소 <span class="required">*</span></label>
-            <input 
-              type="text" 
-              v-model="factoryData.address" 
-              placeholder="주소를 입력하세요"
-              required
-            >
+            <div class="address-input-group">
+              <input 
+                type="text" 
+                v-model="factoryData.address" 
+                placeholder="주소를 검색하세요"
+                readonly
+                @click="openPostcode('factory')"
+              >
+              <button type="button" @click="openPostcode('factory')" class="btn-address-search">주소 검색</button>
+            </div>
           </div>
 
           <div class="form-group">
@@ -193,7 +238,9 @@
             <input 
               type="tel" 
               v-model="factoryData.phone" 
+              @input="handlePhoneInput($event, 'factory')"
               placeholder="02-1234-5678"
+              maxlength="13"
               required
             >
           </div>
@@ -202,8 +249,20 @@
             <label>공장 대표명 <span class="required">*</span></label>
             <input 
               type="text" 
-              v-model="factoryData.representative" 
+              v-model="factoryData.representativeName" 
               placeholder="대표자 성함을 입력하세요"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label>사업자 등록 번호 <span class="required">*</span></label>
+            <input 
+              type="text" 
+              v-model="factoryData.businessNumber" 
+              @input="handleBizNumInput($event, 'factory')"
+              placeholder="000-00-00000"
+              maxlength="12"
               required
             >
           </div>
@@ -211,23 +270,23 @@
           <div class="form-group">
             <label>공장 지역 <span class="required">*</span></label>
             <select v-model="factoryData.region" required>
-              <option value="SE01">서울</option>
-              <option value="GG01">경기</option>
-              <option value="IC01">인천</option>
-              <option value="BS01">부산</option>
-              <option value="DG01">대구</option>
-              <option value="DJ01">대전</option>
-              <option value="GJ01">광주</option>
-              <option value="UL01">울산</option>
-              <option value="SJ01">세종</option>
-              <option value="GW01">강원</option>
-              <option value="CB01">충북</option>
-              <option value="CN01">충남</option>
-              <option value="JB01">전북</option>
-              <option value="JN01">전남</option>
-              <option value="GB01">경북</option>
-              <option value="GN01">경남</option>
-              <option value="JJ01">제주</option>
+              <option value="SEOUL">서울</option>
+              <option value="GYEONGGI">경기</option>
+              <option value="INCHEON">인천</option>
+              <option value="BUSAN">부산</option>
+              <option value="DAEGU">대구</option>
+              <option value="DAEJEON">대전</option>
+              <option value="GWANGJU">광주</option>
+              <option value="ULSAN">울산</option>
+              <option value="SEJONG">세종</option>
+              <option value="GANGWON">강원</option>
+              <option value="CHUNGBUK">충북</option>
+              <option value="CHUNGNAM">충남</option>
+              <option value="JEONBUK">전북</option>
+              <option value="JEONNAM">전남</option>
+              <option value="GYEONGBUK">경북</option>
+              <option value="GYEONGNAM">경남</option>
+              <option value="JEJU">제주</option>
             </select>
           </div>
 
@@ -276,7 +335,7 @@
             </div>
             <div class="result-item">
               <span class="label">대표자:</span>
-              <span class="value">{{ resultData.representative }}</span>
+              <span class="value">{{ resultData.representativeName }}</span>
             </div>
           </div>
         </div>
@@ -291,6 +350,7 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api'
 
 const router = useRouter()
 
@@ -299,7 +359,7 @@ const showResultModal = ref(false)
 const resultData = reactive({
   name: '',
   code: '',
-  representative: ''
+  representativeName: ''
 })
 
 // 등록 타입 (store 또는 factory)
@@ -321,7 +381,9 @@ const storeData = reactive({
   name: '',
   address: '',
   phone: '',
-  representative: '',
+  representativeName: '',
+  businessNumber: '',
+  region: 'SEOUL',
   warningCount: 0,
   operatingDays: [],
   openTime: '',
@@ -334,8 +396,9 @@ const factoryData = reactive({
   name: '',
   address: '',
   phone: '',
-  representative: '',
-  region: 'SE01',
+  representativeName: '',
+  businessNumber: '',
+  region: 'SEOUL',
   lineCount: 1
 })
 
@@ -375,10 +438,10 @@ const removeStorePhoto = () => {
 }
 
 // 가맹점 등록
-const registerStore = () => {
+const registerStore = async () => {
   // 유효성 검사
   if (!storeData.name) {
-    alert('가맹점명을 선택해주세요.')
+    alert('가맹점명을 입력해주세요.')
     return
   }
   if (!storeData.address) {
@@ -389,6 +452,18 @@ const registerStore = () => {
     alert('매장 전화번호를 입력해주세요.')
     return
   }
+  if (!storeData.representativeName) {
+    alert('가맹점주명을 입력해주세요.')
+    return
+  }
+  if (!storeData.businessNumber || storeData.businessNumber.replace(/-/g, '').length !== 10) {
+    alert('사업자 등록 번호를 10자리 숫자로 입력해주세요.')
+    return
+  }
+  if (!storeData.region) {
+    alert('지역을 선택해주세요.')
+    return
+  }
   if (storeData.operatingDays.length === 0) {
     alert('운영 요일을 선택해주세요.')
     return
@@ -397,28 +472,46 @@ const registerStore = () => {
     alert('운영 시간을 입력해주세요.');
     return;
   }
-  if (!storeData.representative) {
-    alert('가맹점주명을 입력해주세요.');
+  
+  // 시간 유효성 검사 (시작 시간 < 종료 시간)
+  if (storeData.openTime >= storeData.closeTime) {
+    alert('운영 시작 시간은 종료 시간보다 이전이어야 합니다.');
     return;
   }
 
-  // TODO: API 호출로 가맹점 등록
-  console.log('가맹점 등록:', {
-    code: generatedStoreCode.value,
-    ...storeData
-  })
+  try {
+    const payload = {
+      name: storeData.name,
+      address: storeData.address,
+      phone: storeData.phone,
+      representativeName: storeData.representativeName,
+      businessNumber: storeData.businessNumber,
+      region: storeData.region,
+      franchiseCreate: {
+        operatingDays: storeData.operatingDays.join(','),
+        openTime: storeData.openTime + ':00', // Ensure HH:mm:ss
+        closeTime: storeData.closeTime + ':00',
+        imageUrl: storeData.photoUrl
+      }
+    }
 
-  // 결과 데이터 설정 및 모달 표시
-  resultData.name = storeData.name
-  resultData.code = generatedStoreCode.value
-  resultData.representative = storeData.representative
-  
-  showResultModal.value = true
-  storeCounter.value++
+    const response = await api.post('/hq/business-units/franchise', payload)
+
+    if (response.data.success) {
+      // 결과 데이터 설정 및 모달 표시
+      resultData.name = response.data.data.name
+      resultData.code = response.data.data.code
+      resultData.representativeName = response.data.data.representativeName
+      showResultModal.value = true
+    }
+  } catch (error) {
+    console.error('가맹점 등록 실패:', error)
+    alert(error.response?.data?.message || '가맹점 등록 중 오류가 발생했습니다.')
+  }
 }
 
 // 공장 등록
-const registerFactory = () => {
+const registerFactory = async () => {
   // 유효성 검사
   if (!factoryData.name) {
     alert('공장명을 입력해주세요.')
@@ -432,8 +525,12 @@ const registerFactory = () => {
     alert('공장 전화번호를 입력해주세요.')
     return
   }
-  if (!factoryData.representative) {
+  if (!factoryData.representativeName) {
     alert('공장 대표명을 입력해주세요.')
+    return
+  }
+  if (!factoryData.businessNumber || factoryData.businessNumber.replace(/-/g, '').length !== 10) {
+    alert('사업자 등록 번호를 10자리 숫자로 입력해주세요.')
     return
   }
   if (!factoryData.region) {
@@ -445,19 +542,32 @@ const registerFactory = () => {
     return
   }
 
-  // TODO: API 호출로 공장 등록
-  console.log('공장 등록:', {
-    code: generatedFactoryCode.value,
-    ...factoryData
-  })
+  try {
+    const payload = {
+      name: factoryData.name,
+      address: factoryData.address,
+      phone: factoryData.phone,
+      representativeName: factoryData.representativeName,
+      businessNumber: factoryData.businessNumber,
+      region: factoryData.region,
+      factoryCreate: {
+        productionLineCount: factoryData.lineCount
+      }
+    }
 
-  // 결과 데이터 설정 및 모달 표시
-  resultData.name = factoryData.name
-  resultData.code = generatedFactoryCode.value
-  resultData.representative = factoryData.representative
+    const response = await api.post('/hq/business-units/factory', payload)
 
-  showResultModal.value = true
-  factoryCounter.value++
+    if (response.data.success) {
+      // 결과 데이터 설정 및 모달 표시
+      resultData.name = response.data.data.name
+      resultData.code = response.data.data.code
+      resultData.representativeName = response.data.data.representativeName
+      showResultModal.value = true
+    }
+  } catch (error) {
+    console.error('공장 등록 실패:', error)
+    alert(error.response?.data?.message || '공장 등록 중 오류가 발생했습니다.')
+  }
 }
 
 const closeModal = () => {
@@ -469,11 +579,106 @@ const closeModal = () => {
   }
 }
 
+// 전화번호 자동 하이픈 및 제약
+const handlePhoneInput = (e, type) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.startsWith('02')) {
+    if (val.length > 2 && val.length <= 5) {
+      val = val.slice(0, 2) + '-' + val.slice(2);
+    } else if (val.length > 5 && val.length <= 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
+    } else if (val.length > 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    }
+  } else {
+    if (val.length > 3 && val.length <= 7) {
+      val = val.slice(0, 3) + '-' + val.slice(3);
+    } else if (val.length > 7 && val.length <= 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
+    } else if (val.length > 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    }
+  }
+  
+  if (type === 'store') storeData.phone = val;
+  else factoryData.phone = val;
+}
+
+// 사업자 등록 번호 자동 하이픈 (000-00-00000)
+const handleBizNumInput = (e, type) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 5) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 5) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 5) + '-' + val.slice(5, 10);
+  }
+  
+  if (type === 'store') storeData.businessNumber = val;
+  else factoryData.businessNumber = val;
+}
+
+// 주소 검색 (Daum Postcode)
+const openPostcode = (type) => {
+  new window.daum.Postcode({
+    oncomplete: (data) => {
+      let fullAddress = data.address;
+      let extraAddress = '';
+
+      if (data.addressType === 'R') {
+        if (data.bname !== '') extraAddress += data.bname;
+        if (data.buildingName !== '') extraAddress += (extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName);
+        fullAddress += (extraAddress !== '' ? ` (${extraAddress})` : '');
+      }
+
+      if (type === 'store') {
+        storeData.address = fullAddress;
+        // 시/도 정보를 기반으로 지역 자동 선택 (필요시)
+        updateRegionByAddress(data.sido, 'store');
+      } else {
+        factoryData.address = fullAddress;
+        updateRegionByAddress(data.sido, 'factory');
+      }
+    }
+  }).open();
+}
+
+const updateRegionByAddress = (sido, type) => {
+  const sidoMap = {
+    '서울': 'SEOUL',
+    '경기': 'GYEONGGI',
+    '인천': 'INCHEON',
+    '부산': 'BUSAN',
+    '대구': 'DAEGU',
+    '대전': 'DAEJEON',
+    '광주': 'GWANGJU',
+    '울산': 'ULSAN',
+    '세종': 'SEJONG',
+    '강원': 'GANGWON',
+    '충북': 'CHUNGBUK',
+    '충남': 'CHUNGNAM',
+    '전북': 'JEONBUK',
+    '전남': 'JEONNAM',
+    '경북': 'GYEONGBUK',
+    '경남': 'GYEONGNAM',
+    '제주': 'JEJU',
+    '제주특별자치도': 'JEJU'
+  }
+  
+  const mapped = sidoMap[sido] || Object.entries(sidoMap).find(([key]) => sido.includes(key))?.[1];
+  if (mapped) {
+    if (type === 'store') storeData.region = mapped;
+    else factoryData.region = mapped;
+  }
+}
+
 // 가맹점 폼 초기화
 const resetStoreForm = () => {
   storeData.name = ''
   storeData.address = ''
   storeData.phone = ''
+  storeData.representativeName = ''
+  storeData.businessNumber = ''
+  storeData.region = 'SEOUL'
   storeData.operatingDays = []
   storeData.openTime = ''
   storeData.closeTime = ''
@@ -485,8 +690,9 @@ const resetFactoryForm = () => {
   factoryData.name = ''
   factoryData.address = ''
   factoryData.phone = ''
-  factoryData.representative = ''
-  factoryData.region = 'SE01'
+  factoryData.representativeName = ''
+  factoryData.businessNumber = ''
+  factoryData.region = 'SEOUL'
   factoryData.lineCount = 1
 }
 </script>
@@ -623,6 +829,31 @@ const resetFactoryForm = () => {
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
 }
 
+.address-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.address-input-group input {
+  flex: 1;
+}
+
+.btn-address-search {
+  padding: 0 1rem;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-address-search:hover {
+  background: #e2e8f0;
+}
+
 .input-disabled {
   background: #f8fafc !important;
   color: #94a3b8;
@@ -688,23 +919,27 @@ const resetFactoryForm = () => {
 
 .btn-remove-photo {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 32px;
-  height: 32px;
-  background: #ef4444;
-  color: white;
-  border: none;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
 }
 
 .btn-remove-photo:hover {
-  background: #dc2626;
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecaca;
   transform: scale(1.1);
 }
 
