@@ -64,8 +64,7 @@
             <div class="info-row">
               <div class="label">사업자 번호</div>
               <div class="value">
-                <span v-if="!isEditing">{{ hqData.businessNumber }}</span>
-                <input v-else type="text" v-model="hqData.businessNumber">
+                <span class="fixed-code">{{ hqData.businessNumber }}</span>
               </div>
             </div>
 
@@ -133,9 +132,7 @@ const saveChanges = async () => {
       name: hqData.value.name,
       address: hqData.value.address,
       phone: hqData.value.phone,
-      representativeName: hqData.value.representativeName,
-      region: hqData.value.region,
-      businessNumber: hqData.value.businessNumber
+      representativeName: hqData.value.representativeName
     }
     const response = await api.patch('/hq/business-units/HQ/1', payload)
     if (response.data.success) {
