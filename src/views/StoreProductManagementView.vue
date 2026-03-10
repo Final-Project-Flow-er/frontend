@@ -186,6 +186,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import api from '@/api'
 
 const filter = ref({
   productCode: '',
@@ -214,61 +215,50 @@ const form = ref({
 
 const products = ref([])
 
-// Generate 24 Products
-const generateMockProducts = () => {
-    const types = [
-        { code: 'OR', name: '오리지널 떡볶이 밀키트', price1: 10000, price2: 18000 },
-        { code: 'RO', name: '로제 떡볶이 밀키트', price1: 12000, price2: 22000 },
-        { code: 'MA', name: '마라 떡볶이 밀키트', price1: 12000, price2: 22000 }
-    ]
-    const spices = [
-        { code: '01', name: '순한맛' },
-        { code: '02', name: '기본맛' },
-        { code: '03', name: '매운맛' },
-        { code: '04', name: '아주 매운맛' }
-    ]
-    const sizes = [
-        { code: '01', name: '1~2인분', serving: 1 },
-        { code: '03', name: '3~4인분', serving: 3 }
-    ]
+const isLoading = ref(false)
 
-    const list = []
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}` 
-                const price = sz.code === '01' ? t.price1 : t.price2
-                
-                const supplyPrice = price - 5000 
-                
-                list.push({
-                    productCode: code,
-                    name: name,
-                    description: `${t.name} ${s.name}입니다.`,
-                    imageUrl: `/images/${t.code}.png`, // Updated to .png
-                    price: price,
-                    supplyPrice: supplyPrice,
-                    status: 'ON_SALE',
-                    servingSize: sz.serving,
-                    spiceLevel: s.code,
-                    kcal: sz.serving === 1 ? 1400 : 2800, 
-                    weight: sz.code === '01' ? 500 : 1000,
-                    startDate: '2024-01-01', 
-                    endDate: '2025-12-31',
-                    baseSafeStock: 10,
-                    components: t.code === 'OR' ? ['밀떡', '어묵', '오리지널 소스'] : t.code === 'RO' ? ['밀떡', '베이컨', '로제 소스'] : ['밀떡', '우삼겹', '마라 소스'],
-                    type: t.code,
-                    sizeCode: sz.code
-                })
+const fetchProducts = async () => {
+    isLoading.value = true
+    try {
+        const response = await api.get('/franchise/product')
+        if (response.data && response.data.success) {
+            
+            let fetchedProducts = []
+            const dataObj = response.data.data
+            if (dataObj && dataObj.franchiseProductList) {
+                fetchedProducts = dataObj.franchiseProductList
+            } else if (dataObj && dataObj.franchiseproductList) {
+               fetchedProducts = dataObj.franchiseproductList
+            } else if (dataObj && dataObj.FranchiseProductList) {
+                fetchedProducts = dataObj.FranchiseProductList
+            }
+
+            products.value = fetchedProducts.map(p => {
+                const type = p.productCode ? p.productCode.substring(0, 2) : ''
+                const spice = p.productCode ? p.productCode.substring(2, 4) : ''
+                const size = p.productCode ? p.productCode.substring(4, 6) : ''
+
+                return {
+                    ...p,
+                    imageUrl: p.imageUrl || `/images/${type}.png`,
+                    servingSize: size === '01' ? 1 : 3,
+                    spiceLevel: spice,
+                    sizeCode: size,
+                    type: type,
+                    baseSafeStock: p.safetyStock,
+                    componentsInput: p.components ? p.components.join(', ') : ''
+                }
             })
-        })
-    })
-    products.value = list
+        }
+    } catch (error) {
+        console.error('Failed to fetch store products:', error)
+    } finally {
+        isLoading.value = false
+    }
 }
 
 onMounted(() => {
-    generateMockProducts()
+    fetchProducts()
 })
 
 const filteredProducts = computed(() => {

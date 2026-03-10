@@ -514,7 +514,7 @@ const saveProduct = async () => {
         weight: form.value.weight,
         startDate: form.value.startDate,
         endDate: form.value.endDate,
-        componentIds: [] // No backend components search logic available yet, passing empty to avoid errors
+        components: form.value.componentsInput ? form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean) : []
     }
     
     try {
