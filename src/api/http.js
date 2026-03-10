@@ -1,5 +1,5 @@
 export async function request(url, options = {}) {
-  const token = sessionStorage.getItem('accessToken')
+  const token = localStorage.getItem('accessToken')
   const headers = { ...(options.headers || {}) }
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(url, { ...options, headers })
