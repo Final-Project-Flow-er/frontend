@@ -1,68 +1,60 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getReturnDetail, updateReturn } from '@/api/hqReturns.js'
 
 const route = useRoute()
 const router = useRouter()
 
-// Mock main return item
 const returnItem = ref(null)
 const isLoading = ref(true)
 
-// Inspection Products Data
 const inspectionProducts = ref([])
 const productsFilter = ref({
-  boxCode: '', // [복구] 박스 코드 필터
+  boxCode: '',
   productIdCode: '',
   inspectionStatus: '',
   productCondition: ''
 })
 
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const STATUS_LABEL = { PENDING: '검수 전', INSPECTED: '검수 완료', NORMAL: '정상', DEFECT: '하자' }
 const inspectionStatuses = ['검수 전', '검수 완료']
 const productConditions = ['검수 전', '정상', '하자']
 
-// Multi-ID Mock Data Logic
-const allReturns = [
-  {
-    returnCode: 'RESE0120231101001', franchiseCode: 'SE01', requestDate: '2023-11-05', status: '대기',
-    boxCode: 'SE01FA0120231105OR0101001', productIdCode: 'SE01FA01AOR0101B001', orderCode: 'SE0120231101001', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    reason: '파손', quantity: 5, amount: 50000, recipientName: '김가맹', recipientPhone: '010-1234-5678',
-    address: '서울시 강남구 테헤란로 123', memo: '배송 대기 중인 항목입니다.',
-    products: [
-      { code: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 5, unitPrice: 10000, condition: '정상' }
-    ]
-  },
-  {
-    returnCode: 'RESE0220231102005', franchiseCode: 'SE02', requestDate: '2023-11-06', status: '배송중',
-    boxCode: 'SE02FA0120231106RO0201010', productIdCode: 'SE02FA02ARO0201B010', orderCode: 'SE0220231102005', productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    reason: '오발주', quantity: 10, amount: 200000, recipientName: '이점주', recipientPhone: '010-9876-5432',
-    address: '부산시 해운대구 ...', memo: '현재 배송 중입니다.'
-  },
-  {
-    returnCode: 'RESE0320231030020', franchiseCode: 'SE03', requestDate: '2023-11-04', status: '배송 완료',
-    boxCode: 'SE03FA0120231104MA0303020', productIdCode: 'SE03FA01AMA0303B020', orderCode: 'SE0320231030020', productCode: 'MA0303', productName: '마라 떡볶이 밀키트 매운맛 3,4인분',
-    reason: '상품 하자', quantity: 2, amount: 60000, recipientName: '박센터', recipientPhone: '010-5555-4444',
-    address: '대전시 유성구 ...', memo: '배송 완료되어 검수 가능한 항목입니다.'
-  }
-]
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
-onMounted(() => {
-  isLoading.value = true
-  setTimeout(() => {
-    const found = allReturns.find(r => r.returnCode === route.params.id)
-    if (found) {
-      returnItem.value = { ...found }
-      // Generate inspection items for the mock
-      inspectionProducts.value = Array.from({ length: found.quantity }).map((_, i) => ({
-        id: Date.now() + i,
-        boxCode: found.boxCode, // Copy boxCode to items
-        productIdCode: `${found.productIdCode}-${i+1}`,
-        inspectionStatus: '검수 전',
-        productCondition: '검수 전'
-      }))
+onMounted(async () => {
+  try {
+    const data = await getReturnDetail(route.params.id)
+    returnItem.value = {
+      returnCode: data.returnCode,
+      franchiseCode: data.franchiseCode,
+      requestDate: formatDate(data.requestedDate),
+      status: data.status,
+      orderCode: data.orderCode,
+      productCode: '',
+      productName: '',
+      reason: TYPE_LABEL[data.type] || data.type,
+      quantity: (data.items || []).length,
+      amount: Number(data.totalAmount || 0),
+      recipientName: data.username || '',
+      recipientPhone: data.phoneNumber || '',
+      address: '',
+      memo: data.description || ''
     }
+    inspectionProducts.value = (data.items || []).map((item, i) => ({
+      id: i,
+      boxCode: item.boxCode || '',
+      productIdCode: item.serialCode || '',
+      inspectionStatus: item.isInspected ? '검수 완료' : '검수 전',
+      productCondition: STATUS_LABEL[item.status] || '검수 전'
+    }))
+  } catch (e) {
+    alert(e.message)
+  } finally {
     isLoading.value = false
-  }, 300)
+  }
 })
 
 const canInspect = computed(() => returnItem.value?.status === '배송 완료')
@@ -105,23 +97,49 @@ const getStatusClass = (s) => ({
   '반품 거절': 'status-danger'
 }[s] || 'status-default')
 
-// Decision Actions
-const finishWithDeduction = () => {
-  if (returnItem.value.reason === '오발주') {
-    alert('경고를 부여하며 대금 차감 승인 처리를 진행합니다.')
-  } else {
-    alert('대금 차감 승인 처리를 진행합니다.')
+const CONDITION_API = { '검수 전': 'PENDING', '정상': 'NORMAL', '하자': 'DEFECT' }
+
+const saveInspections = async () => {
+  try {
+    const updates = inspectionProducts.value.map(p => ({
+      boxCode: p.boxCode,
+      serialCode: p.productIdCode,
+      isInspected: p.inspectionStatus === '검수 완료',
+      status: CONDITION_API[p.productCondition] || 'PENDING'
+    }))
+    await updateReturn(route.params.id, updates)
+  } catch (e) {
+    throw e
   }
-  returnItem.value.status = '반품 승인'
 }
 
-const finishWithRejection = () => {
-  if (returnItem.value.reason === '오발주') {
-    alert('경고를 부여하며 반품 거절 처리를 진행합니다.')
-  } else {
-    alert('반품 거절 처리를 진행합니다.')
+// Decision Actions
+const finishWithDeduction = async () => {
+  try {
+    await saveInspections()
+    if (returnItem.value.reason === '오발주') {
+      alert('경고를 부여하며 대금 차감 승인 처리를 진행합니다.')
+    } else {
+      alert('대금 차감 승인 처리를 진행합니다.')
+    }
+    returnItem.value.status = '반품 승인'
+  } catch (e) {
+    alert(e.message || '처리에 실패했습니다.')
   }
-  returnItem.value.status = '반품 거절'
+}
+
+const finishWithRejection = async () => {
+  try {
+    await saveInspections()
+    if (returnItem.value.reason === '오발주') {
+      alert('경고를 부여하며 반품 거절 처리를 진행합니다.')
+    } else {
+      alert('반품 거절 처리를 진행합니다.')
+    }
+    returnItem.value.status = '반품 거절'
+  } catch (e) {
+    alert(e.message || '처리에 실패했습니다.')
+  }
 }
 
 </script>

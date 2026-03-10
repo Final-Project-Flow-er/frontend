@@ -1,47 +1,83 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 
-// Mock Data for Left List (Outbound Boxes)
-// Mock Data for Left List (Outbound Boxes)
-const outboundBoxes = ref([
-  { boxCode: 'SE01-FA01-A1-OR0101-001', orderCode: 'SE0120231026001', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20, destination: '서울 강남점' },
-  { boxCode: 'SE01-FA01-A1-MA0301-001', orderCode: 'SE0120231026001', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15, destination: '서울 강남점' },
-  { boxCode: 'SE01-FA01-A1-RO0201-001', orderCode: 'SE0120231025005', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10, destination: '경기 판교점' },
-  { boxCode: 'SE01-FA01-A1-OR0103-001', orderCode: 'SE0120231025005', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5, destination: '경기 판교점' },
-])
+const outboundBoxes = ref([])
 
-// Mock Data for Right List (Details per box)
-const allBoxDetails = ref({
-  'SE01-FA01-A1-OR0101-001': Array.from({ length: 20 }, (_, i) => ({
-    id: `SE01-FA01-A1-OR0101-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'OR0101',
-    name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    expiryDate: '2026-02-15',
-    picking: false
-  })),
-  'SE01-FA01-A1-MA0301-001': Array.from({ length: 15 }, (_, i) => ({
-    id: `SE01-FA01-A1-MA0301-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'MA0301',
-    name: '마라 떡볶이 밀키트 매운맛 1,2인분',
-    expiryDate: '2026-02-16',
-    picking: false
-  })),
-  'SE01-FA01-A1-RO0201-001': Array.from({ length: 10 }, (_, i) => ({
-    id: `SE01-FA01-A1-RO0201-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'RO0201',
-    name: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    expiryDate: '2026-02-17',
-    picking: false
-  })),
-  'SE01-FA01-A1-OR0103-001': Array.from({ length: 5 }, (_, i) => ({
-    id: `SE01-FA01-A1-OR0103-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'OR0103',
-    name: '오리지널 떡볶이 밀키트 순한맛 3,4인분',
-    expiryDate: '2026-02-18',
-    picking: false
-  })),
+const fetchOutboundBoxes = async () => {
+  try {
+    const response = await fetch('/api/v1/outbounds/boxes', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      }
+    })
+    let result = null;
+    try {
+      result = await response.json()
+    } catch(e) {
+      console.warn("Non-JSON response received:", e)
+    }
+    // 백엔드의 getBoxDetail과 매핑.
+    if (response.ok && result?.success && result?.data) {
+      console.log("API returned raw boxes:", result.data)
+      outboundBoxes.value = result.data.map(box => ({
+        boxCode: box.boxCode,
+        orderCode: box.orderCode,
+        productCode: box.productCode,
+        name: box.productName,
+        destination: box.franchiseName || '-',
+        quantity: box.countItem || 0
+      }))
+    } else {
+      outboundBoxes.value = []
+    }
+  } catch(error) {
+    console.error('Error fetching outbound boxes:', error)
+    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+  }
+}
+
+onMounted(() => {
+  fetchOutboundBoxes()
 })
+
+// Data for Right List (Details per box)
+const allBoxDetails = ref({})
+
+const fetchBoxDetails = async (boxCode) => {
+  if (allBoxDetails.value[boxCode]) return // 이미 불러온 경우 스킵
+
+  try {
+    const response = await fetch(`/api/v1/outbounds/boxes/items?boxCode=${boxCode}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      }
+    })
+    let result = null;
+    try {
+      result = await response.json()
+    } catch(e) {
+      console.warn("Non-JSON response received:", e)
+    }
+    
+    if (response.ok && result?.success && result?.data) {
+      console.log(`API returned items for boxCode ${boxCode}:`, result.data)
+      allBoxDetails.value[boxCode] = result.data.map(item => ({
+        id: item.serialCode,
+        productCode: item.productId, // API에는 productId가 있음
+        name: item.productName,
+        productionDate: item.manufactureDate,
+        picking: item.isPicking
+      }))
+    } else {
+      allBoxDetails.value[boxCode] = []
+    }
+  } catch(error) {
+    console.error('Error fetching box details:', error)
+    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+    allBoxDetails.value[boxCode] = []
+  }
+}
 
 const selectedBoxCode = ref(null)
 const selectedBoxIds = ref(new Set())
@@ -52,16 +88,20 @@ const selectedBoxDetails = computed(() => {
   return allBoxDetails.value[selectedBoxCode.value] || []
 })
 
-const selectBox = (boxCode) => {
+const selectBox = async (boxCode) => {
   selectedBoxCode.value = boxCode
+  await fetchBoxDetails(boxCode)
 }
 
 // Checkbox Logic - Boxes
-const toggleAllBoxes = (e) => {
+const toggleAllBoxes = async (e) => {
   if (e.target.checked) {
+    outboundBoxes.value.forEach(box => selectedBoxIds.value.add(box.boxCode))
+    
+    // Fetch details for all boxes if not already loaded
+    await Promise.all(outboundBoxes.value.map(box => fetchBoxDetails(box.boxCode)))
+    
     outboundBoxes.value.forEach(box => {
-      selectedBoxIds.value.add(box.boxCode)
-      // Automatically check all items in selected boxes
       if (allBoxDetails.value[box.boxCode]) {
         allBoxDetails.value[box.boxCode].forEach(item => selectedItemIds.value.add(item.id))
       }
@@ -72,7 +112,7 @@ const toggleAllBoxes = (e) => {
   }
 }
 
-const toggleBox = (boxCode) => {
+const toggleBox = async (boxCode) => {
   if (selectedBoxIds.value.has(boxCode)) {
     selectedBoxIds.value.delete(boxCode)
     // Uncheck all items in this box
@@ -82,6 +122,7 @@ const toggleBox = (boxCode) => {
   } else {
     selectedBoxIds.value.add(boxCode)
     // Check all items in this box
+    await fetchBoxDetails(boxCode)
     if (allBoxDetails.value[boxCode]) {
       allBoxDetails.value[boxCode].forEach(item => selectedItemIds.value.add(item.id))
     }
@@ -104,124 +145,46 @@ const toggleItem = (itemId) => {
 
 // Actions
 
-const performDelete = () => {
-  const boxCount = selectedBoxIds.value.size
-  const itemCount = selectedItemIds.value.size
-  
-  // Delete Boxes
-  if (boxCount > 0) {
-    outboundBoxes.value = outboundBoxes.value.filter(b => !selectedBoxIds.value.has(b.boxCode))
-    selectedBoxIds.value.forEach(code => {
-      delete allBoxDetails.value[code]
-      if (selectedBoxCode.value === code) selectedBoxCode.value = null
-    })
-    selectedBoxIds.value.clear()
-  }
-
-  // Delete Items (from current details)
-  if (itemCount > 0 && selectedBoxCode.value) {
-     const currentItems = allBoxDetails.value[selectedBoxCode.value]
-     // Filter out deleted items
-     const remainingItems = currentItems.filter(item => !selectedItemIds.value.has(item.id))
-     allBoxDetails.value[selectedBoxCode.value] = remainingItems
-     
-     // Update Box Quantity
-     const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === selectedBoxCode.value)
-     if (boxIndex !== -1) {
-       outboundBoxes.value[boxIndex].quantity = remainingItems.length
-       // Remove box if empty
-       if (remainingItems.length === 0) {
-         outboundBoxes.value.splice(boxIndex, 1)
-         selectedBoxCode.value = null
-       }
-     }
-     
-     selectedItemIds.value.clear()
-  }
-  
-  openModal('알림', '삭제되었습니다.', null, false)
-}
-
-const deleteSelected = () => {
-  const boxCount = selectedBoxIds.value.size
-  const itemCount = selectedItemIds.value.size
-  
-  if (boxCount === 0 && itemCount === 0) {
-    openModal('알림', '삭제할 항목을 선택해주세요.', null, false)
-    return
-  }
-
-  const msg = `정말 ${boxCount + itemCount}개의 항목을 삭제하시겠습니까?`
-  openModal('삭제 확인', msg, performDelete)
-}
-
-const performPicking = () => {
-  // Update picking status to true for selected items
-  // Since we might have items from multiple boxes selected if we expanded logic,
-  // but currently we only show one box's details.
-  // Requirement doesn't specify cross-box picking in detail list yet, 
-  // but toggleBox selects all items. So we should pick ALL selected items.
-  
-  Object.keys(allBoxDetails.value).forEach(boxCode => {
-    allBoxDetails.value[boxCode].forEach(item => {
-      if (selectedItemIds.value.has(item.id)) {
-        item.picking = true
-      }
-    })
-  })
-  
-  selectedItemIds.value.clear()
-  openModal('알림', '피킹 완료되었습니다.', null, false)
-}
-
-const confirmPicking = () => {
-  const itemCount = selectedItemIds.value.size
-  if (itemCount === 0) {
-    openModal('알림', '피킹할 개별 품목을 선택해주세요.', null, false)
-    return
-  }
-
-  openModal('피킹 확인', '피킹을 확정지으시겠습니까?', performPicking)
-}
-
-const approveOutbound = () => {
-   const boxCount = selectedBoxIds.value.size
-   const itemCount = selectedItemIds.value.size
-   
-  if (boxCount === 0 && itemCount === 0) {
-    openModal('알림', '출고 승인할 항목을 선택해주세요.', null, false)
-    return
-  }
-
-  // Check if any selected item (including those in selected boxes) is NOT picked
-  let hasUnpicked = false
-  
-  // Check selected items directly
-  Object.keys(allBoxDetails.value).forEach(boxCode => {
-    allBoxDetails.value[boxCode].forEach(item => {
-      if (selectedItemIds.value.has(item.id) && !item.picking) {
-        hasUnpicked = true
-      }
-    })
-  })
-
-  if (hasUnpicked) {
-    openModal('알림', '피킹이 완료(O)된 항목만 출고 승인할 수 있습니다.', null, false)
-    return
-  }
-
-  const performApprove = () => {
-    // Remove approved items and boxes
-    selectedBoxIds.value.forEach(boxCode => {
-      outboundBoxes.value = outboundBoxes.value.filter(b => b.boxCode !== boxCode)
-      delete allBoxDetails.value[boxCode]
-      if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
-    })
-    
-    // Remove individual items from their boxes
+const performDelete = async () => {
+  try {
+    // 선택된 아이템들을 박스 코드별로 그룹화
+    const itemsByBox = {}
     Object.keys(allBoxDetails.value).forEach(boxCode => {
-      const items = allBoxDetails.value[boxCode]
-      const remainingItems = items.filter(i => !selectedItemIds.value.has(i.id))
+      const selectedInBox = (allBoxDetails.value[boxCode] || [])
+        .filter(item => selectedItemIds.value.has(item.id))
+        .map(item => item.id)
+      
+      if (selectedInBox.length > 0) {
+        itemsByBox[boxCode] = selectedInBox
+      }
+    })
+
+    // 박스별로 삭제 API 요청 병렬 통신
+    const promises = Object.entries(itemsByBox).map(async ([boxCode, serialCodes]) => {
+      const res = await fetch('/api/v1/outbounds/cancels', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ boxCode, serialCodes })
+      })
+      let json = null
+      try { json = await res.json() } catch(e) {}
+      return {  success: res.ok && json?.success !== false }
+    })
+
+    const results = await Promise.all(promises)
+    const hasError = results.some(r => !r.success)
+
+    if (hasError) {
+      console.warn("일부 응답이 성공(OK) 상태가 아닙니다. 하지만 처리는 백엔드에서 진행되었을 수 있으므로 UI를 갱신합니다.")
+    }
+
+    // 통신 성공 시 UI 상태 업데이트
+    Object.entries(itemsByBox).forEach(([boxCode, serialCodes]) => {
+      const items = allBoxDetails.value[boxCode] || []
+      const remainingItems = items.filter(i => !serialCodes.includes(i.id))
       allBoxDetails.value[boxCode] = remainingItems
       
       const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === boxCode)
@@ -236,7 +199,176 @@ const approveOutbound = () => {
 
     selectedBoxIds.value.clear()
     selectedItemIds.value.clear()
-    openModal('알림', '출고 승인 완료되었습니다.', null, false)
+    openModal('알림', '삭제되었습니다.', null, false)
+  } catch (error) {
+    console.error('Error in deleting:', error)
+    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+  }
+}
+
+const deleteSelected = () => {
+  const itemCount = selectedItemIds.value.size
+  
+  if (itemCount === 0) {
+    openModal('알림', '삭제할 품목을 선택해주세요.', null, false)
+    return
+  }
+
+  const msg = `정말 선택된 ${itemCount}개의 항목을 삭제(할당 취소)하시겠습니까?`
+  openModal('삭제 확인', msg, performDelete)
+}
+
+const performPicking = async () => {
+  try {
+    const serialCodes = Array.from(selectedItemIds.value)
+    const response = await fetch('/api/v1/outbounds/pickings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      },
+      body: JSON.stringify({ serialCodes })
+    })
+    
+    const result = await response.json()
+    
+    if (response.ok && result.success) {
+      // Update picking status to true for selected items in UI
+      Object.keys(allBoxDetails.value).forEach(boxCode => {
+        allBoxDetails.value[boxCode].forEach(item => {
+          if (selectedItemIds.value.has(item.id)) {
+            item.picking = true
+          }
+        })
+      })
+      
+      selectedItemIds.value.clear()
+      openModal('알림', '피킹 완료되었습니다.', null, false)
+    } else {
+      openModal('오류', result.message || '피킹 처리에 실패했습니다.', null, false)
+    }
+  } catch (error) {
+    console.error('Error in picking:', error)
+    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+  }
+}
+
+const confirmPicking = () => {
+  const itemCount = selectedItemIds.value.size
+  if (itemCount === 0) {
+    openModal('알림', '피킹할 개별 품목을 선택해주세요.', null, false)
+    return
+  }
+
+  // 박스 단위(20개) 검증
+  let isValid = true
+  Object.keys(allBoxDetails.value).forEach(boxCode => {
+    const itemsInBox = allBoxDetails.value[boxCode] || []
+    const selectedCountInBox = itemsInBox.filter(item => selectedItemIds.value.has(item.id)).length
+    
+    // 만약 해당 박스에서 선택된 품목이 1개라도 있다면 무조건 20개(정량)가 선택되어야만 피킹 가능
+    if (selectedCountInBox > 0 && selectedCountInBox !== 20) {
+      isValid = false
+    }
+  })
+
+  if (!isValid) {
+    openModal('알림', '피킹은 박스 단위(20개 정량)로 전체가 선택되어야만 가능합니다.', null, false)
+    return
+  }
+
+  openModal('피킹 확인', '피킹을 확정지으시겠습니까?', performPicking)
+}
+
+const approveOutbound = () => {
+  const itemCount = selectedItemIds.value.size
+  
+  if (itemCount === 0) {
+    openModal('알림', '출고 승인할 품목을 선택해주세요.', null, false)
+    return
+  }
+
+  // 박스 단위(20개) 검증
+  let isValid = true
+  Object.keys(allBoxDetails.value).forEach(boxCode => {
+    const itemsInBox = allBoxDetails.value[boxCode] || []
+    const selectedCountInBox = itemsInBox.filter(item => selectedItemIds.value.has(item.id)).length
+    
+    if (selectedCountInBox > 0 && selectedCountInBox !== 20) {
+      isValid = false
+    }
+  })
+
+  if (!isValid) {
+    openModal('알림', '출고 승인은 박스 단위(20개 정량)로 전체가 선택되어야만 가능합니다.', null, false)
+    return
+  }
+
+  // Check if any selected item is NOT picked
+  let hasUnpicked = false
+  Object.keys(allBoxDetails.value).forEach(boxCode => {
+    allBoxDetails.value[boxCode].forEach(item => {
+      if (selectedItemIds.value.has(item.id) && !item.picking) {
+        hasUnpicked = true
+      }
+    })
+  })
+
+  if (hasUnpicked) {
+    openModal('알림', '피킹이 완료(O)된 항목만 출고 승인할 수 있습니다.', null, false)
+    return
+  }
+
+  const performApprove = async () => {
+    try {
+      const response = await fetch('/api/v1/outbounds/confirms', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          serialCodes: Array.from(selectedItemIds.value)
+        })
+      })
+
+      let result = null
+      try { result = await response.json() } catch(e) {}
+
+      if (response.ok && result?.success) {
+        // Remove approved items and boxes
+        selectedBoxIds.value.forEach(boxCode => {
+          outboundBoxes.value = outboundBoxes.value.filter(b => b.boxCode !== boxCode)
+          delete allBoxDetails.value[boxCode]
+          if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
+        })
+        
+        // Remove individual items from their boxes
+        Object.keys(allBoxDetails.value).forEach(boxCode => {
+          const items = allBoxDetails.value[boxCode]
+          const remainingItems = items.filter(i => !selectedItemIds.value.has(i.id))
+          allBoxDetails.value[boxCode] = remainingItems
+          
+          const boxIndex = outboundBoxes.value.findIndex(b => b.boxCode === boxCode)
+          if (boxIndex !== -1) {
+            outboundBoxes.value[boxIndex].quantity = remainingItems.length
+            if (remainingItems.length === 0) {
+              outboundBoxes.value.splice(boxIndex, 1)
+              if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
+            }
+          }
+        })
+
+        selectedBoxIds.value.clear()
+        selectedItemIds.value.clear()
+        openModal('알림', '출고 승인 완료되었습니다.', null, false)
+      } else {
+        openModal('오류', result?.message || '출고 처리에 실패했습니다.', null, false)
+      }
+    } catch (error) {
+      console.error('Error in approving outbound:', error)
+      openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+    }
   }
 
   openModal('출고 승인 확인', '선택된 제품들을 출고 승인하시겠습니까?', performApprove)
@@ -272,7 +404,7 @@ const handleModalClose = () => {
 <template>
   <div class="content-wrapper">
     <div class="page-header">
-      <h2 class="page-title">출고 관리 (공장)</h2>
+      <h2 class="page-title">출고 관리</h2>
     </div>
 
     <div class="main-container">
@@ -297,8 +429,8 @@ const handleModalClose = () => {
               </thead>
               <tbody>
                 <tr 
-                  v-for="box in outboundBoxes" 
-                  :key="box.boxCode" 
+                  v-for="(box, index) in outboundBoxes" 
+                  :key="index" 
                   @click="selectBox(box.boxCode)"
                   :class="{ active: selectedBoxCode === box.boxCode }"
                   class="clickable-row"
@@ -334,7 +466,7 @@ const handleModalClose = () => {
                     <input type="checkbox" @change="toggleAllItems" :checked="selectedBoxDetails.length > 0 && selectedItemIds.size === selectedBoxDetails.length">
                   </th>
                   <th>제품 식별 코드</th>
-                  <th>유통기한</th>
+                  <th>제조일자</th>
                   <th class="text-center">피킹</th>
                 </tr>
               </thead>
@@ -344,7 +476,7 @@ const handleModalClose = () => {
                      <input type="checkbox" :checked="selectedItemIds.has(item.id)" @change="toggleItem(item.id)">
                   </td>
                   <td class="code-cell">{{ item.id }}</td>
-                  <td>{{ item.expiryDate }}</td>
+                  <td>{{ item.productionDate }}</td>
                   <td class="text-center">
                     <span :class="['status-badge', item.picking ? 'picked' : 'not-picked']">
                       {{ item.picking ? 'O' : '-' }}

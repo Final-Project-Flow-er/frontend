@@ -19,10 +19,8 @@ const fetchInboundItems = async () => {
         name: item.productName,
         productionDate: item.manufactureDate
       }))
-    } else if (result.code === 'IV006') {
-      inboundItems.value = []
     } else {
-      openModal('오류', '데이터를 불러오는 데 실패했습니다.', null, false)
+      inboundItems.value = []
     }
   } catch (error) {
     console.error('Error fetching inbound items:', error)

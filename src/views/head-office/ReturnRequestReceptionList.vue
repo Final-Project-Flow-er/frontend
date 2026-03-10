@@ -1,24 +1,49 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getReturnList, acceptReturns } from '@/api/hqReturns.js'
 
 const router = useRouter()
 
-// Mock Data (다양한 상태 포함)
-const returns = ref([
-  {
-    id: 1, franchiseCode: 'SE01', requestDate: '2023-11-05', boxCode: 'SE01FA0120231105OR0101001',
-    productIdCode: 'SE01FA01AOR0101B001', reason: '파손', recipientName: '김가맹', recipientPhone: '010-1234-5678',
-    productCode: 'OR0101', orderCode: 'SE0120231101001', returnCode: 'RESE0120231101001',
-    status: '대기', quantity: 5, amount: 50000
-  },
-  {
-    id: 4, franchiseCode: 'SE01', requestDate: '2023-11-07', boxCode: 'SE01FA0120231107OR0101002',
-    productIdCode: 'SE01FA01AOR0101B002', reason: '단순 변심', recipientName: '김가맹', recipientPhone: '010-1234-5678',
-    productCode: 'OR0101', orderCode: 'SE0120231101001', returnCode: 'RESE0120231101002',
-    status: '대기', quantity: 10, amount: 100000
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const returns = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getReturnList(false)
+    returns.value = (data || []).map(item => ({
+      id: item.returnCode,
+      franchiseCode: item.franchiseCode,
+      requestDate: formatDate(item.requestedDate),
+      boxCode: '',
+      productIdCode: '',
+      reason: TYPE_LABEL[item.type] || item.type,
+      recipientName: item.receiver || '',
+      recipientPhone: item.phoneNumber || '',
+      productCode: '',
+      orderCode: '',
+      returnCode: item.returnCode,
+      status: STATUS_LABEL[item.status] || item.status,
+      quantity: item.quantity,
+      amount: Number(item.totalPrice || 0)
+    }))
+  } catch (e) {
+    alert(e.message)
   }
-])
+})
 
 const filter = ref({
   franchiseCode: '',
@@ -95,14 +120,16 @@ const cancelSelectionMode = () => {
   selectedIds.value = []
 }
 
-const confirmSelection = () => {
+const confirmSelection = async () => {
   if (selectedIds.value.length === 0) {
     alert('접수할 항목을 선택해주세요.')
     return
   }
 
-  if (confirm(`선택한 ${selectedIds.value.length}건을 접수 처리하시겠습니까?`)) {
-    // 상태 업데이트
+  if (!confirm(`선택한 ${selectedIds.value.length}건을 접수 처리하시겠습니까?`)) return
+
+  try {
+    await acceptReturns(selectedIds.value)
     returns.value.forEach(item => {
       if (selectedIds.value.includes(item.id)) {
         item.status = '접수'
@@ -110,6 +137,8 @@ const confirmSelection = () => {
     })
     alert('접수 처리되었습니다.')
     cancelSelectionMode()
+  } catch (e) {
+    alert(e.message || '접수 처리에 실패했습니다.')
   }
 }
 
