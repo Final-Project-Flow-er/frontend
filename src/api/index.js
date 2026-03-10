@@ -35,10 +35,11 @@ instance.interceptors.response.use(
             if (refreshToken) {
                 try {
                     // Reissue token
+                    const currentAccessToken = localStorage.getItem('accessToken')
                     const response = await axios.post(`${API_BASE_URL}/auth/reissue`, {}, {
                         headers: {
                             'Authorization-Refresh': refreshToken,
-                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                            'Authorization': `Bearer ${currentAccessToken}`
                         }
                     })
 

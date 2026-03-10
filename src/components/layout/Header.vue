@@ -5,7 +5,9 @@
     <div class="header-tools">
       <div class="notification" @click="$router.push('/notifications')">
         <img src="@/assets/notification.png" alt="알림" class="notif-img">
-        <span class="dot"></span>
+        <span v-if="notificationStore.unreadCount > 0" class="badge">
+          {{ notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount }}
+        </span>
       </div>
 
       <div class="user-card" @click="$router.push('/mypage')">
@@ -37,15 +39,17 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useNotificationStore } from '../../stores/notification'
 
 defineProps(['modelValue'])
 defineEmits(['update:modelValue'])
 
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const userRole = computed(() => authStore.userRole)
 
@@ -70,10 +74,23 @@ const roleDisplayName = computed(() => {
 
 const handleLogout = async () => {
   if(confirm('로그아웃 하시겠습니까?')) {
+    notificationStore.disconnectSSE()
     await authStore.logout()
     router.push('/login')
   }
 }
+
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    notificationStore.fetchNotifications()
+    notificationStore.fetchUnreadCount()
+    notificationStore.connectSSE()
+  }
+})
+
+onUnmounted(() => {
+  notificationStore.disconnectSSE()
+})
 </script>
 
 <style scoped>
@@ -84,7 +101,23 @@ const handleLogout = async () => {
 
 .notification { position: relative; cursor: pointer; display: flex; align-items: center; }
 .notif-img { height: 28px; width: auto; }
-.notification .dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background-color: #ef4444; border-radius: 50%; border: 2px solid white; }
+.notification .badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid white;
+}
 
 .user-card {
   padding: 0.5rem 0.8rem;
