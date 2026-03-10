@@ -207,7 +207,10 @@ const getLogTypeLabel = (type) => {
     switch (type) {
         case 'PRODUCTION': return '입고'
         case 'DISTRIBUTION': return '출고'
-        case 'RETURN_IN': return '반품 입고'
+        case 'RETURN_IN': 
+        case 'RETURN_INBOUND': return '반품 입고'
+        case 'RETURN_OUT': 
+        case 'RETURN_OUTBOUND': return '반품 출고'
         case 'DISPOSAL': return '폐기'
         default: return type
     }
@@ -217,7 +220,10 @@ const getTypeClass = (type) => {
   switch (type) {
     case 'PRODUCTION': return 'inbound' // Blue
     case 'DISTRIBUTION': return 'outbound' // Red
-    case 'RETURN_IN': return 'return-in' // Green
+    case 'RETURN_IN':
+    case 'RETURN_INBOUND': return 'return-in' // Green
+    case 'RETURN_OUT': 
+    case 'RETURN_OUTBOUND': return 'return-out' // Orange
     case 'DISPOSAL': return 'refund' // Purple (reused)
     default: return ''
   }

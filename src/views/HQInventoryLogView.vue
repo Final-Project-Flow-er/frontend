@@ -237,8 +237,10 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 const getLogTypeLabel = (type) => {
     switch (type) {
-        case 'RETURN_IN': return '반품 입고'
-        case 'RETURN_OUT': return '반품 출고'
+        case 'RETURN_IN': 
+        case 'RETURN_INBOUND': return '반품 입고'
+        case 'RETURN_OUT': 
+        case 'RETURN_OUTBOUND': return '반품 출고'
         case 'DISPOSAL': return '폐기'
         default: return type
     }
@@ -246,8 +248,10 @@ const getLogTypeLabel = (type) => {
 
 const getTypeClass = (type) => {
   switch (type) {
-    case 'RETURN_IN': return 'return-in'
-    case 'RETURN_OUT': return 'return-out'
+    case 'RETURN_IN':
+    case 'RETURN_INBOUND': return 'return-in'
+    case 'RETURN_OUT':
+    case 'RETURN_OUTBOUND': return 'return-out'
     case 'DISPOSAL': return 'refund' // Purple
     default: return ''
   }
