@@ -38,7 +38,7 @@
     <div class="product-grid">
       <div v-for="product in filteredProducts" :key="product.productCode" class="product-card">
         <div class="card-image">
-          <img :src="product.imageUrl || 'https://via.placeholder.com/300x200?text=Topokki'" alt="Product Image" />
+          <img v-if="product.imageUrl" :src="product.imageUrl" alt="Product Image" />
           <span :class="['status-badge', product.status.toLowerCase()]">{{ getStatusLabel(product.status) }}</span>
         </div>
         <div class="card-body">
@@ -240,7 +240,7 @@ const fetchProducts = async () => {
 
                 return {
                     ...p,
-                    imageUrl: p.imageUrl || `/images/${type}.png`,
+                    imageUrl: p.imageUrl || '',
                     servingSize: size === '01' ? 1 : 3,
                     spiceLevel: spice,
                     sizeCode: size,
