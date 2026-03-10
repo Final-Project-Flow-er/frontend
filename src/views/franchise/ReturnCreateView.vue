@@ -1,123 +1,63 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { getReturnTargets, getReturnTargetInfo, createReturn } from '@/api/franchiseReturns.js'
 
 const router = useRouter()
 
-// Mock Data: Orders available for return
-const availableOrders = ref([
- { 
-   orderCode: 'SE0120231026001', 
-   recipientName: '김철수', 
-   recipientPhone: '010-1234-5678', 
-   franchiseCode: 'SE01',
-   items: [
-     { 
-       boxCode: 'SE01FA0120231026OR0101001', 
-       idCode: 'SE01FA01AOR0101B001', 
-       productCode: 'OR0101', 
-       productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', 
-       quantity: 5,        amount: 5000,
-        totalAmount: 25000
-     },
-     { 
-       boxCode: 'SE01FA0120231026RO0201002', 
-       idCode: 'SE01FA01ARO0201B002', 
-       productCode: 'RO0201', 
-       productName: '로제 떡볶이 밀키트 기본맛 1,2인분', 
-       quantity: 3,        amount: 7000,
-        totalAmount: 21000
-     }
-   ]
- },
- { 
-   orderCode: 'SE0120231025005', 
-   recipientName: '이영희', 
-   recipientPhone: '010-9876-5432', 
-   franchiseCode: 'SE01',
-   items: [
-     { 
-       boxCode: 'SE01FA0120231025RO0201005', 
-       idCode: 'SE01FA01ARO0201B005', 
-       productCode: 'RO0201', 
-       productName: '로제 떡볶이 밀키트 기본맛 1,2인분', 
-       quantity: 10,        amount: 7000,
-        totalAmount: 70000
-     }
-   ]
- }
-])
+const availableOrders = ref([])
+const orderTargetMap = ref({})
 
-
-
-onMounted(() => {
-  const state = history.state
-  if (state && state.returnItems && state.returnItems.length > 0) {
-    // Assumption: All returned items belong to the same order.
-    // If mixed orders, we might need a different UI or restrict selection in InboundView.
-    // user said "existing page" which implies single order selection.
-    // Let's use the first item's orderCode.
-    const firstItem = state.returnItems[0]
-    const targetOrderCode = firstItem.orderCode
-    
-    // Check if order exists in mock data
-    // In real app, we might need to fetch it.
-    // For now, if not found, we can add a mock entry or alert.
-    let order = availableOrders.value.find(o => o.orderCode === targetOrderCode)
-    
-    if (!order) {
-        // If not in the list, maybe meaningful to add it to simulate "fetching"
-        order = {
-            orderCode: targetOrderCode,
-            recipientName: '김갑자', // Default as per requirement
-            recipientPhone: '010-0000-0000',
-            franchiseCode: 'SE01',
-            items: [] // Will start empty and we map state items? 
-                      // Or better: The page usually fetches order items.
-                      // Let's assume availableOrders has the data or we inject it.
-            // Let's try to map state items to the order structure
-        }
-        // Map returnItems to order items structure
-        order.items = state.returnItems.map((ri, idx) => ({
-             boxCode: ri.boxCode,
-             idCode: `ITEM-${idx}`, // dummy
-             productCode: ri.productCode,
-             productName: ri.productName,
-             quantity: ri.quantity,
-             amount: 12000,
-             totalAmount: ri.totalAmount
-        }))
-        availableOrders.value.push(order)
-    }
-
-    selectedOrderCode.value = targetOrderCode
-    
-    // Select the specific boxes passed
-    // We match by boxCode
-    const passedBoxCodes = new Set(state.returnItems.map(i => i.boxCode))
-    
-    // Wait for computed to update (nextTick) or manually trigger
-    // selectedOrder is computed from selectedOrderCode.
-    // We can select indices.
-    
-    // Since we potentially created the order object, selectedOrder.value should be valid immediately if sync.
-    // However, if we just pushed to availableOrders, computed will update.
-    
-    setTimeout(() => {
-        if (selectedOrder.value) {
-            selectedOrder.value.items.forEach((item, index) => {
-                if (passedBoxCodes.has(item.boxCode)) {
-                    selectedItemIndices.value.add(index)
-                    returnQuantities[index] = item.quantity
-                }
-            })
-        }
-    }, 0)
+onMounted(async () => {
+  try {
+    const targets = await getReturnTargets()
+    availableOrders.value = (targets || []).map(t => ({
+      orderCode: t.orderCode,
+      recipientName: t.username,
+      recipientPhone: '',
+      franchiseCode: '',
+      items: []
+    }))
+  } catch (e) {
+    alert(e.message)
   }
 })
 
 const selectedOrderCode = ref('')
+const loadingOrder = ref(false)
+
 const selectedOrder = computed(() => availableOrders.value.find(o => o.orderCode === selectedOrderCode.value))
+
+watch(selectedOrderCode, async (code) => {
+  if (!code) return
+  loadingOrder.value = true
+  try {
+    const data = await getReturnTargetInfo(code)
+    const orderInfo = data.orderInfo || {}
+    const items = (data.items || []).map(item => ({
+      boxCode: item.boxCode,
+      productCode: item.productCode,
+      productName: item.productName,
+      quantity: 1,
+      amount: Number(item.unitPrice || 0),
+      totalAmount: Number(item.unitPrice || 0)
+    }))
+    const idx = availableOrders.value.findIndex(o => o.orderCode === code)
+    if (idx !== -1) {
+      availableOrders.value[idx] = {
+        orderCode: orderInfo.orderCode || code,
+        recipientName: orderInfo.username || '',
+        recipientPhone: orderInfo.phoneNumber || '',
+        franchiseCode: orderInfo.franchiseCode || '',
+        items
+      }
+    }
+  } catch (e) {
+    alert(e.message)
+  } finally {
+    loadingOrder.value = false
+  }
+})
 
 const selectedItemIndices = ref(new Set())
 const returnQuantities = reactive({})
@@ -137,7 +77,9 @@ const toggleSelection = (index) => {
   }
 }
 
-const submitReturn = () => {
+const REASON_MAP = { '파손': 'PRODUCT_DEFECT', '오배송': 'MISORDER' }
+
+const submitReturn = async () => {
   if (!selectedOrderCode.value) {
     alert('반품할 발주 번호를 선택해주세요.')
     return
@@ -151,18 +93,26 @@ const submitReturn = () => {
     return
   }
 
-  // Validate quantities
-  for (const index of selectedItemIndices.value) {
-    const item = selectedOrder.value.items[index]
-    const qty = returnQuantities[index]
-    if (qty <= 0 || qty > item.quantity) {
-      alert(`'${item.productName}'의 반품 수량이 올바르지 않습니다. (1 ~ ${item.quantity})`)
-      return
-    }
-  }
+  const order = selectedOrder.value
+  const selectedItems = [...selectedItemIndices.value].map(i => order.items[i])
+  const boxCodes = selectedItems.map(item => item.boxCode)
+  const totalPrice = selectedItems.reduce((sum, item) => sum + item.amount, 0)
 
-  alert('반품 요청이 등록되었습니다.')
-  router.push('/returns')
+  try {
+    await createReturn({
+      orderCode: selectedOrderCode.value,
+      franchiseCode: order.franchiseCode,
+      returnType: REASON_MAP[form.value.reason] || form.value.reason,
+      description: form.value.details,
+      quantity: selectedItems.length,
+      totalPrice,
+      boxCodes
+    })
+    alert('반품 요청이 등록되었습니다.')
+    router.push({ name: 'franchise-order-list' })
+  } catch (e) {
+    alert(e.message || '반품 요청에 실패했습니다.')
+  }
 }
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)

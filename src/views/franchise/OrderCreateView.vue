@@ -99,10 +99,9 @@ const form = ref({
   arrivalDate: calculateArrivalDate()
 })
 
-const submitOrder = () => {
-  // Check if any product quantity is selected
-  const selectedProducts = products.value.filter(p => p.actualQuantity > 0)
-  if (selectedProducts.length === 0) {
+const submitOrder = async () => {
+  const selectedItems = products.value.filter(p => p.actualQuantity > 0)
+  if (selectedItems.length === 0) {
     alert('최소 하나 이상의 상품 수량을 입력해주세요.')
     return
   }
@@ -111,8 +110,22 @@ const submitOrder = () => {
     return
   }
 
-  alert('발주가 등록되었습니다.')
-  router.push('/orders')
+  try {
+    const { createOrder } = await import('@/api/franchiseOrders.js')
+    await createOrder({
+      username: form.value.recipientName,
+      phoneNumber: form.value.recipientPhone,
+      deliveryDate: form.value.arrivalDate + 'T00:00:00',
+      deliveryTime: '00:00',
+      address: form.value.recipientAddress,
+      requirement: form.value.notes,
+      items: selectedItems.map(p => ({ productCode: p.code, quantity: p.actualQuantity }))
+    })
+    alert('발주가 등록되었습니다.')
+    router.push({ name: 'franchise-order-list' })
+  } catch (e) {
+    alert(e.message || '발주 등록에 실패했습니다.')
+  }
 }
 
 const isFormValid = computed(() => {

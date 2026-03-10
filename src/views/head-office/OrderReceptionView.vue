@@ -1,63 +1,50 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { updateOrderStatus, getRequestedOrders } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
-// 1. Mock Central Inventory
-const centralStock = ref({
-  'OR0101': 50,
-  'RO0201': 20,
-  'MA0301': 30,
-  'OR0403': 10,
-  'RO0103': 100
-})
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
-// 2. Mock Orders
-const orders = ref([
-  {
-    id: 1,
-    orderCode: 'SE0120231026001',
-    franchiseCode: 'SE01',
-    recipientName: '김철수',
-    recipientPhone: '010-1111-2222',
-    orderDate: '2023-10-26',
-    arrivalDate: '2023-10-27',
-    status: '대기',
-    products: [
-      { productCode: 'OR0101', quantity: 20, amount: 10000, status: '대기' },
-      { productCode: 'OR0103', quantity: 30, amount: 18000, status: '대기' }
-    ]
-  },
-  {
-    id: 2,
-    orderCode: 'SE0220231025005',
-    franchiseCode: 'SE02',
-    recipientName: '이영희',
-    recipientPhone: '010-3333-4444',
-    orderDate: '2023-10-25',
-    arrivalDate: '2023-10-26',
-    status: '대기',
-    products: [
-      { productCode: 'RO0201', quantity: 15, amount: 12000, status: '대기' },
-      { productCode: 'MA0301', quantity: 10, amount: 12000, status: '대기' }
-    ]
-  },
-  {
-    id: 3,
-    orderCode: 'SE0320231024010',
-    franchiseCode: 'SE03',
-    recipientName: '박민수',
-    recipientPhone: '010-5555-6666',
-    orderDate: '2023-10-24',
-    arrivalDate: '2023-10-25',
-    status: '대기',
-    products: [
-      { productCode: 'OR0101', quantity: 100, amount: 10000, status: '대기' },
-      { productCode: 'RO0103', quantity: 50, amount: 22000, status: '대기' }
-    ]
+// 1. Central Inventory (재고 API 미연동 — 추후 연동 필요)
+const centralStock = ref({})
+
+// 2. Orders (실제 API 로드)
+const orders = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getRequestedOrders(true)
+    // 평탄화된 응답을 orderCode 기준으로 그룹화
+    const orderMap = {}
+    ;(data || []).forEach(item => {
+      if (!orderMap[item.orderCode]) {
+        orderMap[item.orderCode] = {
+          id: item.orderCode,
+          orderCode: item.orderCode,
+          franchiseCode: item.franchiseCode,
+          recipientName: item.receiver,
+          recipientPhone: '-',
+          orderDate: '-',
+          arrivalDate: formatDate(item.deliveryDate),
+          status: item.status,
+          products: []
+        }
+      }
+      orderMap[item.orderCode].products.push({
+        productCode: item.productCode,
+        quantity: item.quantity,
+        amount: 0,
+        status: item.status
+      })
+    })
+    orders.value = Object.values(orderMap)
+  } catch (e) {
+    // 대기 발주가 없으면 빈 목록으로 처리
+    orders.value = []
   }
-])
+})
 
 // 3. Filter
 const filter = ref({
@@ -135,7 +122,7 @@ const updateParentOrderStatus = (orderId) => {
   else order.status = '부분 접수'
 }
 
-const confirmAccept = () => {
+const confirmAccept = async () => {
   if (selectedRowKeys.value.length === 0) {
     alert('접수할 항목을 선택해주세요.')
     return
@@ -149,42 +136,62 @@ const confirmAccept = () => {
     return
   }
 
-  selectedRowKeys.value.forEach(key => {
+  const orderCodes = [...new Set(selectedRowKeys.value.map(key => {
     const row = flattenedRows.value.find(r => r.rowKey === key)
-    if (row) {
-      if (centralStock.value[row.productCode] >= row.quantity) {
-        centralStock.value[row.productCode] -= row.quantity
+    return row?.orderCode
+  }).filter(Boolean))]
+
+  try {
+    await updateOrderStatus({ orderCodes, isAccepted: true })
+    selectedRowKeys.value.forEach(key => {
+      const row = flattenedRows.value.find(r => r.rowKey === key)
+      if (row) {
+        if (centralStock.value[row.productCode] >= row.quantity) {
+          centralStock.value[row.productCode] -= row.quantity
+        }
+        const order = orders.value.find(o => o.id === row.orderId)
+        if (order) {
+          order.products[row.productIndex].status = '접수 완료'
+          updateParentOrderStatus(order.id)
+        }
       }
-      const order = orders.value.find(o => o.id === row.orderId)
-      if (order) {
-        order.products[row.productIndex].status = '접수 완료'
-        updateParentOrderStatus(order.id)
-      }
-    }
-  })
-  alert('선택한 항목이 접수되었습니다.')
-  cancelSelection()
+    })
+    alert('선택한 항목이 접수되었습니다.')
+    cancelSelection()
+  } catch (e) {
+    alert(e.message || '접수 처리에 실패했습니다.')
+  }
 }
 
-const confirmReject = () => {
+const confirmReject = async () => {
   if (selectedRowKeys.value.length === 0) {
     alert('반려할 항목을 선택해주세요.')
     return
   }
   if (!confirm('선택한 항목을 반려하시겠습니까?')) return
 
-  selectedRowKeys.value.forEach(key => {
+  const orderCodes = [...new Set(selectedRowKeys.value.map(key => {
     const row = flattenedRows.value.find(r => r.rowKey === key)
-    if (row) {
-      const order = orders.value.find(o => o.id === row.orderId)
-      if (order) {
-        order.products[row.productIndex].status = '반려'
-        updateParentOrderStatus(order.id)
+    return row?.orderCode
+  }).filter(Boolean))]
+
+  try {
+    await updateOrderStatus({ orderCodes, isAccepted: false })
+    selectedRowKeys.value.forEach(key => {
+      const row = flattenedRows.value.find(r => r.rowKey === key)
+      if (row) {
+        const order = orders.value.find(o => o.id === row.orderId)
+        if (order) {
+          order.products[row.productIndex].status = '반려'
+          updateParentOrderStatus(order.id)
+        }
       }
-    }
-  })
-  alert('선택한 항목이 반려되었습니다.')
-  cancelSelection()
+    })
+    alert('선택한 항목이 반려되었습니다.')
+    cancelSelection()
+  } catch (e) {
+    alert(e.message || '반려 처리에 실패했습니다.')
+  }
 }
 
 // UI Helpers

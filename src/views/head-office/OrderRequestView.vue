@@ -1,71 +1,52 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getRequestedOrders } from '@/api/hqOrders.js'
 
-// Mock Data
-const orders = ref([
-  { 
-    id: 1, orderCode: 'SE0120231101001', status: '대기', franchiseCode: 'SE01', productCode: 'OR0101', 
-    recipientName: '김철수', recipientPhone: '010-1111-2222', orderDate: '2023-11-01', arrivalDate: '2023-11-05',
-    carrier: '-', driverName: '-', driverPhone: '-', carType: '-', carNumber: '-', maxWeight: '-'
-  },
-  { 
-    id: 2, orderCode: 'SE0220231101005', status: '접수', franchiseCode: 'SE02', productCode: 'RO0201', 
-    recipientName: '이영희', recipientPhone: '010-3333-4444', orderDate: '2023-11-01', arrivalDate: '2023-11-06',
-    carrier: '-', driverName: '-', driverPhone: '-', carType: '-', carNumber: '-', maxWeight: '-'
-  },
-  { 
-    id: 3, orderCode: 'SE0320231102020', status: '운송 업체 지정', franchiseCode: 'SE03', productCode: 'MA0301', 
-    recipientName: '박민수', recipientPhone: '010-5555-6666', orderDate: '2023-11-02', arrivalDate: '2023-11-07',
-    carrier: 'CJ대한통운', driverName: '최기사', driverPhone: '010-9999-8888', carType: '1톤 탑차', carNumber: '서울 12가 3456', maxWeight: '1000kg'
-  },
-  { 
-    id: 4, orderCode: 'SE0120231102010', status: '피킹', franchiseCode: 'SE01', productCode: 'OR0403', 
-    recipientName: '김철수', recipientPhone: '010-1111-2222', orderDate: '2023-11-02', arrivalDate: '2023-11-07',
-    carrier: '한진택배', driverName: '이기사', driverPhone: '010-7777-6666', carType: '2.5톤 탑차', carNumber: '경기 34나 7890', maxWeight: '2500kg'
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const orders = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getRequestedOrders(false)
+    orders.value = (data || []).map(item => ({
+      orderCode: item.orderCode,
+      status: item.status,
+      franchiseCode: item.franchiseCode,
+      receiver: item.receiver,
+      productCode: item.productCode,
+      quantity: item.quantity,
+      deliveryDate: formatDate(item.deliveryDate),
+    }))
+  } catch (e) {
+    alert(e.message)
   }
-])
+})
 
 const filter = ref({
   orderCode: '',
   status: '',
   franchiseCode: '',
+  receiver: '',
   productCode: '',
-  recipientName: '',
-  recipientPhone: '',
-  orderDate: '',
-  arrivalDate: '',
-  carrier: '',
-  driverName: '',
-  driverPhone: '',
-  carType: '',
-  carNumber: '',
-  maxWeight: ''
+  deliveryDate: '',
 })
 
-const selectedIds = ref([])
+const selectedCodes = ref([])
 const isSelectionMode = ref(false)
 const isCancelModalOpen = ref(false)
 const cancelReason = ref('')
 
-const statuses = ['대기', '접수', '부분 접수', '운송 업체 지정', '피킹', '출고', '배송중', '배송 완료', '취소', '반려']
+const statuses = ['대기', '접수', '부분 접수', '배송중', '배송완료', '취소', '반려']
 
-// Filtering Logic
 const filteredOrders = computed(() => {
   return orders.value.filter(item => {
     return (!filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)) &&
            (!filter.value.status || item.status === filter.value.status) &&
            (!filter.value.franchiseCode || item.franchiseCode.includes(filter.value.franchiseCode)) &&
+           (!filter.value.receiver || item.receiver.includes(filter.value.receiver)) &&
            (!filter.value.productCode || item.productCode.includes(filter.value.productCode)) &&
-           (!filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)) &&
-           (!filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)) &&
-           (!filter.value.orderDate || item.orderDate === filter.value.orderDate) &&
-           (!filter.value.arrivalDate || item.arrivalDate === filter.value.arrivalDate) &&
-           (!filter.value.carrier || item.carrier.includes(filter.value.carrier)) &&
-           (!filter.value.driverName || item.driverName.includes(filter.value.driverName)) &&
-           (!filter.value.driverPhone || item.driverPhone.includes(filter.value.driverPhone)) &&
-           (!filter.value.carType || item.carType.includes(filter.value.carType)) &&
-           (!filter.value.carNumber || item.carNumber.includes(filter.value.carNumber)) &&
-           (!filter.value.maxWeight || item.maxWeight.includes(filter.value.maxWeight))
+           (!filter.value.deliveryDate || item.deliveryDate === filter.value.deliveryDate)
   })
 })
 
@@ -73,28 +54,28 @@ const isCancellable = (status) => ['대기', '접수', '부분 접수'].includes
 
 const enterSelectionMode = () => {
   isSelectionMode.value = true
-  selectedIds.value = []
+  selectedCodes.value = []
 }
 
 const cancelSelectionMode = () => {
   isSelectionMode.value = false
-  selectedIds.value = []
+  selectedCodes.value = []
 }
 
 const openCancelModal = () => {
-  if (selectedIds.value.length === 0) {
+  if (selectedCodes.value.length === 0) {
     alert('취소할 발주 요청을 선택해주세요.')
     return
   }
-  
-  const unCancellableSelected = selectedIds.value.some(id => {
-      const order = orders.value.find(o => o.id === id)
-      return !isCancellable(order.status)
+
+  const unCancellableSelected = selectedCodes.value.some(code => {
+    const order = orders.value.find(o => o.orderCode === code)
+    return !isCancellable(order.status)
   })
 
   if (unCancellableSelected) {
-      alert('운송 업체 지정 이후 단계의 발주는 취소할 수 없습니다.')
-      return
+    alert('취소 불가 상태의 발주가 포함되어 있습니다.')
+    return
   }
 
   isCancelModalOpen.value = true
@@ -107,8 +88,8 @@ const confirmCancel = () => {
   }
 
   orders.value = orders.value.map(o => {
-    if (selectedIds.value.includes(o.id)) {
-      return { ...o, status: '취소', cancelReason: cancelReason.value }
+    if (selectedCodes.value.includes(o.orderCode)) {
+      return { ...o, status: '취소' }
     }
     return o
   })
@@ -120,29 +101,26 @@ const confirmCancel = () => {
 const closeModal = () => {
   isCancelModalOpen.value = false
   cancelReason.value = ''
-  selectedIds.value = []
+  selectedCodes.value = []
   isSelectionMode.value = false
 }
 
 const toggleSelectAll = (event) => {
-    if (event.target.checked) {
-        selectedIds.value = filteredOrders.value
-            .filter(o => isCancellable(o.status))
-            .map(o => o.id)
-    } else {
-        selectedIds.value = []
-    }
+  if (event.target.checked) {
+    selectedCodes.value = filteredOrders.value
+      .filter(o => isCancellable(o.status))
+      .map(o => o.orderCode)
+  } else {
+    selectedCodes.value = []
+  }
 }
 
 const getStatusClass = (s) => ({
   '대기': 'status-warning',
   '접수': 'status-info',
   '부분 접수': 'status-info',
-  '운송 업체 지정': 'status-primary',
-  '피킹': 'status-primary',
-  '출고': 'status-primary',
   '배송중': 'status-primary',
-  '배송 완료': 'status-ok',
+  '배송완료': 'status-ok',
   '취소': 'status-danger',
   '반려': 'status-danger'
 }[s] || '')
@@ -164,7 +142,7 @@ const getStatusClass = (s) => ({
       </div>
     </div>
 
-    <!-- Filter Section (Large) -->
+    <!-- Filter Section -->
     <div class="filter-section">
       <div class="filter-grid">
         <div class="filter-group">
@@ -188,43 +166,11 @@ const getStatusClass = (s) => ({
         </div>
         <div class="filter-group">
           <label>수령인 이름</label>
-          <input type="text" v-model="filter.recipientName" />
+          <input type="text" v-model="filter.receiver" />
         </div>
         <div class="filter-group">
-          <label>수령인 전화번호</label>
-          <input type="text" v-model="filter.recipientPhone" />
-        </div>
-        <div class="filter-group">
-          <label>발주일</label>
-          <input type="date" v-model="filter.orderDate" />
-        </div>
-        <div class="filter-group">
-          <label>도착 일자</label>
-          <input type="date" v-model="filter.arrivalDate" />
-        </div>
-        <div class="filter-group">
-          <label>운송 업체</label>
-          <input type="text" v-model="filter.carrier" />
-        </div>
-        <div class="filter-group">
-          <label>운전자 이름</label>
-          <input type="text" v-model="filter.driverName" />
-        </div>
-        <div class="filter-group">
-          <label>운전자 번호</label>
-          <input type="text" v-model="filter.driverPhone" />
-        </div>
-        <div class="filter-group">
-          <label>차종</label>
-          <input type="text" v-model="filter.carType" />
-        </div>
-        <div class="filter-group">
-          <label>차량 번호</label>
-          <input type="text" v-model="filter.carNumber" />
-        </div>
-        <div class="filter-group">
-          <label>최대 허용 중량</label>
-          <input type="text" v-model="filter.maxWeight" />
+          <label>배송 일자</label>
+          <input type="date" v-model="filter.deliveryDate" />
         </div>
       </div>
     </div>
@@ -235,46 +181,32 @@ const getStatusClass = (s) => ({
         <thead>
           <tr>
             <th v-if="isSelectionMode">
-                <input type="checkbox" @change="toggleSelectAll" :checked="selectedIds.length > 0 && selectedIds.length === filteredOrders.filter(o => isCancellable(o.status)).length" />
+              <input type="checkbox" @change="toggleSelectAll" :checked="selectedCodes.length > 0 && selectedCodes.length === filteredOrders.filter(o => isCancellable(o.status)).length" />
             </th>
             <th>발주 코드</th>
             <th>상태</th>
             <th>가맹점</th>
-            <th>제품</th>
+            <th>제품 코드</th>
             <th>수령인</th>
-            <th>연락처</th>
-            <th>발주일</th>
-            <th>도착일</th>
-            <th>운송 업체</th>
-            <th>운전자</th>
-            <th>운전자 번호</th>
-            <th>차종</th>
-            <th>차량 번호</th>
-            <th>최대 중량</th>
+            <th>수량</th>
+            <th>배송 일자</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filteredOrders" :key="order.id" :class="{ 'selected-row': selectedIds.includes(order.id) }">
+          <tr v-for="order in filteredOrders" :key="order.orderCode" :class="{ 'selected-row': selectedCodes.includes(order.orderCode) }">
             <td v-if="isSelectionMode">
-                <input type="checkbox" :value="order.id" v-model="selectedIds" :disabled="!isCancellable(order.status)" />
+              <input type="checkbox" :value="order.orderCode" v-model="selectedCodes" :disabled="!isCancellable(order.status)" />
             </td>
             <td class="sku-cell">{{ order.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(order.status)]">{{ order.status }}</span></td>
             <td>{{ order.franchiseCode }}</td>
             <td class="sku-cell">{{ order.productCode }}</td>
-            <td>{{ order.recipientName }}</td>
-            <td>{{ order.recipientPhone }}</td>
-            <td>{{ order.orderDate }}</td>
-            <td>{{ order.arrivalDate }}</td>
-            <td>{{ order.carrier }}</td>
-            <td>{{ order.driverName }}</td>
-            <td>{{ order.driverPhone }}</td>
-            <td>{{ order.carType }}</td>
-            <td>{{ order.carNumber }}</td>
-            <td>{{ order.maxWeight }}</td>
+            <td>{{ order.receiver }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>{{ order.deliveryDate }}</td>
           </tr>
           <tr v-if="filteredOrders.length === 0">
-              <td colspan="15" class="empty-cell">조회된 발주 요청이 없습니다.</td>
+            <td :colspan="isSelectionMode ? 9 : 8" class="empty-cell">조회된 발주 요청이 없습니다.</td>
           </tr>
         </tbody>
       </table>
@@ -285,7 +217,7 @@ const getStatusClass = (s) => ({
       <div v-if="isCancelModalOpen" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
           <h3>발주 접수 취소</h3>
-          <p class="modal-desc">선택한 {{ selectedIds.length }}건의 발주 요청을 취소하시겠습니까?</p>
+          <p class="modal-desc">선택한 {{ selectedCodes.length }}건의 발주 요청을 취소하시겠습니까?</p>
           <div class="form-group">
             <label>취소 사유</label>
             <textarea v-model="cancelReason" placeholder="취소 사유를 입력해주세요." rows="4"></textarea>
@@ -301,7 +233,7 @@ const getStatusClass = (s) => ({
 </template>
 
 <style scoped>
-.content-wrapper { max-width: 1700px; margin: 0 auto; padding-bottom: 2rem; }
+.content-wrapper { max-width: 1400px; margin: 0 auto; padding-bottom: 2rem; }
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
 
@@ -320,7 +252,6 @@ const getStatusClass = (s) => ({
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1.2rem;
-  margin-bottom: 1rem;
 }
 .filter-group { display: flex; flex-direction: column; gap: 0.5rem; }
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
@@ -372,9 +303,4 @@ input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .secondary-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
 .danger-btn { background: #ef4444; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
-
-.bottom-actions { margin-top: 2rem; display: flex; justify-content: flex-end; }
-.primary-btn { background: var(--primary); color: white; border: none; padding: 0.75rem 2rem; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-.primary-btn.wide { min-width: 200px; font-size: 1.1rem; }
 </style>

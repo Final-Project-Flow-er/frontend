@@ -91,10 +91,10 @@
                 <input 
                   type="text" 
                   v-model="member.phone" 
-                  @input="e => member.phone = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)"
+                  @input="handlePhoneInput"
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
-                  maxlength="11"
+                  maxlength="13"
                 >
               </div>
               <div class="info-field">
@@ -377,7 +377,7 @@ const saveChanges = async () => {
     return;
   }
   
-  if (member.value.phone.trim().length !== 11) {
+  if (member.value.phone.replace(/-/g, '').length !== 11) {
     alert('연락처는 11자리 숫자로 입력해주세요.');
     return;
   }
@@ -462,6 +462,17 @@ const onPhotoChange = (e) => {
     }
     reader.readAsDataURL(file)
   }
+}
+
+// 전화번호 자동 하이픈
+const handlePhoneInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7, 11);
+  }
+  member.value.phone = val;
 }
 </script>
 

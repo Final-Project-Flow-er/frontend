@@ -13,10 +13,10 @@
       <div v-if="organization" class="header-actions">
         <template v-if="!isEditing">
           <button @click="startEdit" class="btn-edit">수정</button>
-          <template v-if="organization.type !== 'headOffice'">
+          <template v-if="organization.unitType !== 'HQ'">
             <button v-if="isOrgActive" @click="confirmStatusToggle" class="btn-deactivate">운영중지</button>
-            <button v-else-if="organization.status === 'inactive'" @click="confirmStatusToggle" class="btn-restore">운영재개</button>
-            <button v-if="organization.status !== 'deleted'" @click="confirmDelete" class="btn-delete">삭제</button>
+            <button v-else-if="organization.status === 'INACTIVE'" @click="confirmStatusToggle" class="btn-restore">운영재개</button>
+            <button v-if="organization.status !== 'DELETED'" @click="confirmDelete" class="btn-delete">삭제</button>
           </template>
         </template>
         <template v-else>
@@ -30,10 +30,10 @@
     <div v-if="organization" class="detail-card">
       <div class="card-header">
         <div class="header-left">
-          <div class="org-type-badge" :class="organization.type">
-            {{ getOrgTypeLabel(organization.type) }}
+          <div class="org-type-badge" :class="organization.unitType">
+            {{ getOrgTypeLabel(organization.unitType) }}
           </div>
-          <div class="status-badge" :class="organization.status || 'active'">
+          <div class="status-badge" :class="organization.status || 'ACTIVE'">
             {{ getStatusLabel(organization.status) }}
           </div>
           <h1>{{ organization.name }}</h1>
@@ -47,7 +47,7 @@
           <h2>기본 정보</h2>
           <div class="info-grid">
             <div class="info-field">
-              <label>{{ getOrgNameLabel(organization.type) }}</label>
+              <label>{{ getOrgNameLabel(organization.unitType) }}</label>
               <input 
                 type="text" 
                 v-model="organization.name" 
@@ -68,12 +68,18 @@
 
             <div class="info-field full-width">
               <label>주소</label>
-              <input 
-                type="text" 
-                v-model="organization.address" 
-                :disabled="!isEditing"
-                :class="{ 'input-disabled': !isEditing }"
-              >
+              <div class="address-input-group">
+                <input 
+                  type="text" 
+                  v-model="organization.address" 
+                  :disabled="!isEditing"
+                  :class="{ 'input-disabled': !isEditing }"
+                  placeholder="주소를 검색하세요"
+                  readonly
+                  @click="isEditing && openPostcode()"
+                >
+                <button v-if="isEditing" type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>
+              </div>
             </div>
 
             <div class="info-field">
@@ -83,6 +89,8 @@
                 v-model="organization.phone" 
                 :disabled="!isEditing"
                 :class="{ 'input-disabled': !isEditing }"
+                @input="handlePhoneInput"
+                maxlength="13"
               >
             </div>
 
@@ -90,17 +98,50 @@
               <label>대표명</label>
               <input 
                 type="text" 
-                v-model="organization.representative" 
+                v-model="organization.representativeName" 
                 :disabled="!isEditing"
                 :class="{ 'input-disabled': !isEditing }"
-                :placeholder="getOrgTypeLabel(organization.type) + ' 대표명을 입력하세요'"
+                :placeholder="getOrgTypeLabel(organization.unitType) + ' 대표명을 입력하세요'"
               >
+            </div>
+
+            <div class="info-field">
+              <label>사업자 등록 번호</label>
+              <input 
+                type="text" 
+                :value="organization.businessNumber" 
+                disabled
+                class="input-disabled"
+              >
+            </div>
+
+            <div class="info-field">
+              <label>지역</label>
+              <select v-model="organization.region" :disabled="!isEditing" :class="{ 'input-disabled': !isEditing }">
+                <option value="SEOUL">서울</option>
+                <option value="GYEONGGI">경기</option>
+                <option value="INCHEON">인천</option>
+                <option value="BUSAN">부산</option>
+                <option value="DAEGU">대구</option>
+                <option value="DAEJEON">대전</option>
+                <option value="GWANGJU">광주</option>
+                <option value="ULSAN">울산</option>
+                <option value="SEJONG">세종</option>
+                <option value="GANGWON">강원</option>
+                <option value="CHUNGBUK">충북</option>
+                <option value="CHUNGNAM">충남</option>
+                <option value="JEONBUK">전북</option>
+                <option value="JEONNAM">전남</option>
+                <option value="GYEONGBUK">경북</option>
+                <option value="GYEONGNAM">경남</option>
+                <option value="JEJU">제주</option>
+              </select>
             </div>
           </div>
         </section>
 
         <!-- 가맹점 추가 정보 -->
-        <section v-if="organization.type === 'store'" class="info-section">
+        <section v-if="organization.unitType === 'FRANCHISE'" class="info-section">
           <h2>매장 정보</h2>
           <div class="info-grid">
 
@@ -108,7 +149,7 @@
               <label>운영 시작 시간</label>
               <input 
                 type="time" 
-                v-model="organization.openTime" 
+                v-model="organization.franchiseDetail.openTime" 
                 :disabled="!isEditing"
                 :class="{ 'input-disabled': !isEditing }"
               >
@@ -118,7 +159,7 @@
               <label>운영 종료 시간</label>
               <input 
                 type="time" 
-                v-model="organization.closeTime" 
+                v-model="organization.franchiseDetail.closeTime" 
                 :disabled="!isEditing"
                 :class="{ 'input-disabled': !isEditing }"
               >
@@ -130,18 +171,18 @@
                 <div v-if="!isEditing" class="days-readonly">
                   <span v-for="day in weekDays" :key="day.value" 
                         class="day-box" 
-                        :class="{ active: organization.operatingDays && organization.operatingDays.includes(day.value) }">
+                        :class="{ active: organization.franchiseDetail && (organization.franchiseDetail.operatingDays || '').split(',').includes(day.value) }">
                     {{ day.label }}
                   </span>
                 </div>
                 <div v-else class="days-interactive">
                   <label v-for="day in weekDays" :key="day.value" 
                          class="day-check-box"
-                         :class="{ checked: organization.operatingDays && organization.operatingDays.includes(day.value) }">
+                         :class="{ checked: tempOperatingDays.includes(day.value) }">
                     <input 
                       type="checkbox" 
                       :value="day.value" 
-                      v-model="organization.operatingDays"
+                      v-model="tempOperatingDays"
                     >
                     <span>{{ day.label }}</span>
                   </label>
@@ -152,8 +193,8 @@
             <div class="info-field full-width">
               <label>매장 사진</label>
               <div class="photo-section">
-                <div v-if="organization.photoUrl" class="photo-display">
-                  <img :src="organization.photoUrl" alt="매장 사진">
+                <div v-if="organization.franchiseDetail.imageUrl" class="photo-display">
+                  <img :src="organization.franchiseDetail.imageUrl" alt="매장 사진">
                   <button v-if="isEditing" @click="removePhoto" class="btn-remove-photo">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -176,19 +217,19 @@
         </section>
 
         <!-- 경고 및 제한 상태 (가맹점 전용) -->
-        <section v-if="organization.type === 'store'" class="info-section warning-section">
+        <section v-if="organization.unitType === 'FRANCHISE'" class="info-section warning-section">
           <h2>경고 및 반품 제한 상태</h2>
-          <div class="warning-status-card" :class="{ 'is-restricted': organization.warningCount >= 3 }">
+          <div class="warning-status-card" :class="{ 'is-restricted': organization.franchiseDetail.warningCount >= 3 }">
             <div class="warning-info">
               <div class="warning-label">누적 경고 횟수</div>
               <div class="warning-value">
-                <span class="count">{{ organization.warningCount || 0 }}</span>
+                <span class="count">{{ organization.franchiseDetail.warningCount || 0 }}</span>
                 <span class="total">/ 3</span>
               </div>
             </div>
             <div class="restriction-status">
               <div class="status-icon">
-                <svg v-if="organization.warningCount < 3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg v-if="organization.franchiseDetail.warningCount < 3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
@@ -199,18 +240,18 @@
                 </svg>
               </div>
               <div class="status-texts">
-                <div class="status-title">{{ organization.warningCount >= 3 ? '반품 제한 적용 중' : '정상 운영 중' }}</div>
+                <div class="status-title">{{ organization.franchiseDetail.warningCount >= 3 ? '반품 제한 적용 중' : '정상 운영 중' }}</div>
                 <p class="status-desc">
-                  {{ organization.warningCount >= 3 
+                  {{ organization.franchiseDetail.warningCount >= 3 
                     ? '경고 3회 누적으로 인해 현재 반품 신청이 제한된 상태입니다.' 
                     : '현재 반품 신청에 제한이 없습니다. 경고 3회 누적 시 제한이 적용됩니다.' }}
                 </p>
-                <div v-if="organization.warningCount >= 3 && organization.restrictionEndDate" class="restriction-timer">
+                <div v-if="organization.franchiseDetail.warningCount >= 3 && organization.franchiseDetail.penaltyEndDate" class="restriction-timer">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
                   </svg>
-                  <span>제한 종료 예정일: <strong>{{ organization.restrictionEndDate }}</strong></span>
+                  <span>제한 종료 예정일: <strong>{{ new Date(organization.franchiseDetail.penaltyEndDate).toLocaleDateString() }}</strong></span>
                 </div>
               </div>
             </div>
@@ -218,7 +259,7 @@
         </section>
 
         <!-- 공장 추가 정보 -->
-        <section v-if="organization.type === 'factory'" class="info-section">
+        <section v-if="organization.unitType === 'FACTORY'" class="info-section">
           <h2>공장 정보</h2>
           <div class="info-grid">
             <div class="info-field">
@@ -252,7 +293,7 @@
               <label>생산 라인 개수</label>
               <input 
                 type="number" 
-                v-model.number="organization.lineCount" 
+                v-model.number="organization.factoryDetail.productionLineCount" 
                 :disabled="!isEditing"
                 :class="{ 'input-disabled': !isEditing }"
                 min="1"
@@ -274,6 +315,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import api from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -282,6 +324,7 @@ const route = useRoute()
 const organization = ref(null)
 const originalOrganization = ref(null)
 const isEditing = ref(false)
+const tempOperatingDays = ref([])
 
 // 요일 목록
 const weekDays = [
@@ -311,99 +354,43 @@ const getOrgTypeLabel = (type) => {
 
 const getStatusLabel = (status) => {
   switch(status) {
-    case 'active': return '운영중'
-    case 'inactive': return '운영중지'
-    case 'deleted': return '삭제'
+    case 'ACTIVE': return '운영중'
+    case 'INACTIVE': return '운영중지'
+    case 'DELETED': return '삭제'
     default: return '운영중'
   }
 }
 
 const isOrgActive = computed(() => {
-  return !organization.value || organization.value.status === 'active' || !organization.value.status
+  return !organization.value || organization.value.status === 'ACTIVE'
 })
 
 // 조직 정보 로드
-const loadOrganization = () => {
-  const code = route.params.code
+const loadOrganization = async () => {
+  const type = route.params.type
+  const id = route.params.id
   
-  // TODO: API 호출로 조직 정보 가져오기
-  // TODO: API 호출로 조직 정보 가져오기
-  // 샘플 데이터
-  const sampleData = {
-    'HQ01': {
-      code: 'HQ01',
-      type: 'headOffice',
-      name: '본사',
-      address: '서울특별시 강남구 테헤란로 1',
-      phone: '02-0000-0000',
-      representative: '김본사',
-      status: 'active',
-      photoUrl: ''
-    },
-    'SE01': {
-      code: 'SE01',
-      type: 'store',
-      name: '서울점',
-      address: '서울특별시 강남구 테헤란로 123',
-      phone: '02-1234-5678',
-      operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
-      openTime: '09:00',
-      representative: '홍길동',
-      warningCount: 1,
-      closeTime: '22:00',
-      status: 'active',
-      photoUrl: ''
-    },
-    'SE02': {
-      code: 'SE02',
-      type: 'store',
-      name: '부산점',
-      address: '부산광역시 해운대구 센텀중앙로 78',
-      phone: '051-9876-5432',
-      operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
-      openTime: '10:00',
-      representative: '이순신',
-      warningCount: 3,
-      restrictionEndDate: '2026-03-18',
-      closeTime: '21:00',
-      status: 'active',
-      photoUrl: ''
-    },
-    'FA01': {
-      code: 'FA01',
-      type: 'factory',
-      name: '중앙 생산 공장',
-      address: '경기도 화성시 동탄산업1로 45',
-      phone: '031-5555-6666',
-      representative: '김철수',
-      region: 'GG01',
-      status: 'active',
-      lineCount: 5
-    },
-    'SE03': {
-      code: 'SE03',
-      type: 'store',
-      name: '대구점',
-      address: '대구광역시 수성구 동대구로 456',
-      phone: '053-7777-8888',
-      operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-      openTime: '08:00',
-      representative: '강감찬',
-      warningCount: 0,
-      closeTime: '23:00',
-      status: 'inactive',
-      photoUrl: ''
+  try {
+    const response = await api.get(`/hq/business-units/${type}/${id}`)
+    if (response.data.success) {
+      organization.value = response.data.data
+      originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
+      if (organization.value.franchiseDetail) {
+        tempOperatingDays.value = (organization.value.franchiseDetail.operatingDays || '').split(',').filter(d => d)
+      }
     }
-  }
-
-  organization.value = sampleData[code]
-  if (organization.value) {
-    originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
+  } catch (error) {
+    console.error('조직 정보 로딩 실패:', error)
+    alert('정보를 불러오지 못했습니다.')
+    router.back()
   }
 }
 
 // 수정 시작
 const startEdit = () => {
+  if (organization.value.franchiseDetail) {
+    tempOperatingDays.value = (organization.value.franchiseDetail.operatingDays || '').split(',').filter(d => d)
+  }
   isEditing.value = true
 }
 
@@ -414,31 +401,99 @@ const cancelEdit = () => {
 }
 
 // 변경사항 저장
-const saveChanges = () => {
-  // TODO: API 호출로 조직 정보 업데이트
-  console.log('Updated organization:', organization.value)
-  
-  alert('변경사항이 저장되었습니다.')
-  originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
-  isEditing.value = false
-}
+const saveChanges = async () => {
+  const type = organization.value.unitType
+  const id = organization.value.id
 
-const confirmStatusToggle = () => {
-  const isActive = isOrgActive.value
-  const action = isActive ? '운영중지' : '운영재개'
-  if (confirm(`'${organization.value.name}'의 ${action} 하시겠습니까?`)) {
-    organization.value.status = isActive ? 'inactive' : 'active'
-    originalOrganization.value.status = organization.value.status
-    alert(`${action} 처리되었습니다.`)
+  try {
+    const payload = {
+      name: organization.value.name,
+      address: organization.value.address,
+      phone: organization.value.phone,
+      representativeName: organization.value.representativeName,
+      region: organization.value.region,
+    }
+
+    if (type === 'FRANCHISE') {
+      // 시간 유효성 검사
+      if (organization.value.franchiseDetail.openTime >= organization.value.franchiseDetail.closeTime) {
+        alert('운영 시작 시간은 종료 시간보다 이전이어야 합니다.');
+        return;
+      }
+
+      payload.franchiseUpdate = {
+        operatingDays: tempOperatingDays.value.join(','),
+        openTime: organization.value.franchiseDetail.openTime.length === 5 
+          ? organization.value.franchiseDetail.openTime + ':00' 
+          : organization.value.franchiseDetail.openTime,
+        closeTime: organization.value.franchiseDetail.closeTime.length === 5 
+          ? organization.value.franchiseDetail.closeTime + ':00' 
+          : organization.value.franchiseDetail.closeTime,
+        imageUrl: organization.value.franchiseDetail.imageUrl
+      }
+    } else if (type === 'FACTORY') {
+      payload.factoryUpdate = {
+        productionLineCount: organization.value.factoryDetail.productionLineCount
+      }
+    }
+
+    const response = await api.patch(`/hq/business-units/${type}/${id}`, payload)
+    if (response.data.success) {
+      alert('변경사항이 저장되었습니다.')
+      organization.value = response.data.data
+      originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
+      isEditing.value = false
+    }
+  } catch (error) {
+    console.error('업데이트 실패:', error)
+    alert(error.response?.data?.message || '저장 중 오류가 발생했습니다.')
   }
 }
 
-const confirmDelete = () => {
+const confirmStatusToggle = async () => {
+  const isActive = isOrgActive.value
+  const action = isActive ? '운영중지' : '운영재개'
+  if (confirm(`'${organization.value.name}'의 ${action} 하시겠습니까?`)) {
+    try {
+      const type = organization.value.unitType
+      const id = organization.value.id
+      const newStatus = isActive ? 'INACTIVE' : 'ACTIVE'
+      
+      const response = await api.patch(`/hq/business-units/${type}/${id}/status`, {
+        status: newStatus
+      })
+      
+      if (response.data.success) {
+        organization.value.status = newStatus
+        originalOrganization.value.status = newStatus
+        alert(`${action} 처리되었습니다.`)
+      }
+    } catch (error) {
+      console.error('상태 변경 실패:', error)
+      alert('상태 변경 중 오류가 발생했습니다.')
+    }
+  }
+}
+
+const confirmDelete = async () => {
   if (confirm(`'${organization.value.name}'을(를) 정말 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.`)) {
-    organization.value.status = 'deleted'
-    originalOrganization.value.status = 'deleted'
-    alert('삭제 처리되었습니다.')
-    router.push('/organizations')
+    try {
+      const type = organization.value.unitType
+      const id = organization.value.id
+      
+      const response = await api.delete(`/hq/business-units/${type}/${id}`)
+      if (response.data.success) {
+        alert('삭제 처리되었습니다.')
+        if (type === 'FRANCHISE') {
+          router.push('/admin/organizations/franchise')
+        } else {
+          router.push('/admin/organizations/factory')
+        }
+      }
+    } catch (error) {
+      console.error('삭제 실패:', error)
+      alert('삭제 중 오류가 발생했습니다.')
+    }
   }
 }
 
@@ -452,7 +507,9 @@ const uploadPhoto = () => {
     if (file) {
       const reader = new FileReader()
       reader.onload = (event) => {
-        organization.value.photoUrl = event.target.result
+        if (organization.value.franchiseDetail) {
+          organization.value.franchiseDetail.imageUrl = event.target.result
+        }
       }
       reader.readAsDataURL(file)
     }
@@ -462,17 +519,19 @@ const uploadPhoto = () => {
 
 // 사진 제거
 const removePhoto = () => {
-  organization.value.photoUrl = ''
+  if (organization.value.franchiseDetail) {
+    organization.value.franchiseDetail.imageUrl = ''
+  }
 }
 
 // 목록으로 돌아가기
 const goBack = () => {
   if (organization.value) {
-    if (organization.value.type === 'store') {
+    if (organization.value.unitType === 'FRANCHISE') {
       router.push('/admin/organizations/franchise')
-    } else if (organization.value.type === 'factory') {
+    } else if (organization.value.unitType === 'FACTORY') {
       router.push('/admin/organizations/factory')
-    } else if (organization.value.type === 'headOffice') {
+    } else if (organization.value.unitType === 'HQ') {
       router.push('/admin/head-office/management')
     } else {
       router.push('/organizations')
@@ -486,10 +545,73 @@ onMounted(() => {
   loadOrganization()
 })
 
+// 전화번호 자동 하이픈
+const handlePhoneInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.startsWith('02')) {
+    if (val.length > 2 && val.length <= 5) {
+      val = val.slice(0, 2) + '-' + val.slice(2);
+    } else if (val.length > 5 && val.length <= 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
+    } else if (val.length > 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    }
+  } else {
+    if (val.length > 3 && val.length <= 7) {
+      val = val.slice(0, 3) + '-' + val.slice(3);
+    } else if (val.length > 7 && val.length <= 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
+    } else if (val.length > 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    }
+  }
+  organization.value.phone = val;
+}
+
+// 사업자 등록 번호 자동 하이픈 (000-00-00000)
+const handleBizNumInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 5) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 5) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 5) + '-' + val.slice(5, 10);
+  }
+  organization.value.businessNumber = val;
+}
+
+// 주소 검색 (Daum Postcode)
+const openPostcode = () => {
+  new window.daum.Postcode({
+    oncomplete: (data) => {
+      let fullAddress = data.address;
+      let extraAddress = '';
+
+      if (data.addressType === 'R') {
+        if (data.bname !== '') extraAddress += data.bname;
+        if (data.buildingName !== '') extraAddress += (extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName);
+        fullAddress += (extraAddress !== '' ? ` (${extraAddress})` : '');
+      }
+
+      organization.value.address = fullAddress;
+      
+      // 시/도 정보를 기반으로 지역 자동 선택
+      const sidoMap = {
+        '서울': 'SEOUL', '경기': 'GYEONGGI', '인천': 'INCHEON', '부산': 'BUSAN',
+        '대구': 'DAEGU', '대전': 'DAEJEON', '광주': 'GWANGJU', '울산': 'ULSAN',
+        '세종': 'SEJONG', '강원': 'GANGWON', '충북': 'CHUNGBUK', '충남': 'CHUNGNAM',
+        '전북': 'JEONBUK', '전남': 'JEONNAM', '경북': 'GYEONGBUK', '경남': 'GYEONGNAM',
+        '제주': 'JEJU', '제주특별자치도': 'JEJU'
+      }
+      const mapped = sidoMap[data.sido] || Object.entries(sidoMap).find(([key]) => data.sido.includes(key))?.[1];
+      if (mapped) organization.value.region = mapped;
+    }
+  }).open();
+}
+
 const getOrgNameLabel = (type) => {
-  if (type === 'store') return '가맹점명'
-  if (type === 'factory') return '공장명'
-  if (type === 'headOffice') return '본사명'
+  if (type === 'FRANCHISE') return '가맹점명'
+  if (type === 'FACTORY') return '공장명'
+  if (type === 'HQ') return '본사명'
   return '사업장명'
 }
 </script>
@@ -534,85 +656,80 @@ const getOrgNameLabel = (type) => {
   gap: 0.75rem;
 }
 
-.btn-edit,
-.btn-save,
-.btn-cancel {
-  padding: 0.6rem 1.5rem;
-  border-radius: 8px;
+.btn-edit, .btn-save {
+  padding: 0.55rem 1.2rem;
   font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-edit {
   background: #0f172a;
   color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-.btn-edit:hover {
+.btn-edit:hover, .btn-save:hover {
   background: #1e293b;
-  transform: translateY(-1px);
 }
 
 .btn-deactivate {
-  padding: 0.6rem 1.5rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
   background: white;
-  color: #ef4444;
-  border: 1.5px solid #ef4444;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
-
 .btn-deactivate:hover {
-  background: #fff1f2;
-}
-
-.btn-restore {
-  padding: 0.6rem 1.5rem;
-  background: #15803d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .btn-delete {
-  padding: 0.6rem 1.5rem;
-  background: #ef4444;
-  color: white;
-  border: none;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
-
 .btn-delete:hover {
-  background: #dc2626;
+  background: #fef2f2;
 }
 
-.btn-save {
-  background: #0f172a;
-  color: white;
+.btn-restore {
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #10b981;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-.btn-save:hover {
-  background: #1e293b;
-  transform: translateY(-1px);
+.btn-restore:hover {
+  background: #ecfdf5;
 }
 
 .btn-cancel {
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
   background: white;
   color: #64748b;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
 .btn-cancel:hover {
   background: #f8fafc;
-  border-color: #cbd5e1;
 }
 
 /* 상세 카드 */
@@ -743,10 +860,36 @@ const getOrgNameLabel = (type) => {
   box-sizing: border-box;
 }
 
-.info-field input:focus {
+.info-field input:focus,
+.info-field select:focus {
   outline: none;
   border-color: #0f172a;
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+}
+
+.address-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.address-input-group input {
+  flex: 1;
+}
+
+.btn-address-search {
+  padding: 0 1rem;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-address-search:hover {
+  background: #e2e8f0;
 }
 
 .input-disabled {
@@ -989,23 +1132,27 @@ const getOrgNameLabel = (type) => {
 
 .btn-remove-photo {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 36px;
-  height: 36px;
-  background: #ef4444;
-  color: white;
-  border: none;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
 }
 
 .btn-remove-photo:hover {
-  background: #dc2626;
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecaca;
   transform: scale(1.1);
 }
 
