@@ -59,6 +59,9 @@
             <span class="info-label">무게:</span> {{ product.weight }}g
           </div>
           <div class="card-info-row">
+            <span class="info-label">구성용품:</span> {{ product.components ? product.components.join(', ') : '없음' }}
+          </div>
+          <div class="card-info-row">
             <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
           </div>
 
@@ -118,6 +121,11 @@
               <label>자동생성 상품명</label>
               <input type="text" v-model="form.name" disabled class="readonly-input" />
             </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>구성용품 (쉼표로 구분하여 입력)</label>
+            <input type="text" v-model="form.componentsInput" placeholder="예: 떡, 어묵, 소스, 파" />
           </div>
 
           <div class="form-group full-width">
@@ -200,7 +208,8 @@ const form = ref({
   price: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
-  weight: 0
+  weight: 0,
+  componentsInput: '' // Added for components
 })
 
 const products = ref([])
@@ -248,6 +257,7 @@ const generateMockProducts = () => {
                     startDate: '2024-01-01', 
                     endDate: '2025-12-31',
                     baseSafeStock: 10,
+                    components: t.code === 'OR' ? ['밀떡', '어묵', '오리지널 소스'] : t.code === 'RO' ? ['밀떡', '베이컨', '로제 소스'] : ['밀떡', '우삼겹', '마라 소스'],
                     type: t.code,
                     sizeCode: sz.code
                 })
@@ -309,7 +319,7 @@ const openAddModal = () => {
   isEditMode.value = false
   form.value = {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
-      productCode: '', name: '', description: '', imageUrl: '', price: 0, weight: 0, status: 'ON_SALE', servingSize: 1
+      productCode: '', name: '', description: '', imageUrl: '', price: 0, weight: 0, status: 'ON_SALE', servingSize: 1, componentsInput: ''
   }
   updateCodeAndName()
   showModal.value = true
@@ -321,10 +331,12 @@ const openEditModal = (product) => {
   const type = product.productCode.substring(0, 2)
   const spice = product.productCode.substring(2, 4)
   const size = product.productCode.substring(4, 6)
+  
+  const componentsInput = product.components ? product.components.join(', ') : ''
 
   form.value = { 
       ...JSON.parse(JSON.stringify(product)),
-      type, spiceLevel: spice, sizeCode: size
+      type, spiceLevel: spice, sizeCode: size, componentsInput
   }
   showModal.value = true
 }
@@ -335,11 +347,14 @@ const closeModal = () => {
 
 const saveProduct = () => {
     // In real app, validate existence
+    const components = form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean)
+    const productData = { ...form.value, components }
+    
     if (isEditMode.value) {
         const index = products.value.findIndex(p => p.productCode === form.value.productCode)
-        if (index !== -1) products.value[index] = { ...form.value }
+        if (index !== -1) products.value[index] = productData
     } else {
-        products.value.push({ ...form.value })
+        products.value.push(productData)
     }
     closeModal()
 }
