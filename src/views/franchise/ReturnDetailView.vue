@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getReturnDetail, cancelReturn, updateReturn } from '@/api/franchiseReturns.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,46 +11,39 @@ const returnItem = ref(null)
 const isEditing = ref(false)
 const editableItem = ref(null)
 const selectedProducts = ref([])
+const availableProducts = ref([])
 
-// Mock Data (Simulating Database)
- // Mock Data (Simulating Database)
- const returns = [
-  { orderCode: 'SE0120231026001', returnCode: 'RESE0120231026001', boxCode: 'SE01FA0120231026OR0101001', idCode: 'SE01FA01AOR0101B001', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 1, amount: 5000, totalAmount: 5000, recipientName: '김철수', recipientPhone: '010-1234-5678', franchiseCode: 'SE01', details: '박스 파손 심함', reason: '상품 하자', date: '2023-10-26', status: '대기' },
-  { orderCode: 'SE0120231025005', returnCode: 'RESE0120231025005', boxCode: 'SE01FA0120231025RO0201005', idCode: 'SE01FA01ARO0201B005', productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 2, amount: 7000, totalAmount: 14000, recipientName: '이영희', recipientPhone: '010-9876-5432', franchiseCode: 'SE01', details: '고객 변심 반품', reason: '오발주', date: '2023-10-25', status: '접수' },
-  { orderCode: 'SE0120231024010', returnCode: 'RESE0120231024010', boxCode: 'SE01FA0120231024MA0301010', idCode: 'SE01FA01AMA0301B010', productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 1, amount: 7000, totalAmount: 7000, recipientName: '박민수', recipientPhone: '010-5555-4444', franchiseCode: 'SE01', details: '오배송 확인됨', reason: '오발주', date: '2023-10-24', status: '배송중' }
- ]
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
- // Mock Data for "All Products in Box" (To simulate finding other items in the same box)
- const allBoxProducts = [
-   { boxCode: 'SE01FA0120231026OR0101001', idCode: 'SE01FA01AOR0101B001', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 1, amount: 5000, totalAmount: 5000 },
-   { boxCode: 'SE01FA0120231026OR0101001', idCode: 'SE01FA01AOR0101B002', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 1, amount: 5000, totalAmount: 5000 },
-   { boxCode: 'SE01FA0120231026OR0101001', idCode: 'SE01FA01AOR0101B003', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 1, amount: 5000, totalAmount: 5000 },
-   { boxCode: 'SE01FA0120231025RO0201005', idCode: 'SE01FA01ARO0201B005', productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 2, amount: 7000, totalAmount: 14000 },
-   { boxCode: 'SE01FA0120231024MA0301010', idCode: 'SE01FA01AMA0301B010', productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 1, amount: 7000, totalAmount: 7000 }
- ]
-
- const availableProducts = ref([])
-
-onMounted(() => {
-  const allItems = returns.filter(r => r.returnCode === returnId)
-  if (allItems.length > 0) {
-    const first = allItems[0]
+onMounted(async () => {
+  try {
+    const data = await getReturnDetail(returnId)
+    const products = (data.items || []).map(item => ({
+      boxCode: item.boxCode,
+      idCode: item.boxCode, // use boxCode as idCode for selection
+      productCode: item.productCode,
+      productName: item.productName,
+      quantity: 1,
+      amount: Number(item.unitPrice || 0),
+      totalAmount: Number(item.unitPrice || 0)
+    }))
     returnItem.value = {
-      ...first,
-      products: allItems.map(item => ({
-        boxCode: item.boxCode,
-        idCode: item.idCode,
-        productCode: item.productCode,
-        productName: item.productName,
-        quantity: item.quantity,
-        amount: item.amount,
-        totalAmount: item.totalAmount
-      }))
+      returnCode: data.returnCode,
+      orderCode: data.orderCode,
+      franchiseCode: data.franchiseCode,
+      date: formatDate(data.requestedDate),
+      status: data.status,
+      recipientName: data.username,
+      recipientPhone: data.phoneNumber,
+      reason: TYPE_LABEL[data.returnType] || data.returnType,
+      details: data.description,
+      products,
+      grandTotal: products.reduce((sum, p) => sum + p.totalAmount, 0)
     }
-    returnItem.value.grandTotal = allItems.reduce((sum, item) => sum + item.totalAmount, 0)
-
-    // Load available products in this box for editing
-    availableProducts.value = allBoxProducts.filter(p => p.boxCode === returnItem.value.boxCode)
+    availableProducts.value = products
+  } catch (e) {
+    alert(e.message)
   }
 })
 
@@ -64,14 +58,19 @@ const getStatusClass = (s) => ({
   '대금 차감 거절': 'status-danger'
 }[s] || '')
 
-const cancelReturnRequest = () => {
+const cancelReturnRequest = async () => {
   if (returnItem.value.status !== '대기') {
     alert('처리 상태가 대기가 아니면 취소할 수 없습니다.')
     return
   }
-  // In a real app, API call to delete/cancel
-  alert('반품 요청이 취소되었습니다.')
-  router.back() // Use router.back() for consistency
+  if (!confirm('반품 요청을 취소하시겠습니까?')) return
+  try {
+    await cancelReturn(returnId)
+    alert('반품 요청이 취소되었습니다.')
+    router.back()
+  } catch (e) {
+    alert(e.message || '반품 취소에 실패했습니다.')
+  }
 }
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
@@ -87,18 +86,21 @@ const cancelEdit = () => {
   editableItem.value = null
 }
 
-const saveChanges = () => {
-  // Update the products list based on selection
+const saveChanges = async () => {
   const newProducts = availableProducts.value.filter(p => selectedProducts.value.includes(p.idCode))
-  
-  returnItem.value = {
-    ...editableItem.value,
-    products: newProducts,
-    grandTotal: newProducts.reduce((sum, p) => sum + p.totalAmount, 0)
+  try {
+    const boxCodes = newProducts.map(p => p.boxCode)
+    await updateReturn(returnId, boxCodes.map(b => ({ boxCode: b })))
+    returnItem.value = {
+      ...editableItem.value,
+      products: newProducts,
+      grandTotal: newProducts.reduce((sum, p) => sum + p.totalAmount, 0)
+    }
+    alert('변경사항이 저장되었습니다.')
+    isEditing.value = false
+  } catch (e) {
+    alert(e.message || '저장에 실패했습니다.')
   }
-  
-  alert('변경사항이 저장되었습니다.')
-  isEditing.value = false
 }
 </script>
 

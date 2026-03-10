@@ -1,24 +1,38 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getReturnList, acceptReturns } from '@/api/hqReturns.js'
 
 const router = useRouter()
 
-// Mock Data
-const returns = ref([
-  {
-    id: 2, franchiseCode: 'SE02', requestDate: '2023-11-06', boxCode: 'SE02FA0120231106RO0201005',
-    productIdCode: 'SE02FA01ARO0201B005', reason: '오발주', recipientName: '이점주', recipientPhone: '010-9876-5432',
-    productCode: 'RO0201', orderCode: 'SE0220231102005', returnCode: 'RESE0220231102005',
-    status: '접수', quantity: 2, amount: 24000
-  },
-  {
-    id: 3, franchiseCode: 'SE03', requestDate: '2023-11-04', boxCode: 'SE03FA0120231104MA0303001',
-    productIdCode: 'SE03FA01AMA0303B020', reason: '상품 하자', recipientName: '박센터', recipientPhone: '010-5555-4444',
-    productCode: 'MA0303', orderCode: 'SE0320231030020', returnCode: 'RESE0320231030020',
-    status: '배송 완료', quantity: 2, amount: 60000
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const returns = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getReturnList(true)
+    returns.value = (data || []).map(item => ({
+      id: item.returnCode,
+      franchiseCode: item.franchiseCode,
+      requestDate: formatDate(item.requestedDate),
+      boxCode: '',
+      productIdCode: '',
+      reason: TYPE_LABEL[item.type] || item.type,
+      recipientName: item.receiver || '',
+      recipientPhone: item.phoneNumber || '',
+      productCode: '',
+      orderCode: '',
+      returnCode: item.returnCode,
+      status: item.status,
+      quantity: item.quantity,
+      amount: Number(item.totalPrice || 0)
+    }))
+  } catch (e) {
+    alert(e.message)
   }
-])
+})
 
 const filter = ref({
   franchiseCode: '',
@@ -96,14 +110,16 @@ const cancelSelectionMode = () => {
   selectedIds.value = []
 }
 
-const confirmSelection = () => {
+const confirmSelection = async () => {
   if (selectedIds.value.length === 0) {
     alert('접수할 항목을 선택해주세요.')
     return
   }
 
-  if (confirm(`선택한 ${selectedIds.value.length}건을 접수 처리하시겠습니까?`)) {
-    // 상태 업데이트
+  if (!confirm(`선택한 ${selectedIds.value.length}건을 접수 처리하시겠습니까?`)) return
+
+  try {
+    await acceptReturns(selectedIds.value)
     returns.value.forEach(item => {
       if (selectedIds.value.includes(item.id)) {
         item.status = '접수'
@@ -111,6 +127,8 @@ const confirmSelection = () => {
     })
     alert('접수 처리되었습니다.')
     cancelSelectionMode()
+  } catch (e) {
+    alert(e.message || '접수 처리에 실패했습니다.')
   }
 }
 

@@ -1,77 +1,40 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getOrderDetail, cancelOrder as cancelOrderApi } from '@/api/hqOrders.js'
 
 const route = useRoute()
 const router = useRouter()
 const orderId = route.params.id
 const orderItem = ref(null)
 
-const orders = [
-  { 
-    orderStatus: '대기', 
-    orderDate: '2023-10-25', 
-    orderCode: 'HEAD20231025001', 
-    franchiseCode: 'SE01',
-    managerName: '김민기', 
-    managerPhone: '010-1111-2222', 
-    stockInDate: '2023-10-27',
-    arrivalDate: '2023-10-27', 
-    products: [
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50, amount: 10000 },
-      { productCode: 'OR0103', productName: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 20, amount: 18000 }
-    ],
-    totalAmount: 860000
-  },
-  { 
-    orderStatus: '배송중', 
-    orderDate: '2023-10-24', 
-    orderCode: 'HEAD20231024005', 
-    franchiseCode: 'SE02',
-    managerName: '송지은', 
-    managerPhone: '010-3333-4444', 
-    stockInDate: '2023-10-26',
-    arrivalDate: '2023-10-26', 
-    products: [
-      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 30, amount: 12000 },
-      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 10, amount: 12000 }
-    ],
-    totalAmount: 480000
-  },
-  { 
-    orderStatus: '배송완료', 
-    orderDate: '2023-10-23', 
-    orderCode: 'HEAD20231023020', 
-    franchiseCode: 'SE03',
-    managerName: '박원규', 
-    managerPhone: '010-5555-6666', 
-    stockInDate: '2023-10-25',
-    arrivalDate: '2023-10-25', 
-    products: [
-      { productCode: 'MA0303', productName: '마라 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 200, amount: 22000 },
-      { productCode: 'RO0103', productName: '로제 떡볶이 밀키트 순한맛 3,4인분', quantity: 50, amount: 22000 }
-    ],
-    totalAmount: 5500000
-  },
-  { 
-    orderStatus: '취소', 
-    orderDate: '2023-10-22', 
-    orderCode: 'HEAD20231022030', 
-    franchiseCode: 'SE04',
-    managerName: '김민수', 
-    managerPhone: '010-7777-8888', 
-    stockInDate: '-',
-    arrivalDate: '2023-10-24', 
-    products: [
-      { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 30, amount: 18000 },
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 10, amount: 10000 }
-    ],
-    totalAmount: 640000
-  }
-]
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
-onMounted(() => {
-  orderItem.value = orders.find(o => o.orderCode === orderId) || orders[0] // Fallback for demo
+onMounted(async () => {
+  try {
+    const data = await getOrderDetail(orderId)
+    const info = data.orderInfo || data
+    const items = data.items || []
+    orderItem.value = {
+      orderCode: info.orderCode,
+      orderStatus: info.status,
+      orderDate: formatDate(info.requestedDate),
+      franchiseCode: '',
+      managerName: info.username || '',
+      managerPhone: info.phoneNumber || '',
+      stockInDate: info.storedDate || '',
+      arrivalDate: formatDate(info.manufacturedDate),
+      products: items.map(item => ({
+        productCode: item.productCode || '',
+        productName: item.productName || '',
+        quantity: item.quantity || 0,
+        amount: Number(item.unitPrice || 0)
+      })),
+      totalAmount: items.reduce((sum, item) => sum + (item.quantity * Number(item.unitPrice || 0)), 0)
+    }
+  } catch (e) {
+    alert(e.message)
+  }
 })
 
 const getStatusClass = (s) => ({
@@ -89,10 +52,14 @@ const goToEdit = () => {
   router.push({ name: 'head-office-order-edit', params: { id: orderItem.value.orderCode } })
 }
 
-const cancelOrder = () => {
-  if (confirm('이 발주를 취소하시겠습니까?')) {
-    orderItem.value.orderStatus = '취소'
+const cancelOrder = async () => {
+  if (!confirm('이 발주를 취소하시겠습니까?')) return
+  try {
+    await cancelOrderApi(orderId)
     alert('발주가 취소되었습니다.')
+    router.push({ name: 'head-office-order-list' })
+  } catch (e) {
+    alert(e.message || '발주 취소에 실패했습니다.')
   }
 }
 </script>

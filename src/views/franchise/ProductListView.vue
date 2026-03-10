@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getSalesList } from '@/api/franchiseSales.js'
 
 const router = useRouter()
 
@@ -12,19 +13,31 @@ const filter = ref({
   quantity: ''
 })
 
-const sales = ref([
-  { salesCode: '2023102614300001', date: '2023-10-26 14:30', productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 5, unitPrice: 5000, totalPrice: 25000 },
-  { salesCode: '2023102614300001', date: '2023-10-26 14:30', productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 2, unitPrice: 7000, totalPrice: 14000 },
-  { salesCode: '2023102510150001', date: '2023-10-25 10:15', productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 3, unitPrice: 7000, totalPrice: 21000 },
-  { salesCode: '2023102510150001', date: '2023-10-25 10:15', productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 1, unitPrice: 13000, totalPrice: 13000 },
-  { salesCode: '2023102409000001', date: '2023-10-24 09:00', productCode: 'RO0103', productName: '로제 떡볶이 밀키트 순한맛 3,4인분', quantity: 1, unitPrice: 17000, totalPrice: 17000 },
-  { salesCode: '2023102409000001', date: '2023-10-24 09:00', productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 4, unitPrice: 7000, totalPrice: 28000 },
-])
+const sales = ref([])
+const loading = ref(false)
+const error = ref(null)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    sales.value = await getSalesList()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
+})
+
+const formatSalesDate = (isoStr) => {
+  if (!isoStr) return ''
+  return isoStr.replace('T', ' ').substring(0, 16)
+}
 
 const filteredSales = computed(() => {
   return sales.value.filter(item => {
+    const formattedDate = formatSalesDate(item.salesDate)
     const matchSalesCode = !filter.value.salesCode || item.salesCode.includes(filter.value.salesCode)
-    const matchDate = !filter.value.date || item.date.includes(filter.value.date)
+    const matchDate = !filter.value.date || formattedDate.startsWith(filter.value.date)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
     const matchQuantity = !filter.value.quantity || item.quantity.toString() === filter.value.quantity
@@ -71,6 +84,8 @@ const goToSalesDetail = (salesCode) => {
       </div>
     </div>
 
+    <div v-if="error" class="error-message">{{ error }}</div>
+
     <div class="data-table-card">
       <div class="table-scroll-container">
         <table class="data-table">
@@ -86,10 +101,15 @@ const goToSalesDetail = (salesCode) => {
           </tr>
           </thead>
           <tbody>
-          <tr v-for="(item, index) in filteredSales" :key="index" class="clickable-row" @click="goToSalesDetail(item.salesCode)">
-            <!-- [변경] 판매 코드: code-cell 제거 후 sku-cell (파란색) 적용 -->
+          <tr v-if="loading">
+            <td colspan="7" class="text-center loading-row">불러오는 중...</td>
+          </tr>
+          <tr v-else-if="filteredSales.length === 0">
+            <td colspan="7" class="text-center loading-row">판매 내역이 없습니다.</td>
+          </tr>
+          <tr v-else v-for="(item, index) in filteredSales" :key="index" class="clickable-row" @click="goToSalesDetail(item.salesCode)">
             <td class="sku-cell">{{ item.salesCode }}</td>
-            <td>{{ item.date }}</td>
+            <td>{{ formatSalesDate(item.salesDate) }}</td>
             <td class="sku-cell">{{ item.productCode }}</td>
             <td class="name-cell">{{ item.productName }}</td>
             <td class="text-right">{{ item.quantity }}</td>
@@ -138,6 +158,8 @@ const goToSalesDetail = (salesCode) => {
 
 .clickable-row { cursor: pointer; transition: background 0.15s; }
 .clickable-row:hover { background: #f8fafc; }
+.loading-row { padding: 2rem; color: var(--text-light); }
+.error-message { background: #fee2e2; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
 
 :root {
   --primary: #4f46e5;

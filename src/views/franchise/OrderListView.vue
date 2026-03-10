@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getOrderList } from '@/api/franchiseOrders.js'
+import { getReturnList } from '@/api/franchiseReturns.js'
 
 const router = useRouter()
 
@@ -28,165 +30,91 @@ const filter = ref({
   totalAmount: ''
 })
 
-// [데이터 1] 발주 데이터
-const orders = ref([
-  {
-    orderStatus: '대기',
-    orderDate: '2023-10-25',
-    orderCode: 'SE0120231025001',
-    recipientName: '김철수',
-    recipientPhone: '010-1234-5678',
-    arrivalDate: '2023-10-27',
-    arrivalTime: '14:00',
-    products: [
-      { productCode: 'OR0101', quantity: 50, amount: 5000 },
-      { productCode: 'RO0201', quantity: 10, amount: 7000 }
-    ]
-  },
-  {
-    orderStatus: '배송중',
-    orderDate: '2023-10-24',
-    orderCode: 'SE0120231024002',
-    recipientName: '이영희',
-    recipientPhone: '010-9876-5432',
-    arrivalDate: '2023-10-26',
-    arrivalTime: '10:00',
-    products: [
-      { productCode: 'RO0201', quantity: 30, amount: 7000 }
-    ]
-  },
-  {
-    orderStatus: '배송완료',
-    orderDate: '2023-10-23',
-    orderCode: 'SE0120231023003',
-    recipientName: '박민수',
-    recipientPhone: '010-5555-4444',
-    arrivalDate: '2023-10-25',
-    arrivalTime: '16:30',
-    products: [
-      { productCode: 'MA0301', quantity: 20, amount: 7000 },
-      { productCode: 'OR0403', quantity: 5, amount: 13000 }
-    ]
-  },
-  {
-    orderStatus: '취소',
-    orderDate: '2023-10-22',
-    orderCode: 'SE0120231022004',
-    recipientName: '최지원',
-    recipientPhone: '010-1111-2222',
-    arrivalDate: '-',
-    arrivalTime: '-',
-    products: [
-      { productCode: 'OR0403', quantity: 10, amount: 13000 }
-    ]
-  },
-])
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+const formatDateTime = (iso) => iso ? iso.replace('T', ' ').substring(0, 16) : ''
+const formatTime = (iso) => iso ? iso.replace('T', ' ').substring(11, 16) : ''
+
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+
+// [데이터 1] 발주 데이터 (flat from API)
+const rawOrders = ref([])
+const loading = ref(false)
+const error = ref(null)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const [orderData, returnData] = await Promise.all([getOrderList(), getReturnList()])
+    rawOrders.value = orderData || []
+    rawReturns.value = returnData || []
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
+})
+
+// Build order total per orderCode
+const orderTotalMap = computed(() => {
+  const map = {}
+  rawOrders.value.forEach(item => {
+    if (!map[item.orderCode]) map[item.orderCode] = 0
+    map[item.orderCode] += Number(item.totalPrice || 0)
+  })
+  return map
+})
 
 const filteredFlatOrders = computed(() => {
-  let flatList = []
-  orders.value.forEach(order => {
-    const orderTotalAmount = order.products.reduce((acc, p) => acc + (p.quantity * p.amount), 0)
-    order.products.forEach(product => {
-      flatList.push({
-        orderCode: order.orderCode,
-        orderStatus: order.orderStatus,
-        orderDate: order.orderDate,
-        recipientName: order.recipientName,
-        recipientPhone: order.recipientPhone,
-        arrivalDate: order.arrivalDate,
-        arrivalTime: order.arrivalTime,
-        orderTotalAmount: orderTotalAmount,
-        productCode: product.productCode,
-        quantity: product.quantity,
-        unitPrice: product.amount,
-        lineTotalAmount: product.quantity * product.amount
-      })
-    })
-  })
-  return flatList.filter(item => {
+  return rawOrders.value.map(item => ({
+    orderCode: item.orderCode,
+    orderStatus: item.orderStatus,
+    orderDate: formatDate(item.requestedDate),
+    recipientName: item.receiver || '',
+    recipientPhone: '',
+    arrivalDate: formatDate(item.deliveryDate),
+    arrivalTime: formatTime(item.deliveryDate),
+    orderTotalAmount: orderTotalMap.value[item.orderCode] || 0,
+    productCode: item.productCode,
+    quantity: item.quantity ?? '-',
+    unitPrice: item.unitPrice,
+    lineTotalAmount: Number(item.totalPrice || 0)
+  })).filter(item => {
     const matchStatus = !filter.value.status || item.orderStatus === filter.value.status
     const matchOrderDate = !filter.value.orderDate || item.orderDate.includes(filter.value.orderDate)
     const matchOrderCode = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchRecipientName = !filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)
-    const matchRecipientPhone = !filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)
     const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
-    const matchArrivalTime = !filter.value.arrivalTime || item.arrivalTime.includes(filter.value.arrivalTime)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
-    return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchRecipientPhone && matchArrivalDate && matchArrivalTime && matchProductCode
+    return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchArrivalDate && matchProductCode
   })
 })
 
 // [데이터 2] 반품 데이터
-const returns = ref([
-  {
-    orderCode: 'SE0120231026001',
-    returnCode: 'RESE0120231026001',
-    boxCode: 'SE01FA0120231026OR0101001',
-    idCode: 'SE01FA01AOR0101B001',
-    productCode: 'OR0101',
-    productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    quantity: 1,
-    amount: 5000,
-    totalAmount: 5000,
-    recipientName: '김철수',
-    recipientPhone: '010-1234-5678',
-    franchiseCode: 'SE01',
-    details: '박스 파손 심함',
-    reason: '상품 하자',
-    date: '2023-10-26',
-    status: '대기'
-  },
-  {
-    orderCode: 'SE0120231025005',
-    returnCode: 'RESE0120231025005',
-    boxCode: 'SE01FA0120231025RO0201005',
-    idCode: 'SE01FA01ARO0201B005',
-    productCode: 'RO0201',
-    productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    quantity: 2,
-    amount: 7000,
-    totalAmount: 14000,
-    recipientName: '이영희',
-    recipientPhone: '010-9876-5432',
-    franchiseCode: 'SE01',
-    details: '고객 반품 요청',
-    reason: '오발주',
-    date: '2023-10-25',
-    status: '접수'
-  },
-  {
-    orderCode: 'SE0120231024010',
-    returnCode: 'RESE0120231024010',
-    boxCode: 'SE01FA0120231024MA0301010',
-    idCode: 'SE01FA01AMA0301B010',
-    productCode: 'MA0301',
-    productName: '마라 떡볶이 밀키트 매운맛 1,2인분',
-    quantity: 1,
-    amount: 7000,
-    totalAmount: 7000,
-    recipientName: '박민수',
-    recipientPhone: '010-5555-4444',
-    franchiseCode: 'SE01',
-    details: '오배송 확인됨',
-    reason: '오발주',
-    date: '2023-10-24',
-    status: '배송중'
-  }
-])
+const rawReturns = ref([])
 
 const filteredReturns = computed(() => {
-  return returns.value.filter(item => {
+  return rawReturns.value.map(item => ({
+    returnCode: item.returnCode,
+    status: item.status,
+    orderCode: item.orderCode,
+    productCode: item.productCode,
+    productName: item.productName,
+    amount: Number(item.unitPrice || 0),
+    quantity: item.quantity,
+    totalAmount: Number(item.totalPrice || 0),
+    reason: TYPE_LABEL[item.type] || item.type,
+    date: formatDate(item.requestedDate),
+    boxCode: '',
+    idCode: ''
+  })).filter(item => {
     const matchOrder = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchReturn = !filter.value.returnCode || item.returnCode.includes(filter.value.returnCode)
-    const matchBox = !filter.value.boxCode || item.boxCode.includes(filter.value.boxCode)
-    const matchId = !filter.value.idCode || item.idCode.includes(filter.value.idCode)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
     const matchQty = !filter.value.quantity || String(item.quantity).includes(filter.value.quantity)
     const matchAmount = !filter.value.amount || String(item.amount).includes(filter.value.amount)
     const matchTotal = !filter.value.totalAmount || String(item.totalAmount).includes(filter.value.totalAmount)
-
-    return matchOrder && matchReturn && matchBox && matchId && matchProductCode && matchProductName && matchQty && matchAmount && matchTotal
+    return matchOrder && matchReturn && matchProductCode && matchProductName && matchQty && matchAmount && matchTotal
   })
 })
 
