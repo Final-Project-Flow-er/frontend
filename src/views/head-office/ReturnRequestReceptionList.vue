@@ -6,6 +6,17 @@ import { getReturnList, acceptReturns } from '@/api/hqReturns.js'
 const router = useRouter()
 
 const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
 const returns = ref([])
@@ -25,7 +36,7 @@ onMounted(async () => {
       productCode: '',
       orderCode: '',
       returnCode: item.returnCode,
-      status: item.status,
+      status: STATUS_LABEL[item.status] || item.status,
       quantity: item.quantity,
       amount: Number(item.totalPrice || 0)
     }))
