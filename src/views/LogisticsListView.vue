@@ -37,21 +37,28 @@
         <div class="filter-group">
           <select v-model="statusFilter" class="filter-select">
             <option value="all">상태: 전체</option>
-            <option value="active">활성</option>
-            <option value="inactive">비활성</option>
-            <option value="deleted">삭제</option>
+            <option value="ACTIVE">활성</option>
+            <option value="INACTIVE">비활성</option>
           </select>
           <select v-model="regionFilter" class="filter-select">
             <option value="all">지역: 전체</option>
-            <option value="서울">서울</option>
-            <option value="경기">경기</option>
-            <option value="인천">인천</option>
-            <option value="강원">강원</option>
-            <option value="충청">충청</option>
-            <option value="전라">전라</option>
-            <option value="경상">경상</option>
-            <option value="제주">제주</option>
-            <option value="전국">전국</option>
+            <option value="SEOUL">서울</option>
+            <option value="GYEONGGI">경기</option>
+            <option value="INCHEON">인천</option>
+            <option value="GANGWON">강원</option>
+            <option value="CHUNGNAM">충남</option>
+            <option value="CHUNGBUK">충북</option>
+            <option value="DAEJEON">대전</option>
+            <option value="SEJONG">세종</option>
+            <option value="JEONNAM">전남</option>
+            <option value="JEONBUK">전북</option>
+            <option value="GWANGJU">광주</option>
+            <option value="GYEONGNAM">경남</option>
+            <option value="GYEONGBUK">경북</option>
+            <option value="BUSAN">부산</option>
+            <option value="DAEGU">대구</option>
+            <option value="ULSAN">울산</option>
+            <option value="JEJU">제주</option>
           </select>
           <select v-model="costFilter" class="filter-select">
             <option value="all">단가: 전체</option>
@@ -59,18 +66,20 @@
             <option value="normal">2,500원 ~ 3,000원</option>
             <option value="high">3,000원 초과</option>
           </select>
+        </div>
+        <div class="filter-actions">
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input 
+              type="text" 
+              v-model="companySearch" 
+              placeholder="업체명 또는 담당자 검색"
+            >
+          </div>
           <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
             초기화
           </button>
-        </div>
-        <div class="search-box">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input 
-            type="text" 
-            v-model="companySearch" 
-            placeholder="업체명 또는 담당자 검색"
-          >
         </div>
       </div>
       <div class="table-container fixed-height">
@@ -83,8 +92,6 @@
               <th>주력 지역</th>
               <th>운송 단가</th>
               <th>차량수</th>
-              <th>계약 시작일</th>
-              <th>계약 종료일</th>
               <th>상태</th>
               <th>관리</th>
             </tr>
@@ -93,18 +100,16 @@
             <tr 
               v-for="company in filteredCompanies" 
               :key="company.id" 
-              :class="{ 'inactive-row': company.status === 'inactive' }"
+              :class="{ 'inactive-row': company.status === 'INACTIVE' }"
               @click="openDetail('company', company)"
               class="clickable-row"
             >
-              <td class="name-cell">{{ company.name }}</td>
-              <td>{{ company.managerName }}</td>
-              <td>{{ company.phone }}</td>
-              <td>{{ company.mainRegion }}</td>
-              <td class="cost-cell">{{ company.costPerKm.toLocaleString() }}</td>
-              <td>{{ company.vehicleCount }}대</td>
-              <td>{{ company.contractStart }}</td>
-              <td>{{ company.contractEnd }}</td>
+              <td class="name-cell">{{ company.companyName }}</td>
+              <td>{{ company.manager }}</td>
+              <td>{{ company.officePhone }}</td>
+              <td>{{ getRegionLabel(company.usableRegion) }}</td>
+              <td class="cost-cell">{{ company.unitPrice?.toLocaleString() }}</td>
+              <td>{{ company.ownedVehicles }}대</td>
               <td>
                 <span :class="['status-badge', getStatusClass(company.status)]">
                   {{ getStatusLabel(company.status) }}
@@ -113,7 +118,7 @@
               <td @click.stop>
                 <div class="row-actions">
                   <button
-                    v-if="company.status === 'active' || !company.status"
+                    v-if="!company.status || ['ACTIVE', 'active'].includes(company.status)"
                     @click="deleteItem('company', company.id)"
                     class="btn-icon-action deactivate"
                     title="비활성화"
@@ -124,7 +129,7 @@
                     </svg>
                   </button>
                   <button
-                    v-else-if="company.status === 'inactive'"
+                    v-else-if="['INACTIVE', 'inactive'].includes(company.status)"
                     @click="restoreItem('company', company.id)"
                     class="btn-icon-action restore"
                     title="복구"
@@ -135,7 +140,7 @@
                     </svg>
                   </button>
                   <button
-                    v-if="company.status !== 'deleted'"
+                    v-if="!company.status || !['DELETED', 'deleted'].includes(company.status)"
                     @click="confirmHardDelete('company', company)"
                     class="btn-icon-action delete"
                     title="삭제"
@@ -161,8 +166,8 @@
         <div class="filter-group">
           <select v-model="statusFilter" class="filter-select">
             <option value="all">상태: 전체</option>
-            <option value="active">운행가능</option>
-            <option value="inactive">비활성</option>
+            <option value="ACTIVE">운행가능</option>
+            <option value="INACTIVE">비활성</option>
           </select>
           <select v-model="companyFilter" class="filter-select">
             <option value="all">업체: 전체</option>
@@ -172,30 +177,26 @@
           </select>
           <select v-model="typeFilter" class="filter-select">
             <option value="all">종류: 전체</option>
-            <option value="frozen">냉동탑차</option>
-            <option value="normal">카고/일반탑차</option>
-            <option value="wingbody">윙바디</option>
-            <option value="bike">이륜차</option>
+            <option value="CARGO">카고</option>
+            <option value="WING_BODY">윙바디</option>
+            <option value="REFRIGERATED_TOP">냉동탑차</option>
+            <option value="CHILLED_TOP">냉장탑차</option>
+            <option value="CONTAINER">컨테이너 캐리어</option>
           </select>
-          <select v-model="tonnageFilter" class="filter-select">
-            <option value="all">톤수: 전체</option>
-            <option value="1t">1t</option>
-            <option value="2.5t">2.5t</option>
-            <option value="5t">5t</option>
-            <option value="11t">11t</option>
-          </select>
+        </div>
+        <div class="filter-actions">
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input 
+              type="text" 
+              v-model="vehicleSearch" 
+              placeholder="차량번호 또는 운전자 검색"
+            >
+          </div>
           <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
             초기화
           </button>
-        </div>
-        <div class="search-box">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input 
-            type="text" 
-            v-model="vehicleSearch" 
-            placeholder="차량번호 또는 운전자 검색"
-          >
         </div>
       </div>
       <div class="table-container fixed-height">
@@ -206,8 +207,7 @@
               <th>소속 업체</th>
               <th>차량 종류</th>
               <th>최대 적재량</th>
-              <th>운전자명</th>
-              <th>운전자 연락처</th>
+              <th>배차 상태</th>
               <th>상태</th>
               <th>관리</th>
             </tr>
@@ -216,16 +216,19 @@
             <tr 
               v-for="vehicle in filteredVehicles" 
               :key="vehicle.id" 
-              :class="{ 'inactive-row': vehicle.status === 'inactive' }"
+              :class="{ 'inactive-row': vehicle.status === 'INACTIVE' }"
               @click="openDetail('vehicle', vehicle)"
               class="clickable-row"
             >
-              <td class="code-cell">{{ vehicle.vehicleNo }}</td>
-              <td>{{ vehicle.company }}</td>
+              <td class="name-cell">{{ vehicle.vehicleNumber }}</td>
+              <td>{{ getCompanyName(vehicle.transportId) }}</td>
               <td>{{ getVehicleTypeText(vehicle.vehicleType) }}</td>
-              <td>{{ vehicle.maxLoad }}</td>
-              <td>{{ vehicle.driverName }}</td>
-              <td>{{ vehicle.driverPhone }}</td>
+              <td>{{ vehicle.maxLoad }}톤</td>
+              <td>
+                <span :class="['status-badge', getDispatchStatusClass(vehicle.dispatchable)]">
+                  {{ getDispatchLabel(vehicle.dispatchable) }}
+                </span>
+              </td>
               <td>
                 <span :class="['status-badge', getStatusClass(vehicle.status)]">
                   {{ getStatusLabel(vehicle.status, 'vehicle') }}
@@ -234,7 +237,7 @@
               <td @click.stop>
                 <div class="row-actions">
                   <button
-                    v-if="vehicle.status === 'active' || !vehicle.status"
+                    v-if="!vehicle.status || ['ACTIVE', 'active'].includes(vehicle.status)"
                     @click="deleteItem('vehicle', vehicle.id)"
                     class="btn-icon-action deactivate"
                     title="비활성화"
@@ -245,7 +248,7 @@
                     </svg>
                   </button>
                   <button
-                    v-else-if="vehicle.status === 'inactive'"
+                    v-else-if="['INACTIVE', 'inactive'].includes(vehicle.status)"
                     @click="restoreItem('vehicle', vehicle.id)"
                     class="btn-icon-action restore"
                     title="복구"
@@ -256,7 +259,7 @@
                     </svg>
                   </button>
                   <button
-                    v-if="vehicle.status !== 'deleted'"
+                    v-if="!vehicle.status || !['DELETED', 'deleted'].includes(vehicle.status)"
                     @click="confirmHardDelete('vehicle', vehicle)"
                     class="btn-icon-action delete"
                     title="삭제"
@@ -284,14 +287,16 @@
       :data="selectedData"
       @close="isDetailModalOpen = false"
       @save="handleSave"
+      @delete="({ type, data }) => { confirmHardDelete(type, data); isDetailModalOpen = false; }"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import LogisticsDetailModal from './LogisticsDetailModal.vue'
+import api from '@/api/index'
 
 const router = useRouter()
 const activeTab = ref('companies')
@@ -304,57 +309,125 @@ const tonnageFilter = ref('all')
 const costFilter = ref('all')
 const companyFilter = ref('all')
 
+const getCompanyName = (transportId) => {
+  const company = companies.value.find(c => c.id === transportId)
+  return company ? company.companyName : '알 수 없음'
+}
+
 const uniqueCompanies = computed(() => {
-  return [...new Set(vehicles.value.map(v => v.company))]
+  return [...new Set(vehicles.value.map(v => getCompanyName(v.transportId)))]
 })
 
-const companies = ref([
-  { id: 1, name: 'CJ대한통운', phone: '02-123-4567', managerName: '홍길동', address: '서울특별시 중구', costPerKm: 2500, mainRegion: '전국', vehicleCount: 150, contractStart: '2024-01-01', contractEnd: '2024-12-31', status: 'active' },
-  { id: 2, name: '한진택배', phone: '02-987-6543', managerName: '김철수', address: '서울특별시 용산구', costPerKm: 2300, mainRegion: '수도권', vehicleCount: 80, contractStart: '2024-02-15', contractEnd: '2024-10-15', status: 'active' },
-  { id: 3, name: '롯데글로벌로지스', phone: '02-456-7890', managerName: '이영희', address: '서울특별시 송파구', costPerKm: 2600, mainRegion: '전국', vehicleCount: 120, contractStart: '2024-02-20', contractEnd: '2025-02-20', status: 'inactive' }
-])
+const companies = ref([])
+const vehicles = ref([])
 
-const vehicles = ref([
-  { id: 1, vehicleNo: '12가 3456', company: 'CJ대한통운', vehicleType: 'frozen', maxLoad: '1.2t', driverName: '박철호', driverPhone: '010-1111-2222', status: 'active' },
-  { id: 2, vehicleNo: '56나 7890', company: '한진택배', vehicleType: 'frozen', maxLoad: '2.5t', driverName: '최민수', driverPhone: '010-3333-4444', status: 'active' },
-  { id: 3, vehicleNo: '24다 1357', company: '자체 배송팀', vehicleType: 'normal', maxLoad: '1.0t', driverName: '정우성', driverPhone: '010-5555-6666', status: 'inactive' }
-])
+onMounted(async () => {
+  await fetchCompanies()
+  await fetchVehicles()
+})
+
+const fetchCompanies = async () => {
+  try {
+    const response = await api.get('/transport/vendors?size=1000')
+    if (response.data.success) {
+      // Page 객체(content)인지 Array인지에 따라 유연하게 처리
+      const rawData = response.data.data
+      companies.value = rawData?.content || (Array.isArray(rawData) ? rawData : [])
+    }
+  } catch (err) {
+    console.error('Failed to fetch companies:', err)
+  }
+}
+
+const fetchVehicles = async () => {
+  try {
+    const response = await api.get('/transport/vehicles?size=1000')
+    if (response.data.success) {
+      const rawData = response.data.data
+      vehicles.value = rawData?.content || (Array.isArray(rawData) ? rawData : [])
+    }
+  } catch (err) {
+    console.error('Failed to fetch vehicles:', err)
+  }
+}
 
 // 상세 모달 상태
 const isDetailModalOpen = ref(false)
 const modalType = ref('company')
 const selectedData = ref(null)
 
-const openDetail = (type, data) => {
+const openDetail = async (type, data) => {
   modalType.value = type
-  selectedData.value = data
-  isDetailModalOpen.value = true
+  try {
+    const endpoint = type === 'company' ? `/transport/vendors/${data.id}` : `/transport/vehicles/${data.id}`
+    const response = await api.get(endpoint)
+    if (response.data.success) {
+      let detailData = response.data.data
+      if (type === 'vehicle') {
+        detailData = { ...detailData, companyNameText: getCompanyName(detailData.transportId) }
+      }
+      selectedData.value = detailData
+      isDetailModalOpen.value = true
+    }
+  } catch (err) {
+    console.error('Failed to fetch detail:', err)
+    alert('상세 정보를 불러오는 데 실패했습니다.')
+  }
 }
 
 const getVehicleTypeText = (type) => {
   const types = {
-    'frozen': '냉동탑차',
-    'normal': '카고/일반탑차',
-    'wingbody': '윙바디',
-    'bike': '이륜차'
+    'CARGO': '카고',
+    'WING_BODY': '윙바디',
+    'REFRIGERATED_TOP': '냉동탑차',
+    'CHILLED_TOP': '냉장탑차',
+    'CONTAINER': '컨테이너 캐리어'
   }
   return types[type] || type
 }
 
 const getStatusLabel = (status, type = 'company') => {
   switch(status) {
-    case 'active': return type === 'vehicle' ? '운행가능' : '활성'
-    case 'inactive': return '비활성'
-    case 'deleted': return '삭제'
+    case 'ACTIVE': case 'active': return type === 'vehicle' ? '운행가능' : '활성'
+    case 'INACTIVE': case 'inactive': return '비활성'
+    case 'DELETED': case 'deleted': return '삭제'
     default: return type === 'vehicle' ? '운행가능' : '활성'
   }
 }
 
+const getRegionLabel = (region) => {
+  const regions = {
+    SEOUL: '서울', GYEONGGI: '경기', INCHEON: '인천', GANGWON: '강원',
+    CHUNGNAM: '충남', CHUNGBUK: '충북', DAEJEON: '대전', SEJONG: '세종',
+    JEONNAM: '전남', JEONBUK: '전북', GWANGJU: '광주',
+    GYEONGNAM: '경남', GYEONGBUK: '경북', BUSAN: '부산',
+    DAEGU: '대구', ULSAN: '울산', JEJU: '제주'
+  }
+  return regions[region] || region || '-'
+}
+
+const getDispatchLabel = (status) => {
+  const labels = {
+    'AVAILABLE': '배차 가능',
+    'UNAVAILABLE': '배차 불가',
+    'DISPATCHED': '배차 완료'
+  }
+  return labels[status] || status
+}
+
+const getDispatchStatusClass = (status) => {
+  const classes = {
+    'AVAILABLE': 'active',
+    'UNAVAILABLE': 'inactive',
+    'DISPATCHED': 'normal'
+  }
+  return classes[status] || ''
+}
 const getStatusClass = (status) => {
   switch(status) {
-    case 'active': return 'active'
-    case 'inactive': return 'inactive'
-    case 'deleted': return 'deleted'
+    case 'ACTIVE': case 'active': return 'active'
+    case 'INACTIVE': case 'inactive': return 'inactive'
+    case 'DELETED': case 'deleted': return 'deleted'
     default: return 'active'
   }
 }
@@ -362,25 +435,29 @@ const getStatusClass = (status) => {
 const filteredCompanies = computed(() => {
   let result = companies.value
   
+  // 상태 필터 (uppercase 대응)
   if (statusFilter.value !== 'all') {
-    result = result.filter(c => c.status === statusFilter.value)
+    const filterVal = statusFilter.value.toUpperCase()
+    result = result.filter(c => (c.status || '').toString().toUpperCase() === filterVal)
   }
 
+  // 지역 필터 (uppercase 대응)
   if (regionFilter.value !== 'all') {
-    result = result.filter(c => c.mainRegion === regionFilter.value)
+    const filterVal = regionFilter.value.toUpperCase()
+    result = result.filter(c => (c.usableRegion || '').toString().toUpperCase() === filterVal)
   }
 
   if (costFilter.value !== 'all') {
-    if (costFilter.value === 'low') result = result.filter(c => c.costPerKm < 2500)
-    else if (costFilter.value === 'normal') result = result.filter(c => c.costPerKm >= 2500 && c.costPerKm <= 3000)
-    else if (costFilter.value === 'high') result = result.filter(c => c.costPerKm > 3000)
+    if (costFilter.value === 'low') result = result.filter(c => c.unitPrice < 2500)
+    else if (costFilter.value === 'normal') result = result.filter(c => c.unitPrice >= 2500 && c.unitPrice <= 3000)
+    else if (costFilter.value === 'high') result = result.filter(c => c.unitPrice > 3000)
   }
   
   if (companySearch.value) {
     const query = companySearch.value.toLowerCase()
     result = result.filter(c => 
-      c.name.toLowerCase().includes(query) || 
-      c.managerName.toLowerCase().includes(query)
+      (c.companyName || '').toLowerCase().includes(query) || 
+      (c.manager || '').toLowerCase().includes(query)
     )
   }
   
@@ -391,11 +468,12 @@ const filteredVehicles = computed(() => {
   let result = vehicles.value
   
   if (statusFilter.value !== 'all') {
-    result = result.filter(v => v.status === statusFilter.value)
+    const filterVal = statusFilter.value.toUpperCase()
+    result = result.filter(v => (v.status || '').toString().toUpperCase() === filterVal)
   }
 
   if (companyFilter.value !== 'all') {
-    result = result.filter(v => v.company === companyFilter.value)
+    result = result.filter(v => getCompanyName(v.transportId) === companyFilter.value)
   }
 
   if (typeFilter.value !== 'all') {
@@ -403,15 +481,15 @@ const filteredVehicles = computed(() => {
   }
 
   if (tonnageFilter.value !== 'all') {
-    result = result.filter(v => v.maxLoad === tonnageFilter.value)
+    result = result.filter(v => String(v.maxLoad) === tonnageFilter.value)
   }
   
   if (vehicleSearch.value) {
     const query = vehicleSearch.value.toLowerCase()
     result = result.filter(v => 
-      v.vehicleNo.toLowerCase().includes(query) || 
-      v.driverName.toLowerCase().includes(query) || 
-      v.company.toLowerCase().includes(query)
+      (v.vehicleNumber || '').toLowerCase().includes(query) || 
+      (v.driverName || '').toLowerCase().includes(query) || 
+      getCompanyName(v.transportId).toLowerCase().includes(query)
     )
   }
   
@@ -429,56 +507,81 @@ const resetFilters = () => {
   companyFilter.value = 'all'
 }
 
-const handleSave = ({ type, data }) => {
-  if (type === 'company') {
-    const idx = companies.value.findIndex(c => c.id === data.id)
-    if (idx !== -1) {
-      companies.value[idx] = { ...data }
+const handleSave = async ({ type, data }) => {
+  try {
+    if (type === 'company') {
+      await api.patch(`/transport/vendors/${data.id}`, data)
+      await fetchCompanies()
+      // 업체가 비활성화된 경우 등을 고려하여 차량 목록도 리프레시
+      await fetchVehicles()
+    } else {
+      await api.patch(`/transport/vehicles/${data.id}`, data)
+      await fetchVehicles()
     }
-  } else {
-    const idx = vehicles.value.findIndex(v => v.id === data.id)
-    if (idx !== -1) {
-      vehicles.value[idx] = { ...data }
-    }
+    isDetailModalOpen.value = false
+    alert('수정이 완료되었습니다.')
+  } catch (err) {
+    console.error(err)
+    alert('수정 중 오류가 발생했습니다: ' + (err.response?.data?.message || err.message))
   }
-  isDetailModalOpen.value = false
-  alert('수정이 완료되었습니다.')
 }
 
-const deleteItem = (type, id) => {
+const deleteItem = async (type, id) => {
   const targetName = type === 'company' ? '운송 업체' : '차량'
   if (confirm(`${targetName}를 비활성화하시겠습니까?`)) {
-    if (type === 'company') {
-      const idx = companies.value.findIndex(c => c.id === id)
-      if (idx !== -1) companies.value[idx].status = 'inactive'
-    } else {
-      const idx = vehicles.value.findIndex(v => v.id === id)
-      if (idx !== -1) vehicles.value[idx].status = 'inactive'
+    try {
+      if (type === 'company') {
+        await api.patch(`/transport/vendors/${id}/status`, { status: 'INACTIVE' })
+        await fetchCompanies()
+        await fetchVehicles() // 업체 비활성화 시 소속 차량 상태 연동을 위해
+      } else {
+        await api.patch(`/transport/vehicles/${id}/status`, { status: 'INACTIVE' })
+        await fetchVehicles()
+      }
+      alert(`${targetName}가 비활성화되었습니다.`)
+    } catch (err) {
+      console.error(err)
+      alert('상태 변경 중 오류가 발생했습니다.')
     }
   }
 }
 
-const restoreItem = (type, id) => {
+const restoreItem = async (type, id) => {
   const targetName = type === 'company' ? '운송 업체' : '차량'
   if (confirm(`${targetName}를 다시 활성화하시겠습니까?`)) {
-    if (type === 'company') {
-      const idx = companies.value.findIndex(c => c.id === id)
-      if (idx !== -1) companies.value[idx].status = 'active'
-    } else {
-      const idx = vehicles.value.findIndex(v => v.id === id)
-      if (idx !== -1) vehicles.value[idx].status = 'active'
+    try {
+      if (type === 'company') {
+        await api.patch(`/transport/vendors/${id}/status`, { status: 'ACTIVE' })
+        await fetchCompanies()
+      } else {
+        await api.patch(`/transport/vehicles/${id}/status`, { status: 'ACTIVE' })
+        await fetchVehicles()
+      }
+    } catch (err) {
+      console.error(err)
     }
   }
 }
 
-const confirmHardDelete = (type, item) => {
+const confirmHardDelete = async (type, item) => {
   const targetName = type === 'company' ? '운송 업체' : '차량'
-  const name = type === 'company' ? item.name : item.vehicleNo
+  const name = type === 'company' ? item.companyName : item.vehicleNumber
   if (confirm(`'${name}' ${targetName}를 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.`)) {
-    item.status = 'deleted'
-    alert(`${targetName}가 삭제되었습니다.`)
+    try {
+      if (type === 'company') {
+        await api.delete(`/transport/vendors/${item.id}`)
+        await fetchCompanies()
+      } else {
+        await api.delete(`/transport/vehicles/${item.id}`)
+        await fetchVehicles()
+      }
+      alert(`${targetName}가 삭제되었습니다.`)
+    } catch (err) {
+      console.error(err)
+    }
   }
 }
+
 </script>
 
 <style scoped>
@@ -562,6 +665,13 @@ const confirmHardDelete = (type, item) => {
   flex-wrap: wrap;
 }
 
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
 .filter-select {
   padding: 0.6rem 1rem;
   border: 1.5px solid #e2e8f0;
@@ -601,7 +711,6 @@ const confirmHardDelete = (type, item) => {
 .search-box {
   position: relative;
   flex: 1;
-  max-width: 320px;
 }
 
 .search-box svg {
