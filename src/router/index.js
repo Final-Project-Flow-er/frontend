@@ -147,7 +147,7 @@ const router = createRouter({
             component: HeadOfficeManagementView
         },
         {
-            path: '/organization/:code',
+            path: '/organization/:type/:id',
             name: 'organization-detail',
             component: OrganizationDetailView
         },
@@ -167,7 +167,7 @@ const router = createRouter({
             component: MemberListView
         },
         {
-            path: '/admin/members/:employeeNumber',
+            path: '/admin/members/:id',
             name: 'member-detail',
             component: MemberDetailView
         },
