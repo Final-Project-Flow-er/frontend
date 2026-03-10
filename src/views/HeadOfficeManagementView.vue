@@ -30,7 +30,6 @@
           <div class="hq-main-name">
             <h2 v-if="!isEditing">{{ hqData.name }}</h2>
             <input v-else type="text" v-model="hqData.name" class="inline-edit title">
-            <span class="code-badge">{{ hqData.code }}</span>
           </div>
         </div>
       </div>
@@ -57,10 +56,18 @@
             <div class="info-row">
               <div class="label">대표명</div>
               <div class="value">
-                <span v-if="!isEditing">{{ hqData.representative }}</span>
-                <input v-else type="text" v-model="hqData.representative">
+                <span v-if="!isEditing">{{ hqData.representativeName }}</span>
+                <input v-else type="text" v-model="hqData.representativeName">
               </div>
             </div>
+
+            <div class="info-row">
+              <div class="label">사업자 번호</div>
+              <div class="value">
+                <span class="fixed-code">{{ hqData.businessNumber }}</span>
+              </div>
+            </div>
+
 
             <div class="info-row">
               <div class="label">전화번호</div>
@@ -85,19 +92,27 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import api from '@/api'
 
 const isEditing = ref(false)
+const hqData = ref(null)
+const originalData = ref(null)
 
-const hqData = ref({
-  code: 'HQ01',
-  name: 'CHAIN-G 통합 본사',
-  address: '서울특별시 강남구 테헤란로 1, 체인빌딩 24층',
-  phone: '02-555-0000',
-  representative: '김본사 대표',
+onMounted(async () => {
+  await fetchHqInfo()
 })
 
-const originalData = ref(null)
+const fetchHqInfo = async () => {
+  try {
+    const response = await api.get('/hq/business-units/HQ/1')
+    if (response.data.success) {
+      hqData.value = response.data.data
+    }
+  } catch (error) {
+    console.error('본사 정보 조회 실패:', error)
+  }
+}
 
 const startEdit = () => {
   originalData.value = { ...hqData.value }
@@ -111,9 +126,47 @@ const cancelEdit = () => {
   isEditing.value = false
 }
 
-const saveChanges = () => {
-  alert('본사 정보가 업데이트되었습니다.')
-  isEditing.value = false
+const saveChanges = async () => {
+  try {
+    const payload = {
+      name: hqData.value.name,
+      address: hqData.value.address,
+      phone: hqData.value.phone,
+      representativeName: hqData.value.representativeName
+    }
+    const response = await api.patch('/hq/business-units/HQ/1', payload)
+    if (response.data.success) {
+      alert('본사 정보가 업데이트되었습니다.')
+      hqData.value = response.data.data
+      isEditing.value = false
+    }
+  } catch (error) {
+    console.error('본사 정보 업데이트 실패:', error)
+    alert('본사 정보 업데이트에 실패했습니다.')
+  }
+}
+
+const getRegionLabel = (region) => {
+  const map = {
+    'SEOUL': '서울',
+    'GYEONGGI': '경기',
+    'INCHEON': '인천',
+    'BUSAN': '부산',
+    'DAEGU': '대구',
+    'DAEJEON': '대전',
+    'GWANGJU': '광주',
+    'ULSAN': '울산',
+    'SEJONG': '세종',
+    'GANGWON': '강원',
+    'CHUNGBUK': '충북',
+    'CHUNGNAM': '충남',
+    'JEONBUK': '전북',
+    'JEONNAM': '전남',
+    'GYEONGBUK': '경북',
+    'GYEONGNAM': '경남',
+    'JEJU': '제주'
+  }
+  return map[region] || region
 }
 </script>
 
@@ -255,6 +308,21 @@ const saveChanges = () => {
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.org-type-badge {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.org-type-badge.hq {
+  background: #dcfce7;
+  color: #166534;
 }
 
 /* Details Area */
@@ -310,10 +378,15 @@ const saveChanges = () => {
   transition: all 0.2s;
 }
 
-.info-row input:focus {
+.info-row select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #f1f5f9;
+  background: #f8fafc;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
   outline: none;
-  background: white;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.05);
 }
 </style>

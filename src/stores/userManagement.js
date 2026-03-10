@@ -136,7 +136,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         // 사업장 목록 조회 (가맹점/공장 선텍용)
         async fetchBusinessUnits(type) {
             try {
-                const response = await api.get(`/hq/business-units/${type}`, {
+                const response = await api.get(`/hq/business-units/${type.toUpperCase()}`, {
                     params: { size: 100 } // 페이지네이션 없이 많이 가져옴
                 })
                 if (response.data.success) {
