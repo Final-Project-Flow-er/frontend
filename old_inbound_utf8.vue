@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, onMounted } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 
@@ -6,25 +6,13 @@ const inboundItems = ref([])
 
 const fetchInboundItems = async () => {
   try {
-    const token = localStorage.getItem('accessToken')
-    const headers = { 'Content-Type': 'application/json' }
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
     const response = await fetch('/api/v1/inbounds/items', {
-      headers: headers
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      }
     })
-    
-    let result = null
-    try {
-      result = await response.json()
-    } catch (e) {
-      console.warn("Non-JSON response received:", e)
-    }
-
-    if (response.ok && result?.success && result?.data) {
-      console.log("Inbound API raw data:", result.data)
+    const result = await response.json()
+    if (response.ok && result.success) {
       inboundItems.value = result.data.map(item => ({
         id: item.serialCode,
         productCode: item.productCode || item.productId,
@@ -36,7 +24,7 @@ const fetchInboundItems = async () => {
     }
   } catch (error) {
     console.error('Error fetching inbound items:', error)
-    inboundItems.value = [] // 팝업 안 띄우고 무조건 빈 배열로 랜더링
+    openModal('?ㅻ쪟', '?쒕쾭? ?듭떊?섎뒗 ???ㅽ뙣?덉뒿?덈떎.', null, false)
   }
 }
 
@@ -68,50 +56,44 @@ const toggleSelectItem = (id) => {
 
 const approveInbound = () => {
   if (selectedItemIds.value.size === 0) {
-    openModal('알림', '입고 승인할 항목을 선택해주세요.', null, false)
+    openModal('?뚮┝', '?낃퀬 ?뱀씤????ぉ???좏깮?댁＜?몄슂.', null, false)
     return
   }
   openModal(
-    '입고 승인 확인', 
-    `선택한 ${selectedItemIds.value.size}개의 항목을 입고 승인하시겠습니까?`, 
+    '?낃퀬 ?뱀씤 ?뺤씤', 
+    `?좏깮??${selectedItemIds.value.size}媛쒖쓽 ??ぉ???낃퀬 ?뱀씤?섏떆寃좎뒿?덇퉴?`, 
     performApprove
   )
 }
 
 const performApprove = async () => {
   try {
-    const token = localStorage.getItem('accessToken')
-    const headers = { 'Content-Type': 'application/json' }
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
     const serialCodes = Array.from(selectedItemIds.value)
     const response = await fetch('/api/v1/inbounds/confirm', {
       method: 'PATCH',
-      headers: headers,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      },
       body: JSON.stringify({ serialCodes })
     })
     
     if (response.status === 401 || response.status === 403) {
-      console.warn('권한이 없습니다 (액세스 토큰 확인 필요).')
+      openModal('?ㅻ쪟', '沅뚰븳???놁뒿?덈떎 (?≪꽭???좏겙 ?뺤씤 ?꾩슂).', null, false)
       return
     }
 
-    let result = null
-    try {
-      result = await response.json()
-    } catch (e) {}
-
-    if (response.ok && result?.success) {
+    const result = await response.json()
+    if (response.ok && result.success) {
       await fetchInboundItems()
       selectedItemIds.value.clear()
-      openModal('알림', '입고 승인 되었습니다.', null, false)
+      openModal('?뚮┝', '?낃퀬 ?뱀씤 ?섏뿀?듬땲??', null, false)
     } else {
-      console.warn(result?.message || '입고 승인에 실패했습니다.')
+      openModal('?ㅻ쪟', result.message || '?낃퀬 ?뱀씤???ㅽ뙣?덉뒿?덈떎.', null, false)
     }
   } catch (error) {
     console.error('Error confirming inbound:', error)
+    openModal('?ㅻ쪟', '?쒕쾭 ?듭떊 ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.', null, false)
   }
 }
 
@@ -144,12 +126,12 @@ const handleModalClose = () => {
 <template>
   <div class="content-wrapper">
     <div class="page-header">
-      <h2 class="page-title">입고 관리 (공장)</h2>
+      <h2 class="page-title">?낃퀬 愿由?(怨듭옣)</h2>
     </div>
 
     <div class="main-container">
       <section class="full-panel">
-        <h3 class="panel-title">상세 품목 목록</h3>
+        <h3 class="panel-title">?곸꽭 ?덈ぉ 紐⑸줉</h3>
         <div class="data-table-card">
           <div class="data-table-scroll-wrapper">
             <table class="data-table">
@@ -158,14 +140,14 @@ const handleModalClose = () => {
                   <th class="checkbox-col">
                     <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" />
                   </th>
-                  <th>제품 식별 코드</th>
-                  <th>제품 코드</th>
-                  <th>제품명</th>
-                  <th>생산일</th>
+                  <th>?쒗뭹 ?앸퀎 肄붾뱶</th>
+                  <th>?쒗뭹 肄붾뱶</th>
+                  <th>?쒗뭹紐?/th>
+                  <th>?앹궛??/th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, index) in inboundItems" :key="index">
+                <tr v-for="item in inboundItems" :key="item.id">
                   <td class="checkbox-col">
                     <input type="checkbox" :checked="selectedItemIds.has(item.id)" @change="toggleSelectItem(item.id)" />
                   </td>
@@ -175,7 +157,7 @@ const handleModalClose = () => {
                   <td>{{ item.productionDate }}</td>
                 </tr>
                 <tr v-if="inboundItems.length === 0">
-                  <td colspan="5" class="empty-state">입고 대기 항목이 없습니다.</td>
+                  <td colspan="5" class="empty-state">?낃퀬 ?湲???ぉ???놁뒿?덈떎.</td>
                 </tr>
               </tbody>
             </table>
@@ -184,10 +166,9 @@ const handleModalClose = () => {
 
         <div class="action-bar">
           <div class="selected-count" v-if="selectedItemIds.size > 0">
-            선택된 항목: <strong>{{ selectedItemIds.size }}</strong>개
-          </div>
+            ?좏깮????ぉ: <strong>{{ selectedItemIds.size }}</strong>媛?          </div>
           <button class="approve-btn" @click="approveInbound" :disabled="selectedItemIds.size === 0">
-            입고 승인
+            ?낃퀬 ?뱀씤
           </button>
         </div>
       </section>

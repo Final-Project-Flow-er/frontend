@@ -54,7 +54,7 @@ const handleLogin = async () => {
 
         <div class="login-options">
           <a href="#" @click.prevent="$router.push('/account')" class="forgot-link">
-          계정 분실 문의
+            계정 분실 문의
           </a>
         </div>
       </form>
