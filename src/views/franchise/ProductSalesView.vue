@@ -4,14 +4,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Mock data for the sales list
-const salesItems = ref([
-  { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 2, unitPrice: 5000, totalPrice: 10000 },
-  { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 3, unitPrice: 7000, totalPrice: 21000 },
-  { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 1, unitPrice: 7000, totalPrice: 7000 },
-  { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 1, unitPrice: 13000, totalPrice: 13000 },
-  { productCode: 'RO0103', productName: '로제 떡볶이 밀키트 순한맛 3,4인분', quantity: 2, unitPrice: 17000, totalPrice: 34000 }
-])
+const salesItems = ref([])
 
 const grandTotal = computed(() => {
   return salesItems.value.reduce((sum, item) => sum + item.totalPrice, 0)
