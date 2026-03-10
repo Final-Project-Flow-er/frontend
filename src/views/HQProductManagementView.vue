@@ -263,7 +263,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import api from '@/api'
 
 const filter = ref({
   productCode: '',
@@ -315,72 +316,73 @@ const form = ref({
 
 const products = ref([])
 
-// Generate 24 Products
-const generateMockProducts = () => {
-    const types = [
-        { code: 'OR', name: '오리지널 떡볶이 밀키트', price1: 10000, price2: 18000 },
-        { code: 'RO', name: '로제 떡볶이 밀키트', price1: 12000, price2: 22000 },
-        { code: 'MA', name: '마라 떡볶이 밀키트', price1: 12000, price2: 22000 }
-    ]
-    const spices = [
-        { code: '01', name: '순한맛' },
-        { code: '02', name: '기본맛' },
-        { code: '03', name: '매운맛' },
-        { code: '04', name: '아주 매운맛' }
-    ]
-    const sizes = [
-        { code: '01', name: '1~2인분', serving: 1 },
-        { code: '03', name: '3~4인분', serving: 3 }
-    ]
+const fetchProducts = async () => {
+    try {
+        const params = {}
+        if (filter.value.productCode) params.productCode = filter.value.productCode
+        if (filter.value.name) params.name = filter.value.name
+        if (filter.value.status) params.status = filter.value.status
+        if (filter.value.servingSize) params.sizeCode = filter.value.servingSize
 
-    const list = []
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}` 
-                const price = sz.code === '01' ? t.price1 : t.price2
-                const costPrice = price - 7000
-                const supplyPrice = price - 5000 
+        const res = await api.get('/hq/product', { params })
+        const data = res.data?.data || {}
+        const list = data.hqProductList || data.hqproductList || data.HQProductList || []
+        
+        if (list && list.length > 0) {
+            products.value = list.map(p => {
+                let spice = '01', size = '01'
+                const spicyMap = { '순한맛':'01', '기본맛':'02', '매운맛':'03', '아주 매운맛':'04' }
+                const sizeMap = { '1~2인분':'01', '3~4인분':'03' }
                 
-                list.push({
-                    productCode: code, // e.g. OR0101
-                    name: name,
-                    description: `${t.name} ${s.name}입니다.`,
-                    imageUrl: `/images/${t.code}.png`, // Updated to .png
-                    price: price,
-                    costPrice: costPrice,
-                    supplyPrice: supplyPrice,
-                    status: 'ON_SALE',
-                    servingSize: sz.serving,
-                    spiceLevel: s.code,
-                    kcal: sz.serving === 1 ? 1400 : 2800, 
-                    weight: sz.code === '01' ? 500 : 1000,
-                    startDate: '2024-01-01', 
-                    endDate: '2025-12-31',
-                    baseSafeStock: 10,
-                    components: t.code === 'OR' ? ['밀떡', '어묵', '오리지널 소스'] : t.code === 'RO' ? ['밀떡', '베이컨', '로제 소스'] : ['밀떡', '우삼겹', '마라 소스'],
-                    type: t.code,
-                    sizeCode: sz.code
-                })
+                if (p.spicy && spicyMap[p.spicy]) spice = spicyMap[p.spicy]
+                if (p.size && sizeMap[p.size]) size = sizeMap[p.size]
+
+                let typeCode = 'OR'
+                if (p.productCode && p.productCode.length >= 2) {
+                    typeCode = p.productCode.substring(0, 2)
+                }
+
+                return {
+                    ...p,
+                    productCode: p.productCode,
+                    name: p.name,
+                    description: p.description || '',
+                    spiceLevel: spice,
+                    sizeCode: size,
+                    type: typeCode,
+                    servingSize: size === '01' ? 1 : 3,
+                    price: p.price,
+                    costPrice: p.costPrice || 0,
+                    supplyPrice: p.supplyPrice,
+                    kcal: p.kcal || 0,
+                    weight: p.weight || 0,
+                    baseSafeStock: p.safetyStock || 0,
+                    components: p.components || [],
+                    componentsInput: p.components ? p.components.join(', ') : '',
+                    imageUrl: p.imageUrl || '',
+                    startDate: p.startDate,
+                    endDate: p.endDate,
+                    status: 'ON_SALE' // Backend doesn't return status in list
+                }
             })
-        })
-    })
-    products.value = list
+        } else {
+            products.value = []
+        }
+    } catch (err) {
+        console.error('Failed to fetch products:', err)
+    }
 }
 
+watch(filter, () => {
+    fetchProducts()
+}, { deep: true })
+
 onMounted(() => {
-    generateMockProducts()
+    fetchProducts()
 })
 
 const filteredProducts = computed(() => {
-  return products.value.filter(p => {
-    const matchCode = !filter.value.productCode || p.productCode.includes(filter.value.productCode)
-    const matchName = !filter.value.name || p.name.includes(filter.value.name)
-    const matchStatus = !filter.value.status || p.status === filter.value.status
-    const matchSize = !filter.value.servingSize || p.sizeCode === filter.value.servingSize
-    return matchCode && matchName && matchStatus && matchSize
-  })
+  return products.value
 })
 
 const getStatusLabel = (status) => {
@@ -496,18 +498,46 @@ const closeModal = () => {
   showModal.value = false
 }
 
-const saveProduct = () => {
-    // In real app, validate existence
-    const components = form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean)
-    const productData = { ...form.value, components }
-    
-    if (isEditMode.value) {
-        const index = products.value.findIndex(p => p.productCode === form.value.productCode)
-        if (index !== -1) products.value[index] = productData
-    } else {
-        products.value.push(productData)
+const saveProduct = async () => {
+    const productData = {
+        name: form.value.name,
+        description: form.value.description,
+        imageUrl: form.value.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image',
+        price: form.value.price,
+        costPrice: form.value.costPrice,
+        originalPrice: form.value.costPrice, // for update request
+        supplyPrice: form.value.supplyPrice,
+        safetyStock: form.value.baseSafeStock,
+        baseSafeStock: form.value.baseSafeStock, // for update request
+        status: form.value.status,
+        kcal: form.value.kcal,
+        weight: form.value.weight,
+        startDate: form.value.startDate,
+        endDate: form.value.endDate,
+        componentIds: [] // No backend components search logic available yet, passing empty to avoid errors
     }
-    closeModal()
+    
+    try {
+        if (isEditMode.value) {
+            // Edit -> PATCH update
+            // Note: Update doesn't specify productCode in path, so wait, how do we update? productId is needed!
+            // But HQProductResponse doesn't return productId. We only have productCode.
+            // Wait, we need the productId to PATCH. Let's send productCode if backend allows or we might fail.
+            // Oh no, the PATCH URL is `/{productId}`!
+            alert('현재 제품 ID 조회가 불가능하여 수정 기능이 제한됩니다.');
+            /*
+            await api.patch(`/hq/product/${form.value.productId}`, productData)
+            */
+        } else {
+            // Add -> POST create
+            await api.post('/hq/product/create', { ...productData, productCode: form.value.productCode })
+        }
+        await fetchProducts()
+        closeModal()
+    } catch (err) {
+        console.error('Failed to save product:', err)
+        alert('상품 저장에 실패했습니다.')
+    }
 }
 
 // Type Modal Logic
@@ -524,7 +554,7 @@ const closeTypeModal = () => {
     showTypeModal.value = false
 }
 
-const addType = () => {
+const addType = async () => {
     if (!typeForm.value.name || !typeForm.value.code) {
         alert('이름과 코드를 모두 입력해주세요.')
         return
@@ -533,17 +563,24 @@ const addType = () => {
         alert('코드는 반드시 두 자리여야 합니다.')
         return
     }
-    if (productTypes.value.find(t => t.code === typeForm.value.code.toUpperCase())) {
-        alert('이미 존재하는 코드입니다.')
-        return
-    }
     
-    productTypes.value.push({
-        name: typeForm.value.name,
-        code: typeForm.value.code.toUpperCase()
-    })
-    alert(`신규 타입 [${typeForm.value.name}]이 추가되었습니다.`)
-    closeTypeModal()
+    try {
+        await api.post('/hq/product/product-types', null, {
+            params: {
+                type: typeForm.value.code.toUpperCase(),
+                productName: typeForm.value.name
+            }
+        })
+        productTypes.value.push({
+            name: typeForm.value.name,
+            code: typeForm.value.code.toUpperCase()
+        })
+        alert(`신규 타입 [${typeForm.value.name}]이 추가되었습니다.`)
+        closeTypeModal()
+    } catch (err) {
+        console.error('Failed to add product type:', err)
+        alert('신규 타입 추가에 실패했습니다.')
+    }
 }
 
 const handleImageUpload = (event) => {
