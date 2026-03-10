@@ -50,7 +50,8 @@
                 </template>
             </select>
         </div>
-          </div>
+        <button class="search-btn" @click="search">검색</button>
+      </div>
 
         <!-- Toggle Selector -->
         <div class="toggle-container">
@@ -78,29 +79,45 @@
                 <tr>
                     <th>날짜</th>
                     <th>발주 코드</th>
-                    <th>박스 코드</th>
                     <th>제품 명</th>
                     <th>유형</th>
-                    <th>수량 (박스)</th>
-                    <th>단가</th>
+                    <th>박스 수</th>
+                    <th>보낸 곳</th>
+                    <th>받는 곳</th>
                     <th>변경수량 (개)</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr v-for="log in filteredLogs" :key="log.logId">
-                    <td>{{ formatDate(log.arrivalTime) }}</td>
-                    <td class="code-cell">{{ log.orderCode }}</td>
-                    <td class="code-cell">{{ log.boxCode }}</td>
-                    <td class="name-cell">{{ log.name }}</td>
-                    <td>
-                    <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
+                <template v-for="log in filteredLogs" :key="log.id">
+                  <tr class="clickable-row" @click="toggleRow(log.id)">
+                      <td>{{ formatDate(log.arrivalTime) }}</td>
+                      <td class="code-cell">{{ log.orderCode }}</td>
+                      <td class="name-cell">{{ log.name }}</td>
+                      <td>
+                      <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
+                      </td>
+                      <td class="number-cell">{{ Math.abs(getChangeQuantity(log) / 20) }} 박스</td>
+                      <td>{{ getSource(log) }}</td>
+                      <td>{{ getDestination(log) }}</td>
+                      <td class="number-cell" :class="getChangeClass(getChangeQuantity(log))">
+                      {{ getChangeQuantity(log) > 0 ? '+' : '' }}{{ getChangeQuantity(log) }}
+                      </td>
+                  </tr>
+                  <tr v-if="isExpanded(log.id)" class="expanded-row">
+                    <td colspan="8">
+                      <div class="expanded-content">
+                        <div v-if="loadingBoxCodes[log.id]" class="loading-text">박스 코드 불러오는 중...</div>
+                        <div v-else-if="boxCodesMap[log.id] && boxCodesMap[log.id].length > 0">
+                          <strong>박스 코드:</strong> 
+                          <span class="code-cell" v-for="(box, index) in boxCodesMap[log.id]" :key="index">
+                            {{ box.boxCode }}<span v-if="index < boxCodesMap[log.id].length - 1">, </span>
+                          </span>
+                        </div>
+                        <div v-else class="empty-code-text">조회된 박스 코드가 없습니다.</div>
+                      </div>
                     </td>
-                    <td class="number-cell">{{ log.quantity }} 박스</td>
-                    <td class="number-cell">{{ formatPrice(log.supplyPrice) }}</td>
-                    <td class="number-cell" :class="getChangeClass(getChangeQuantity(log))">
-                    {{ getChangeQuantity(log) > 0 ? '+' : '' }}{{ getChangeQuantity(log) }}
-                    </td>
-                </tr>
+                  </tr>
+                </template>
                 <tr v-if="filteredLogs.length === 0">
                     <td colspan="8" class="empty-cell">조회된 물류 내역이 없습니다.</td>
                 </tr>
@@ -117,12 +134,11 @@
                     <th>제품 명</th>
                     <th>유형</th>
                     <th>수량 (개)</th>
-                    <th>판매가</th>
                     <th>변경수량 (개)</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr v-for="log in filteredLogs" :key="log.logId">
+                <tr v-for="log in filteredLogs" :key="log.id">
                     <td>{{ formatDate(log.arrivalTime) }}</td>
                     <td class="code-cell">{{ log.serialNumber || log.orderCode || '-' }}</td>
                     <td class="code-cell">{{ log.boxCode }}</td>
@@ -130,14 +146,13 @@
                     <td>
                     <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
                     </td>
-                    <td class="number-cell">{{ log.quantity }} 개</td>
-                    <td class="number-cell">{{ formatPrice(log.supplyPrice) }}</td>
+                    <td class="number-cell">{{ Math.abs(getChangeQuantity(log)) }} 개</td>
                     <td class="number-cell" :class="getChangeClass(getChangeQuantity(log))">
                     {{ getChangeQuantity(log) > 0 ? '+' : '' }}{{ getChangeQuantity(log) }}
                     </td>
                 </tr>
                 <tr v-if="filteredLogs.length === 0">
-                    <td colspan="8" class="empty-cell">조회된 판매/환불 내역이 없습니다.</td>
+                    <td colspan="7" class="empty-cell">조회된 판매/환불 내역이 없습니다.</td>
                 </tr>
                 </tbody>
             </table>
@@ -169,74 +184,31 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import api from '@/api/index'
 
 const showModal = ref(true) // Open on load
 const selectedStore = ref(null)
-const storeSearch = ref('')
-
-const stores = [
-    { name: '서울 강남점', code: 'SE01' },
-    { name: '서울 서초점', code: 'SE02' },
-    { name: '서울 송파점', code: 'SE03' },
-    { name: '서울 마포점', code: 'SE04' },
-    { name: '서울 영등포점', code: 'SE05' }
-]
-
-const filteredStores = computed(() => {
-    return stores.filter(s => s.name.includes(storeSearch.value) || s.code.includes(storeSearch.value))
-})
-
-const selectStore = (store) => {
-    selectedStore.value = store
-    showModal.value = false
-    // Here we would ideally load data for this store from API
-    // For now we use the mock data
-}
 
 const openStoreSelectModal = () => {
     showModal.value = true
 }
 
-const activeLogType = ref('LOGISTICS')
+const storeSearch = ref('')
+const expandedRows = ref([])
+const boxCodesMap = ref({})
+const loadingBoxCodes = ref({})
+const logs = ref([])
+const loading = ref(false)
 
 const filter = ref({
-  startDate: '',
-  endDate: '',
-  productName: '',
-  orderCode: '',
-  logType: ''
+    startDate: '',
+    endDate: '',
+    productName: '',
+    orderCode: '',
+    logType: ''
 })
-
-// Mock Data (Simulating Store Data)
-const logs = ref([
-  {
-    logId: 1,
-    product: { productId: 1 },
-    boxCode: 'SE01-FA01-A1-OR0101-001',
-    orderCode: 'SE0120260209001',
-    name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    logType: 'INBOUND',
-    supplyPrice: 10000,
-    locationType: 'HQ',
-    locationId: 100, 
-    quantity: 5,
-    arrivalTime: '2026-02-10T10:30:00'
-  },
-  {
-    logId: 2,
-    product: { productId: 1 },
-    boxCode: 'SE01-FA01-A1-OR0101-001',
-    serialNumber: '202602110001', 
-    name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    logType: 'SALE',
-    supplyPrice: 10000,
-    locationType: 'STORE',
-    locationId: 200,
-    quantity: 1,
-    arrivalTime: '2026-02-11T14:20:00'
-  }
-])
+const activeLogType = ref('LOGISTICS') // 'LOGISTICS' or 'SALES'
 
 const filteredLogs = computed(() => {
   return logs.value.filter(log => {
@@ -245,16 +217,139 @@ const filteredLogs = computed(() => {
       if (activeLogType.value === 'LOGISTICS' && isSalesType) return false
       if (activeLogType.value === 'SALES' && !isSalesType) return false
 
-      const arrivalDate = log.arrivalTime.split('T')[0]
+      const arrivalDate = log.arrivalTime ? log.arrivalTime.split('T')[0] : ''
       const matchStart = !filter.value.startDate || arrivalDate >= filter.value.startDate
       const matchEnd = !filter.value.endDate || arrivalDate <= filter.value.endDate
-      const matchName = !filter.value.productName || log.name.includes(filter.value.productName)
+      const matchName = !filter.value.productName || (log.name && log.name.includes(filter.value.productName))
       const matchCode = !filter.value.orderCode || (log.orderCode && log.orderCode.includes(filter.value.orderCode))
       const matchType = !filter.value.logType || log.logType === filter.value.logType
       
       return matchStart && matchEnd && matchName && matchCode && matchType
   })
 })
+const fetchLogs = async () => {
+    if (!selectedStore.value) return
+    loading.value = true
+    try {
+        const franchiseId = selectedStore.value.id || selectedStore.value.franchiseId || 1 // fallback if id is missing in mock list
+        let endpoint = ''
+        if (activeLogType.value === 'LOGISTICS') endpoint = `/hq/log/franchise-inventory/${franchiseId}`
+        else endpoint = `/hq/log/franchise-sales/${franchiseId}`
+
+        const params = {
+           size: 100 // default size
+        }
+
+        if (filter.value.startDate) params.startDate = filter.value.startDate
+        if (filter.value.endDate) params.endDate = filter.value.endDate
+        if (filter.value.productName) params.productName = filter.value.productName
+        if (filter.value.orderCode) params.transactionCode = filter.value.orderCode
+
+        const response = await api.get(endpoint, { params })
+        if (response.data && response.data.success) {
+            const list = response.data.data.franchiseInventoryLogResponseList || []
+            logs.value = list.map((item, index) => ({
+                id: item.id || `log-${index}`, // use temporary id if missing
+                arrivalTime: item.date || '',
+                orderCode: item.transactionCode || '-',
+                name: item.productName || '',
+                logType: item.logType || '',
+                supplyPrice: item.supplyPrice || 0,
+                fromLocationId: item.fromLocationId,
+                toLocationId: item.toLocationId,
+                changedQuantity: item.changedQuantity || 0,
+                boxCode: item.boxCode || '', // fallback
+                serialNumber: item.transactionCode || '-'
+            }))
+        } else {
+            logs.value = []
+        }
+    } catch (error) {
+        console.error("Failed to fetch logs:", error)
+        logs.value = []
+    } finally {
+        loading.value = false
+    }
+}
+
+watch(activeLogType, () => {
+    expandedRows.value = []
+    boxCodesMap.value = {}
+    fetchLogs()
+})
+
+const search = () => {
+    fetchLogs()
+}
+
+const toggleRow = async (id) => {
+  if (activeLogType.value === 'SALES') return // Only Logistics logs have box codes to expand
+  
+  const index = expandedRows.value.indexOf(id)
+  if (index === -1) {
+    expandedRows.value.push(id)
+    const log = logs.value.find(l => l.id === id)
+    if (log && log.orderCode && log.orderCode !== '-') {
+        // Fetch box codes
+        if (!boxCodesMap.value[id]) {
+            loadingBoxCodes.value[id] = true
+            try {
+                const res = await api.get('/hq/log/boxes', { params: { transactionCode: log.orderCode } })
+                if (res.data && res.data.success) {
+                    boxCodesMap.value[id] = res.data.data
+                } else {
+                    boxCodesMap.value[id] = []
+                }
+            } catch (err) {
+                console.error("Failed to fetch box codes", err)
+                boxCodesMap.value[id] = []
+            } finally {
+                loadingBoxCodes.value[id] = false
+            }
+        }
+    }
+  } else {
+    expandedRows.value.splice(index, 1)
+  }
+}
+
+const isExpanded = (id) => expandedRows.value.includes(id)
+
+// Fetch store list from API to get real IDs
+const stores = ref([])
+onMounted(async () => {
+    try {
+        const res = await api.get('/admin/members/franchises')
+        if (res.data && res.data.success) {
+            stores.value = res.data.data.map(s => ({
+                id: s.franchiseId,
+                name: s.name,
+                code: s.code
+            }))
+        } else {
+            // fallback mock data
+            stores.value = [
+                { id: 1, name: '서울 강남점', code: 'SE01' },
+                { id: 2, name: '서울 서초점', code: 'SE02' }
+            ]
+        }
+    } catch(e) {
+        stores.value = [
+            { id: 1, name: '서울 강남점', code: 'SE01' },
+            { id: 2, name: '서울 서초점', code: 'SE02' }
+        ]
+    }
+})
+
+const filteredStores = computed(() => {
+    return stores.value.filter(s => s.name.includes(storeSearch.value) || s.code.includes(storeSearch.value))
+})
+
+const selectStore = (store) => {
+    selectedStore.value = store
+    showModal.value = false
+    fetchLogs()
+}
 
 const formatDate = (dateString) => {
     if (!dateString) return '-'
@@ -267,6 +362,7 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 const getLogTypeLabel = (type) => {
     switch (type) {
         case 'INBOUND': return '입고'
+        case 'OUTBOUND': return '출고'
         case 'SALE': return '판매'
         case 'RETURN_IN': return '반품 입고'
         case 'RETURN_OUT': return '반품 출고'
@@ -278,7 +374,9 @@ const getLogTypeLabel = (type) => {
 const getTypeClass = (type) => {
   switch (type) {
     case 'INBOUND': return 'inbound'
+    case 'OUTBOUND': return 'outbound'
     case 'SALE': return 'sale'
+    case 'RETURN_IN': return 'return-in'
     case 'RETURN_OUT': return 'return-out'
     case 'REFUND': return 'refund'
     default: return ''
@@ -311,19 +409,8 @@ const getDestination = (log) => {
 }
 
 const getChangeQuantity = (log) => {
-    const qty = log.quantity
-    
-    // Individual item logic for Sales/Refund
-    if (['SALE', 'REFUND'].includes(log.logType)) {
-        return log.logType === 'SALE' ? -qty : qty
-    }
-
-    // Box logic for Inbound/Returns
-    const itemCount = qty * 20
-    if (['INBOUND', 'REFUND'].includes(log.logType)) { // Note: Refund is handled above, but keeping logic clear
-        return itemCount
-    }
-    return -itemCount
+    if (log.changedQuantity != null) return log.changedQuantity;
+    return 0;
 }
 
 const getChangeClass = (qty) => {
@@ -379,9 +466,18 @@ tr:hover { background: #f8fafc; }
 .name-cell { font-weight: 600; color: var(--text-dark); }
 .number-cell { font-variant-numeric: tabular-nums; }
 
+.clickable-row { cursor: pointer; transition: background-color 0.2s; }
+.clickable-row:hover { background-color: #f1f5f9 !important; }
+.expanded-row td { background-color: #f8fafc; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); }
+.expanded-content { display: flex; flex-direction: column; gap: 0.5rem; color: #475569; font-size: 0.9rem; justify-content: flex-start; text-align: left; }
+.loading-text { font-style: italic; color: #64748b; }
+.empty-code-text { color: #94a3b8; }
+
 /* Badges */
 .type-badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; min-width: 60px; text-align: center; }
 .type-badge.inbound { background: #dbeafe; color: #1e40af; } /* Blue */
+.type-badge.outbound { background: #fee2e2; color: #991b1b; } /* Red */
+.type-badge.return-in { background: #dcfce7; color: #166534; } /* Green */
 .type-badge.return-out { background: #ffedd5; color: #9a3412; } /* Orange */
 .type-badge.sale { background: #f1f5f9; color: #475569; } /* Gray */
 .type-badge.refund { background: #f3e8ff; color: #6b21a8; } /* Purple */
