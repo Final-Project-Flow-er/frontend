@@ -520,16 +520,12 @@ const saveProduct = async () => {
     try {
         if (isEditMode.value) {
             // Edit -> PATCH update
-            // Note: Update doesn't specify productCode in path, so wait, how do we update? productId is needed!
-            // But HQProductResponse doesn't return productId. We only have productCode.
-            // Wait, we need the productId to PATCH. Let's send productCode if backend allows or we might fail.
-            // Oh no, the PATCH URL is `/{productId}`!
-            alert('현재 제품 ID 조회가 불가능하여 수정 기능이 제한됩니다.');
-            /*
+            if (!form.value.productId) {
+                alert('상품 ID가 없어 수정할 수 없습니다.')
+                return
+            }
             await api.patch(`/hq/product/${form.value.productId}`, productData)
-            */
         } else {
-            // Add -> POST create
             await api.post('/hq/product/create', { ...productData, productCode: form.value.productCode })
         }
         await fetchProducts()
