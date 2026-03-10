@@ -18,27 +18,14 @@ const handleLogin = async () => {
   }
 
   try {
-    const res = await fetch('/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginId: loginData.id, password: loginData.pw })
-    })
-    const json = await res.json()
-    if (!res.ok || !json.success) throw new Error(json.message || '로그인 실패')
-
-    const { accessToken, refreshToken, userRole } = json.data
-    const roleMap = { ADMIN: 'admin', HQ: 'headOffice', FRANCHISE: 'franchise', FACTORY: 'factory' }
-    const role = roleMap[userRole] || ''
-
-    sessionStorage.setItem('accessToken', accessToken)
-    sessionStorage.setItem('refreshToken', refreshToken)
-    sessionStorage.setItem('isLoggedIn', 'true')
-    sessionStorage.setItem('userRole', role)
-    sessionStorage.setItem('userName', loginData.id)
-
-    router.push('/')
+    const success = await authStore.login(loginData.id, loginData.pw)
+    if (success) {
+      router.push('/')
+    } else {
+      alert('아이디 또는 비밀번호가 올바르지 않습니다.')
+    }
   } catch (e) {
-    alert(e.message || '아이디 또는 비밀번호가 올바르지 않습니다.')
+    alert(e.response?.data?.message || '로그인에 실패하였습니다.')
   }
 }
 </script>
