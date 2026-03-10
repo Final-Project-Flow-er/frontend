@@ -19,9 +19,9 @@
         <select v-model="filter.status">
           <option value="">전체</option>
           <option value="ON_SALE">판매중</option>
-          <option value="SOLD_OUT">단종</option>
-          <option value="TEMPORARY_OUT">일시품절</option>
-          <option value="SALE_SCHEDULED">판매예정</option>
+          <option value="DISCONTINUED">단종</option>
+          <option value="TEMP_SOLD_OUT">일시품절</option>
+          <option value="COMING_SOON">판매예정</option>
         </select>
       </div>
       <div class="filter-group">
@@ -272,7 +272,7 @@ const filteredProducts = computed(() => {
 })
 
 const getStatusLabel = (status) => {
-  const map = { 'ON_SALE': '판매중', 'SOLD_OUT': '단종', 'TEMPORARY_OUT': '일시품절', 'SALE_SCHEDULED': '판매예정' }
+  const map = { 'ON_SALE': '판매중', 'DISCONTINUED': '단종', 'TEMP_SOLD_OUT': '일시품절', 'COMING_SOON': '판매예정' }
   return map[status] || status
 }
 
