@@ -1,52 +1,98 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
 
-// Mock Data for Left List (Inbound Boxes)
-const inboundBoxes = ref([
-  { boxCode: 'SE01-FA01-A1-OR0101-001', orderCode: 'SE0120231026001', recipient: '김갑자', productCode: 'OR0101', name: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 20 },
-  { boxCode: 'SE01-FA01-A1-MA0301-001', orderCode: 'SE0120231026001', recipient: '김갑자', productCode: 'MA0301', name: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 15 },
-  { boxCode: 'SE01-FA01-A1-RO0201-001', orderCode: 'SE0120231025005', recipient: '김갑자', productCode: 'RO0201', name: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 10 },
-  { boxCode: 'SE01-FA01-A1-OR0103-001', orderCode: 'SE0120231025005', recipient: '김갑자', productCode: 'OR0103', name: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 5 },
-])
+const inboundBoxes = ref([])
 
-// Mock Data for Right List (Details per box)
-const allBoxDetails = {
-  'SE01-FA01-A1-OR0101-001': Array.from({ length: 20 }, (_, i) => ({
-    id: `SE01-FA01-A1-OR0101-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'OR0101',
-    name: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    productionDate: '2026-02-01',
-    expiryDate: '2026-02-15',
-    unitPrice: 12000
-  })),
-  'SE01-FA01-A1-MA0301-001': Array.from({ length: 15 }, (_, i) => ({
-    id: `SE01-FA01-A1-MA0301-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'MA0301',
-    name: '마라 떡볶이 밀키트 매운맛 1,2인분',
-    productionDate: '2026-02-02',
-    expiryDate: '2026-02-16',
-    unitPrice: 12000
-  })),
-  'SE01-FA01-A1-RO0201-001': Array.from({ length: 10 }, (_, i) => ({
-    id: `SE01-FA01-A1-RO0201-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'RO0201',
-    name: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    productionDate: '2026-02-03',
-    expiryDate: '2026-02-17',
-    unitPrice: 12000
-  })),
-  'SE01-FA01-A1-OR0103-001': Array.from({ length: 5 }, (_, i) => ({
-    id: `SE01-FA01-A1-OR0103-001-${String(i + 1).padStart(2, '0')}`,
-    productCode: 'OR0103',
-    name: '오리지널 떡볶이 밀키트 순한맛 3,4인분',
-    productionDate: '2026-02-04',
-    expiryDate: '2026-02-18',
-    unitPrice: 12000
-  })),
+const fetchInboundBoxes = async () => {
+  try {
+    const token = localStorage.getItem('accessToken')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch('/api/v1/inbounds/boxes', {
+      headers: headers
+    })
+    
+    let result = null
+    try {
+      result = await response.json()
+    } catch (e) {
+      console.warn("Non-JSON response received:", e)
+    }
+
+    if (response.ok && result?.success && result?.data) {
+      console.log("Inbound Box API raw data:", result.data)
+      inboundBoxes.value = result.data.map(box => ({
+        boxCode: box.boxCode,
+        orderCode: box.orderCode,
+        recipient: '', // API가 제공하지 않으므로 공백
+        productCode: box.productCode,
+        name: box.productName,
+        quantity: box.countItem
+      }))
+    } else {
+      inboundBoxes.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching inbound boxes:', error)
+    inboundBoxes.value = [] // 팝업 안 띄우고 무조건 빈 배열로 랜더링
+  }
+}
+
+onMounted(() => {
+  fetchInboundBoxes()
+})
+
+const allBoxDetails = ref({})
+
+const fetchBoxDetails = async (boxCode) => {
+  if (allBoxDetails.value[boxCode]) return
+  
+  try {
+    const token = localStorage.getItem('accessToken')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(`/api/v1/inbounds/boxes/${boxCode}`, { headers })
+    let result = null
+    try {
+      result = await response.json()
+    } catch (e) {
+      console.warn("Non-JSON", e)
+    }
+
+    if (response.ok && result?.success && result?.data) {
+      allBoxDetails.value[boxCode] = result.data.map(item => {
+        let expiry = '-'
+        if (item.manufactureDate) {
+          const d = new Date(item.manufactureDate)
+          d.setDate(d.getDate() + 14)
+          expiry = d.toISOString().split('T')[0]
+        }
+        return {
+          id: item.serialCode,
+          productCode: item.productCode || item.productId,
+          name: item.productName,
+          productionDate: item.manufactureDate,
+          expiryDate: expiry,
+          unitPrice: 12000
+        }
+      })
+    } else {
+      allBoxDetails.value[boxCode] = []
+    }
+  } catch (error) {
+    console.error('Error fetching box details:', error)
+    allBoxDetails.value[boxCode] = []
+  }
 }
 
 const selectedBoxCode = ref(null)
@@ -55,21 +101,24 @@ const selectedItemIds = ref(new Set())
 
 const selectedBoxDetails = computed(() => {
   if (!selectedBoxCode.value) return []
-  return allBoxDetails[selectedBoxCode.value] || []
+  return allBoxDetails.value[selectedBoxCode.value] || []
 })
 
-const selectBox = (boxCode) => {
+const selectBox = async (boxCode) => {
   selectedBoxCode.value = boxCode
+  await fetchBoxDetails(boxCode)
 }
 
 // Checkbox Logic - Boxes
-const toggleAllBoxes = (e) => {
+const toggleAllBoxes = async (e) => {
   if (e.target.checked) {
+    const promises = inboundBoxes.value.map(box => fetchBoxDetails(box.boxCode))
+    await Promise.all(promises)
+
     inboundBoxes.value.forEach(box => {
       selectedBoxIds.value.add(box.boxCode)
-      // Automatically check all items in selected boxes
-      if (allBoxDetails[box.boxCode]) {
-        allBoxDetails[box.boxCode].forEach(item => selectedItemIds.value.add(item.id))
+      if (allBoxDetails.value[box.boxCode]) {
+        allBoxDetails.value[box.boxCode].forEach(item => selectedItemIds.value.add(item.id))
       }
     })
   } else {
@@ -78,18 +127,17 @@ const toggleAllBoxes = (e) => {
   }
 }
 
-const toggleBox = (boxCode) => {
+const toggleBox = async (boxCode) => {
   if (selectedBoxIds.value.has(boxCode)) {
     selectedBoxIds.value.delete(boxCode)
-    // Uncheck all items in this box
-    if (allBoxDetails[boxCode]) {
-      allBoxDetails[boxCode].forEach(item => selectedItemIds.value.delete(item.id))
+    if (allBoxDetails.value[boxCode]) {
+      allBoxDetails.value[boxCode].forEach(item => selectedItemIds.value.delete(item.id))
     }
   } else {
     selectedBoxIds.value.add(boxCode)
-    // Check all items in this box
-    if (allBoxDetails[boxCode]) {
-      allBoxDetails[boxCode].forEach(item => selectedItemIds.value.add(item.id))
+    await fetchBoxDetails(boxCode)
+    if (allBoxDetails.value[boxCode]) {
+      allBoxDetails.value[boxCode].forEach(item => selectedItemIds.value.add(item.id))
     }
   }
 }
@@ -110,7 +158,7 @@ const toggleItem = (itemId) => {
 const goToReturnRequest = () => {
   const boxCount = selectedBoxIds.value.size
   if (boxCount === 0) {
-    openModal('알림', '반품 요청은 박스 단위로만 가능합니다.', null, false)
+    openModal('알림', '반품 요청할 박스를 선택해주세요. (반품은 박스 단위로만 가능합니다)', null, false)
     return
   }
   
@@ -122,53 +170,89 @@ const goToReturnRequest = () => {
 }
 
 const performReturnRequest = () => {
-    const selectedBoxes = inboundBoxes.value.filter(b => selectedBoxIds.value.has(b.boxCode))
-    
-    const returnItems = selectedBoxes.map(box => ({
-        boxCode: box.boxCode,
-        orderCode: box.orderCode,
-        productCode: box.productCode,
-        productName: box.name,
-        quantity: 1, // 1 Box unit 
-        amount: 12000 * box.quantity, 
-        totalAmount: 12000 * box.quantity 
-    }))
+  const selectedBoxes = inboundBoxes.value.filter(b => selectedBoxIds.value.has(b.boxCode))
+  
+  const returnItems = selectedBoxes.map(box => ({
+      boxCode: box.boxCode,
+      orderCode: box.orderCode,
+      productCode: box.productCode,
+      productName: box.name,
+      quantity: 1, // 1 Box unit 
+      amount: 12000 * box.quantity, 
+      totalAmount: 12000 * box.quantity 
+  }))
 
-    router.push({ 
-        name: 'franchise-return-create', 
-        state: { 
-            returnItems: returnItems,
-            origin: 'InboundView'
-        } 
-    })
+  router.push({ 
+      name: 'franchise-return-create', 
+      state: { 
+          returnItems: returnItems,
+          origin: 'InboundView'
+      } 
+  })
 }
 
 const approveInbound = () => {
   const boxCount = selectedBoxIds.value.size
-  const itemCount = selectedItemIds.value.size
 
-  if (boxCount === 0 && itemCount === 0) {
-    openModal('알림', '입고 승인할 항목을 선택해주세요.', null, false)
+  if (boxCount === 0) {
+    openModal('알림', '입고 승인할 박스를 선택해주세요. (승인은 박스 단위로만 가능합니다)', null, false)
     return
   }
 
-  const msg = boxCount > 0 ? `선택된 ${boxCount}개의 박스를 입고 승인하시겠습니까?` : `선택된 ${itemCount}개의 항목을 입고 승인하시겠습니까?`
+  let expectedItemCount = 0
+  for (const boxCode of selectedBoxIds.value) {
+    if (allBoxDetails.value[boxCode]) {
+      expectedItemCount += allBoxDetails.value[boxCode].length
+    }
+  }
+
+  if (selectedItemIds.value.size !== expectedItemCount || expectedItemCount === 0) {
+    openModal('알림', '입고 승인은 박스 단위로 일괄 처리되어야 합니다. 박스의 모든 항목이 선택되어 있는지 확인해주세요.', null, false)
+    return
+  }
+
+  const msg = `선택된 ${boxCount}개의 박스(총 ${expectedItemCount}개 품목)를 입고 승인하시겠습니까?`
   openModal('입고 승인 확인', msg, performApprove)
 }
 
-const performApprove = () => {
-  // Remove approved boxes
-  selectedBoxIds.value.forEach(boxCode => {
-    inboundBoxes.value = inboundBoxes.value.filter(b => b.boxCode !== boxCode)
-    if (selectedBoxCode.value === boxCode) selectedBoxCode.value = null
-  })
+const performApprove = async () => {
+  try {
+    const token = localStorage.getItem('accessToken')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
 
-  // Remove individual items if any selected that aren't part of the selected boxes above
-  // Note: simplified for standard behavior where usually box selection handles it.
-  
-  selectedBoxIds.value.clear()
-  selectedItemIds.value.clear()
-  openModal('알림', '입고 승인 되었습니다.', null, false)
+    const serialCodes = Array.from(selectedItemIds.value)
+    const response = await fetch('/api/v1/inbounds/confirm', {
+      method: 'PATCH',
+      headers: headers,
+      body: JSON.stringify({ serialCodes })
+    })
+
+    if (response.status === 401 || response.status === 403) {
+      openModal('오류', '권한이 없습니다 (액세스 토큰 확인 필요).', null, false)
+      return
+    }
+
+    let result = null
+    try {
+      result = await response.json()
+    } catch (e) {}
+
+    if (response.ok && result?.success) {
+      await fetchInboundBoxes()
+      selectedBoxCode.value = null
+      selectedBoxIds.value.clear()
+      selectedItemIds.value.clear()
+      openModal('알림', '입고 승인 되었습니다.', null, false)
+    } else {
+      openModal('오류', result?.message || '입고 승인에 실패했습니다.', null, false)
+    }
+  } catch (error) {
+    console.error('Error confirming inbound:', error)
+    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+  }
 }
 
 // Modal State

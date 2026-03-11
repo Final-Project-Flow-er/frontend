@@ -4,6 +4,16 @@ import { getOrderList } from '@/api/factoryOrders.js'
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
+const STATUS_MAP = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  AWAITING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+
 const orders = ref([])
 
 onMounted(async () => {
@@ -12,7 +22,7 @@ onMounted(async () => {
     orders.value = (data || []).map((item, i) => ({
       id: item.orderCode,
       orderCode: item.orderCode,
-      status: item.status,
+      status: STATUS_MAP[item.status] || item.status,
       productCode: item.productCode,
       productName: '',
       quantity: item.quantity,
