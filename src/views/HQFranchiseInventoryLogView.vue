@@ -2,21 +2,25 @@
   <div class="content-wrapper">
     <div class="header-row">
       <h2>가맹점 입출고 관리 (가맹점 로그)</h2>
-      <button class="action-btn" @click="openStoreSelectModal">가맹점 선택</button>
+      <div class="header-actions">
+        <button class="action-btn" @click="openStoreSelectModal">
+           {{ selectedStore ? selectedStore.name : '가맹점 선택' }} 🔽
+        </button>
+      </div>
     </div>
 
-    <!-- Store Info (If Selected) -->
-    <div v-if="selectedStore" class="store-info-banner">
+    <!-- If no store selected, show prompt -->
+    <div v-if="!selectedStore" class="empty-state">
+      <div class="empty-message">가맹점을 선택하여 입출고 내역을 조회하세요.</div>
+      <button class="action-btn primary" @click="openStoreSelectModal">가맹점 찾기</button>
+    </div>
+
+    <div v-else class="store-log-content">
+      <!-- Store Info Banner -->
+      <div class="store-info-banner">
         <h3>{{ selectedStore.name }}</h3>
         <p>현재 선택된 가맹점의 입출고 내역을 조회 중입니다.</p>
-    </div>
-    <div v-else class="no-store-banner">
-        <p>가맹점을 선택해주세요.</p>
-    </div>
-
-    <!-- Reusing StoreInventoryLogView Logic (Simplified here for independence or could import component) -->
-    <!-- For this task, I will implement a version of the log view that simulates being 'that' store -->
-    <div v-if="selectedStore" class="store-log-content">
+      </div>
         <!-- Filter Section -->
         <div class="filter-section">
         <div class="filter-group date-range">
@@ -166,9 +170,8 @@
       <div class="modal-content">
         <h3>가맹점 선택</h3>
         <div class="modal-body">
-            <input type="text" v-model="storeSearch" placeholder="가맹점 이름 검색..." class="store-search-input" />
             <ul class="store-list scrollable">
-                <li v-for="store in filteredStores" :key="store.code" @click="selectStore(store)">
+                <li v-for="store in stores" :key="store.id" @click="selectStore(store)">
                     <span class="store-name">{{ store.name }}</span>
                     <span class="store-code">{{ store.code }}</span>
                 </li>
@@ -185,6 +188,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import axios from 'axios'
 import api from '@/api/index'
 
 const showModal = ref(true) // Open on load
@@ -194,7 +198,6 @@ const openStoreSelectModal = () => {
     showModal.value = true
 }
 
-const storeSearch = ref('')
 const expandedRows = ref([])
 const boxCodesMap = ref({})
 const loadingBoxCodes = ref({})
@@ -315,34 +318,20 @@ const toggleRow = async (id) => {
 
 const isExpanded = (id) => expandedRows.value.includes(id)
 
-// Fetch store list from API to get real IDs
 const stores = ref([])
 onMounted(async () => {
     try {
-        const res = await api.get('/admin/members/franchises')
-        if (res.data && res.data.success) {
-            stores.value = res.data.data.map(s => ({
-                id: s.franchiseId,
-                name: s.name,
-                code: s.code
-            }))
-        } else {
-            // fallback mock data
-            stores.value = [
-                { id: 1, name: '서울 강남점', code: 'SE01' },
-                { id: 2, name: '서울 서초점', code: 'SE02' }
-            ]
-        }
+        const res = await axios.get('/api/v1/hq/inventory/franchises')
+        const data = res.data.data || {}
+        stores.value = Object.entries(data).map(([id, name]) => ({
+            id: Number(id),
+            name: name,
+            code: `가맹점${id}`
+        }))
     } catch(e) {
-        stores.value = [
-            { id: 1, name: '서울 강남점', code: 'SE01' },
-            { id: 2, name: '서울 서초점', code: 'SE02' }
-        ]
+        console.error('가맹점 목록 조회 실패', e)
+        stores.value = []
     }
-})
-
-const filteredStores = computed(() => {
-    return stores.value.filter(s => s.name.includes(storeSearch.value) || s.code.includes(storeSearch.value))
 })
 
 const selectStore = (store) => {
@@ -429,7 +418,9 @@ const getChangeClass = (qty) => {
 .store-info-banner h3 { margin: 0 0 0.5rem 0; color: #1e3a8a; }
 .store-info-banner p { margin: 0; color: #3b82f6; }
 
-.no-store-banner { background: #f8fafc; padding: 2rem; text-align: center; border-radius: 12px; border: 1px dashed #cbd5e1; color: #64748b; }
+.empty-state { text-align: center; margin-top: 100px; color: #64748b; }
+.empty-message { margin-bottom: 1rem; font-size: 1.2rem; }
+.action-btn.primary { background: var(--primary); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; }
 
 /* Filter Styles */
 .filter-section {

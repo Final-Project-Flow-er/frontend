@@ -45,6 +45,13 @@ export const useAuthStore = defineStore('auth', {
                     this.userName = nameMap[userRole] || '사용자'
                     sessionStorage.setItem('userName', this.userName)
 
+                    // Fetch actual user info (profile photo, username) immediately
+                    try {
+                        await this.getMyInfo()
+                    } catch (infoError) {
+                        console.warn('Failed to fetch user profile info after login:', infoError)
+                    }
+
                     return true
                 }
                 return false
