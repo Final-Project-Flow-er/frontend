@@ -29,7 +29,7 @@ const products = ref([])
 onMounted(async () => {
   try {
     const workplace = await getMyWorkplaceInfo()
-    const data = await getFranchiseStock(workplace.id)
+    const data = await getFranchiseStock()
     products.value = (data || []).map(p => ({
       code: p.productCode,
       name: p.productName,
