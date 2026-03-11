@@ -6,10 +6,14 @@ const outboundBoxes = ref([])
 
 const fetchOutboundBoxes = async () => {
   try {
+    const token = localStorage.getItem('accessToken')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const response = await fetch('/api/v1/outbounds/boxes', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      }
+      headers: headers
     })
     let result = null;
     try {
@@ -48,10 +52,14 @@ const fetchBoxDetails = async (boxCode) => {
   if (allBoxDetails.value[boxCode]) return // 이미 불러온 경우 스킵
 
   try {
+    const token = localStorage.getItem('accessToken')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const response = await fetch(`/api/v1/outbounds/boxes/items?boxCode=${boxCode}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      }
+      headers: headers
     })
     let result = null;
     try {

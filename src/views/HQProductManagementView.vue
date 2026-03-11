@@ -24,9 +24,9 @@
         <select v-model="filter.status">
           <option value="">전체</option>
           <option value="ON_SALE">판매중</option>
-          <option value="SOLD_OUT">단종</option>
-          <option value="TEMPORARY_OUT">일시품절</option>
-          <option value="SALE_SCHEDULED">판매예정</option>
+          <option value="DISCONTINUED">단종</option>
+          <option value="TEMP_SOLD_OUT">일시품절</option>
+          <option value="COMING_SOON">판매예정</option>
         </select>
       </div>
       <div class="filter-group">
@@ -63,6 +63,9 @@
             <span class="info-label">칼로리:</span> {{ product.kcal }}kcal
             <span class="divider">|</span>
             <span class="info-label">무게:</span> {{ product.weight }}g
+          </div>
+          <div class="card-info-row">
+            <span class="info-label">구성용품:</span> {{ product.components ? product.components.join(', ') : '없음' }}
           </div>
           <div class="card-info-row">
             <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
@@ -183,6 +186,11 @@
           </div>
 
           <div class="form-group full-width">
+            <label>구성용품 (쉼표로 구분하여 입력)</label>
+            <input type="text" v-model="form.componentsInput" placeholder="예: 떡, 어묵, 소스, 파" />
+          </div>
+
+          <div class="form-group full-width">
             <label>상품 설명</label>
             <textarea v-model="form.description" rows="2"></textarea>
           </div>
@@ -255,7 +263,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import api from '@/api'
 
 const filter = ref({
   productCode: '',
@@ -301,80 +310,83 @@ const form = ref({
   servingSize: 1, // Derived from sizeCode for logic
   baseSafeStock: 10,
   kcal: 0,
-  weight: 0
+  weight: 0,
+  componentsInput: ''
 })
 
 const products = ref([])
 
-// Generate 24 Products
-const generateMockProducts = () => {
-    const types = [
-        { code: 'OR', name: '오리지널 떡볶이 밀키트', price1: 10000, price2: 18000 },
-        { code: 'RO', name: '로제 떡볶이 밀키트', price1: 12000, price2: 22000 },
-        { code: 'MA', name: '마라 떡볶이 밀키트', price1: 12000, price2: 22000 }
-    ]
-    const spices = [
-        { code: '01', name: '순한맛' },
-        { code: '02', name: '기본맛' },
-        { code: '03', name: '매운맛' },
-        { code: '04', name: '아주 매운맛' }
-    ]
-    const sizes = [
-        { code: '01', name: '1~2인분', serving: 1 },
-        { code: '03', name: '3~4인분', serving: 3 }
-    ]
+const fetchProducts = async () => {
+    try {
+        const params = {}
+        if (filter.value.productCode) params.productCode = filter.value.productCode
+        if (filter.value.name) params.name = filter.value.name
+        if (filter.value.status) params.status = filter.value.status
+        if (filter.value.servingSize) params.sizeCode = filter.value.servingSize
 
-    const list = []
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}` 
-                const price = sz.code === '01' ? t.price1 : t.price2
-                const costPrice = price - 7000
-                const supplyPrice = price - 5000 
+        const res = await api.get('/hq/product', { params })
+        const data = res.data?.data || {}
+        const list = data.hqProductList || data.hqproductList || data.HQProductList || []
+        
+        if (list && list.length > 0) {
+            products.value = list.map(p => {
+                let spice = '01', size = '01'
+                const spicyMap = { '순한맛':'01', '기본맛':'02', '매운맛':'03', '아주 매운맛':'04' }
+                const sizeMap = { '1~2인분':'01', '3~4인분':'03' }
                 
-                list.push({
-                    productCode: code, // e.g. OR0101
-                    name: name,
-                    description: `${t.name} ${s.name}입니다.`,
-                    imageUrl: `/images/${t.code}.png`, // Updated to .png
-                    price: price,
-                    costPrice: costPrice,
-                    supplyPrice: supplyPrice,
-                    status: 'ON_SALE',
-                    servingSize: sz.serving,
-                    spiceLevel: s.code,
-                    kcal: sz.serving === 1 ? 1400 : 2800, 
-                    weight: sz.code === '01' ? 500 : 1000,
-                    startDate: '2024-01-01', 
-                    endDate: '2025-12-31',
-                    baseSafeStock: 10,
-                    type: t.code,
-                    sizeCode: sz.code
-                })
+                if (p.spicy && spicyMap[p.spicy]) spice = spicyMap[p.spicy]
+                if (p.size && sizeMap[p.size]) size = sizeMap[p.size]
+
+                let typeCode = 'OR'
+                if (p.productCode && p.productCode.length >= 2) {
+                    typeCode = p.productCode.substring(0, 2)
+                }
+
+                return {
+                    ...p,
+                    productCode: p.productCode,
+                    name: p.name,
+                    description: p.description || '',
+                    spiceLevel: spice,
+                    sizeCode: size,
+                    type: typeCode,
+                    servingSize: size === '01' ? 1 : 3,
+                    price: p.price,
+                    costPrice: p.costPrice || 0,
+                    supplyPrice: p.supplyPrice,
+                    kcal: p.kcal || 0,
+                    weight: p.weight || 0,
+                    baseSafeStock: p.safetyStock || 0,
+                    components: p.components || [],
+                    componentsInput: p.components ? p.components.join(', ') : '',
+                    imageUrl: p.imageUrl || '',
+                    startDate: p.startDate,
+                    endDate: p.endDate,
+                    status: p.status || 'ON_SALE'
+                }
             })
-        })
-    })
-    products.value = list
+        } else {
+            products.value = []
+        }
+    } catch (err) {
+        console.error('Failed to fetch products:', err)
+    }
 }
 
+watch(filter, () => {
+    fetchProducts()
+}, { deep: true })
+
 onMounted(() => {
-    generateMockProducts()
+    fetchProducts()
 })
 
 const filteredProducts = computed(() => {
-  return products.value.filter(p => {
-    const matchCode = !filter.value.productCode || p.productCode.includes(filter.value.productCode)
-    const matchName = !filter.value.name || p.name.includes(filter.value.name)
-    const matchStatus = !filter.value.status || p.status === filter.value.status
-    const matchSize = !filter.value.servingSize || p.sizeCode === filter.value.servingSize
-    return matchCode && matchName && matchStatus && matchSize
-  })
+  return products.value
 })
 
 const getStatusLabel = (status) => {
-  const map = { 'ON_SALE': '판매중', 'SOLD_OUT': '단종', 'TEMPORARY_OUT': '일시품절', 'SALE_SCHEDULED': '판매예정' }
+  const map = { 'ON_SALE': '판매중', 'DISCONTINUED': '단종', 'TEMP_SOLD_OUT': '일시품절', 'COMING_SOON': '판매예정' }
   return map[status] || status
 }
 
@@ -455,7 +467,7 @@ const executeOpenAddModal = () => {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
       productCode: '', name: '', description: '', imageUrl: '', 
       price: 0, costPrice: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
-      kcal: 0, weight: 0,
+      kcal: 0, weight: 0, componentsInput: '',
       startDate: '2024-01-01', endDate: '2025-12-31'
   }
   updateCodeAndName()
@@ -473,9 +485,11 @@ const executeOpenEditModal = (product) => {
   const spice = product.productCode.substring(2, 4)
   const size = product.productCode.substring(4, 6)
 
+  const componentsInput = product.components ? product.components.join(', ') : ''
+
   form.value = { 
       ...JSON.parse(JSON.stringify(product)),
-      type, spiceLevel: spice, sizeCode: size
+      type, spiceLevel: spice, sizeCode: size, componentsInput
   }
   showModal.value = true
 }
@@ -484,15 +498,42 @@ const closeModal = () => {
   showModal.value = false
 }
 
-const saveProduct = () => {
-    // In real app, validate existence
-    if (isEditMode.value) {
-        const index = products.value.findIndex(p => p.productCode === form.value.productCode)
-        if (index !== -1) products.value[index] = { ...form.value }
-    } else {
-        products.value.push({ ...form.value })
+const saveProduct = async () => {
+    const productData = {
+        name: form.value.name,
+        description: form.value.description,
+        imageUrl: form.value.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image',
+        price: form.value.price,
+        costPrice: form.value.costPrice,
+        originalPrice: form.value.costPrice, // for update request
+        supplyPrice: form.value.supplyPrice,
+        safetyStock: form.value.baseSafeStock,
+        baseSafeStock: form.value.baseSafeStock, // for update request
+        status: form.value.status,
+        kcal: form.value.kcal,
+        weight: form.value.weight,
+        startDate: form.value.startDate,
+        endDate: form.value.endDate,
+        components: form.value.componentsInput ? form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean) : []
     }
-    closeModal()
+    
+    try {
+        if (isEditMode.value) {
+            // Edit -> PATCH update
+            if (!form.value.productId) {
+                alert('상품 ID가 없어 수정할 수 없습니다.')
+                return
+            }
+            await api.patch(`/hq/product/${form.value.productId}`, productData)
+        } else {
+            await api.post('/hq/product/create', { ...productData, productCode: form.value.productCode })
+        }
+        await fetchProducts()
+        closeModal()
+    } catch (err) {
+        console.error('Failed to save product:', err)
+        alert('상품 저장에 실패했습니다.')
+    }
 }
 
 // Type Modal Logic
@@ -509,7 +550,7 @@ const closeTypeModal = () => {
     showTypeModal.value = false
 }
 
-const addType = () => {
+const addType = async () => {
     if (!typeForm.value.name || !typeForm.value.code) {
         alert('이름과 코드를 모두 입력해주세요.')
         return
@@ -518,17 +559,24 @@ const addType = () => {
         alert('코드는 반드시 두 자리여야 합니다.')
         return
     }
-    if (productTypes.value.find(t => t.code === typeForm.value.code.toUpperCase())) {
-        alert('이미 존재하는 코드입니다.')
-        return
-    }
     
-    productTypes.value.push({
-        name: typeForm.value.name,
-        code: typeForm.value.code.toUpperCase()
-    })
-    alert(`신규 타입 [${typeForm.value.name}]이 추가되었습니다.`)
-    closeTypeModal()
+    try {
+        await api.post('/hq/product/product-types', null, {
+            params: {
+                type: typeForm.value.code.toUpperCase(),
+                productName: typeForm.value.name
+            }
+        })
+        productTypes.value.push({
+            name: typeForm.value.name,
+            code: typeForm.value.code.toUpperCase()
+        })
+        alert(`신규 타입 [${typeForm.value.name}]이 추가되었습니다.`)
+        closeTypeModal()
+    } catch (err) {
+        console.error('Failed to add product type:', err)
+        alert('신규 타입 추가에 실패했습니다.')
+    }
 }
 
 const handleImageUpload = (event) => {
