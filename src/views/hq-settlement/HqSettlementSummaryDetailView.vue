@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import SettlementReceiptModal from '@/components/settlement/SettlementReceiptModal.vue'
+import { settlementsApi } from '@/api/settlements.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,110 +12,77 @@ const month = computed(() => route.query.month || '')
 const tab = computed(() => route.query.tab || 'daily')
 
 const typeMap = {
-  sales: { title: '가맹점별 매출 현황', label: '매출액', field: 'sales', typeName: '판매' },
-  refund: { title: '가맹점별 반품 환급 현황', label: '반품 환급액', field: 'refund', typeName: '반품' },
-  orderCost: { title: '가맹점별 발주 대금 현황', label: '발주 대금', field: 'orderCost', typeName: '발주' },
-  shipping: { title: '가맹점별 배송비 현황', label: '배송비', field: 'shipping', typeName: '배송' },
-  loss: { title: '가맹점별 손실 현황', label: '손실', field: 'loss', typeName: '손실' },
-  commission: { title: '가맹점별 수수료 현황', label: '수수료', field: 'commission', typeName: '수수료' },
+  sales: { title: '가맹점별 매출 현황', label: '매출액', field: 'totalSaleAmount', typeName: '판매', apiType: 'SALES' },
+  refund: { title: '가맹점별 반품 환급 현황', label: '반품 환급액', field: 'refundAmount', typeName: '반품', apiType: 'REFUND' },
+  orderCost: { title: '가맹점별 발주 대금 현황', label: '발주 대금', field: 'orderAmount', typeName: '발주', apiType: 'ORDER' },
+  shipping: { title: '가맹점별 배송비 현황', label: '배송비', field: 'deliveryFee', typeName: '배송', apiType: 'SHIPPING' },
+  loss: { title: '가맹점별 손실 현황', label: '손실', field: 'lossAmount', typeName: '손실', apiType: 'LOSS' },
+  commission: { title: '가맹점별 수수료 현황', label: '수수료', field: 'commissionFee', typeName: '수수료', apiType: 'COMMISSION' },
 }
 
 const currentInfo = computed(() => typeMap[type.value] || typeMap.sales)
 
-/* ── 날짜 기반 시드 함수 ── */
-const seed = (str) => { let h = 0; for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0 } return Math.abs(h) }
-const seededRand = (s, min, max) => min + (s % (max - min + 1))
-const round100 = (n) => Math.round(n / 100) * 100
+/* ── 데이터 상태 ── */
+const isLoading = ref(false)
+const storesSummary = ref([])
+const transactions = ref([])
+const totalAmount = ref(0)
+const totalTxCount = ref(0)
 
-const storeNames = [
-  { id: 'S001', name: '강남점' },   { id: 'S002', name: '홍대점' },
-  { id: 'S003', name: '신촌점' },   { id: 'S004', name: '이태원점' },
-  { id: 'S005', name: '잠실점' },   { id: 'S006', name: '명동점' },
-  { id: 'S007', name: '건대점' },   { id: 'S008', name: '서울대점' },
-  { id: 'S009', name: '합정점' },   { id: 'S010', name: '성수점' },
-]
+const fetchData = async () => {
+  isLoading.value = true
+  try {
+    // 1. 가맹점별 요약 (목록 API 재사용)
+    const listRes = tab.value === 'daily'
+      ? await settlementsApi.getDailyFranchises({ date: date.value, size: 100 })
+      : await settlementsApi.getMonthlyFranchises({ month: month.value, size: 100 })
+    
+    const field = currentInfo.value.field
+    storesSummary.value = listRes.data.content.map(s => ({
+      id: s.franchiseId,
+      name: s.franchiseName,
+      amount: s[field] || 0
+    })).filter(s => s.amount > 0)
 
-// 가맹점별 합계 데이터
-const storesSummary = computed(() => {
-  const d = tab.value === 'daily' ? date.value : month.value
-  return storeNames.map((s, i) => {
-    const base = seed(d + s.id)
-    const sales = round100(seededRand(base, 250000, 750000))
-    const orderCost = round100(seededRand(base * 2 + i, 80000, 250000))
-    const shipping = round100(seededRand(base * 3 + i, 10000, 25000))
-    const commission = Math.round(sales * 0.03)
-    const refund = i % 3 === 0 ? round100(seededRand(base * 4 + i, 0, 40000)) : 0
-    const loss = i % 4 === 0 ? round100(seededRand(base * 5 + i, 0, 25000)) : 0
-    return { ...s, sales, orderCost, shipping, commission, refund, loss }
-  })
-})
+    totalAmount.value = storesSummary.value.reduce((acc, curr) => acc + curr.amount, 0)
 
-const totalAmount = computed(() => {
-  const field = currentInfo.value.field
-  return storesSummary.value.reduce((acc, curr) => acc + curr[field], 0)
-})
-
-// 가맹점별 상세 전표 데이터 생성 (시드 기반)
-const transactions = computed(() => {
-  const d = tab.value === 'daily' ? date.value : month.value
-  const field = currentInfo.value.field
-  const results = []
-
-  storesSummary.value.forEach((store, idx) => {
-    const amount = store[field]
-    if (amount === 0) return
-
-    const base = seed(d + store.id + field)
-    const count = seededRand(base, 2, 5) // 가맹점당 2~5개의 가짜 전표 생성
-    let remaining = amount
-
-    for (let j = 0; j < count; j++) {
-      const isLast = j === count - 1
-      const partAmount = isLast ? remaining : round100(seededRand(base + j, amount / count / 2, amount / count))
-      remaining -= partAmount
-
-      if (partAmount <= 0 && !isLast) continue
-
-      const time = `${seededRand(base + j, 9, 21)}:${seededRand(base + j + 10, 10, 59)}`
-      const prefix = field.substring(0, 2).toUpperCase()
-      results.push({
-        id: `${prefix}-${store.id}-${j + 1}`,
-        storeName: store.name,
-        type: currentInfo.value.typeName,
-        description: getDescription(field, j),
-        amount: partAmount,
-        date: `${d} ${time}`
-      })
-    }
-  })
-  return results.sort((a, b) => b.date.localeCompare(a.date))
-})
-
-const getDescription = (field, idx) => {
-  const descriptions = {
-    sales: ['일반 주문 건', '포장 주문 건', '배달 주문 건', '키오스크 주문 건'],
-    refund: ['상품 파손 반품', '오발주 반품', '유통기한 임박 반품', '고객 변심 반품'],
-    orderCost: ['정기 발주 결제', '비정기 발주 결제', '추가 물량 결제', '긴급 발주 결제'],
-    shipping: ['기본 배송비', '추가 배송료', '유류비 할증', '야간 배송료'],
-    loss: ['재고 오차 조정', '폐기 처리 손실', '파손 처리 손실', '기타 손실'],
-    commission: ['매출 수수료 (3%)', '플랫폼 수수료', '결제 수수료', '정산 수수료'],
+    // 2. 통합 전표 내역
+    const voucherRes = await settlementsApi.getAllVouchers({
+      period: tab.value === 'daily' ? 'DAILY' : 'MONTHLY',
+      date: date.value,
+      month: month.value,
+      type: currentInfo.value.apiType,
+      size: 100
+    })
+    // FranchiseVoucherResponse에는 franchiseName이 없어서 가맹점별 요약 테이블의 매핑 정보를 활용하거나, 
+    // 백엔드에서 DTO에 franchiseName을 추가해주면 좋음.
+    // 일단 referenceCode 등을 통해 유추하거나, 백엔드 DTO를 한 번 더 체크.
+    transactions.value = voucherRes.content.map(v => {
+        // v.referenceCode 등을 보고 매핑 (현실적으로는 DTO에 franchiseId가 있어야 함)
+        // 일단 UI는 유지하되, 백엔드 DTO에 franchiseName이 없음을 인지.
+        return {
+            id: v.referenceCode,
+            typeName: currentInfo.value.typeName,
+            description: v.description,
+            amount: v.amount,
+            date: v.occurredAt?.replace('T', ' ').substring(0, 16)
+        }
+    })
+    totalTxCount.value = voucherRes.totalElements
+  } catch (error) {
+    console.error('Failed to fetch summary detail:', error)
+  } finally {
+    isLoading.value = false
   }
-  const list = descriptions[field] || ['기타 내역']
-  return list[idx % list.length]
 }
 
-const fmt = (n) => new Intl.NumberFormat('ko-KR').format(n)
+onMounted(fetchData)
+watch([type, date, month, tab], fetchData)
+
+const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n || 0))
 
 const goBack = () => {
   router.push({ path: '/hq/settlement', query: route.query })
-}
-
-/* ── 영수증 모달 ── */
-const showReceiptModal = ref(false)
-const selectedReceiptStore = ref(null)
-const openReceipt = (store) => {
-  selectedReceiptStore.value = store
-  showReceiptModal.value = true
 }
 </script>
 
@@ -132,16 +99,16 @@ const openReceipt = (store) => {
           <p class="page-desc">{{ tab === 'daily' ? date : month }} 기준 조회 결과입니다.</p>
         </div>
       </div>
-      <div class="total-summary-badge">
+      <div class="total-summary-badge" v-if="!isLoading">
         <span class="label">총 합계</span>
-        <span class="value" :class="{ 'negative': ['orderCost', 'shipping', 'loss', 'commission'].includes(currentInfo.field), 'primary-color': ['sales', 'refund'].includes(currentInfo.field) }">
+        <span class="value" :class="{ 'negative': ['orderCost', 'shipping', 'loss', 'commission'].includes(type), 'primary-color': ['sales', 'refund'].includes(type) }">
           ₩ {{ fmt(totalAmount) }}
         </span>
       </div>
     </div>
 
     <!-- 가맹점별 요약 테이블 -->
-    <div class="card-grid">
+    <div class="card-grid" v-if="!isLoading">
       <div class="data-table-card summary-table">
         <div class="table-header">
           <h3>가맹점별 요약</h3>
@@ -158,14 +125,14 @@ const openReceipt = (store) => {
             <tbody>
               <tr v-for="s in storesSummary" :key="s.id">
                 <td class="store-cell">{{ s.name }}</td>
-                <td class="text-right" :class="{ 'negative': ['orderCost', 'shipping', 'loss', 'commission'].includes(currentInfo.field), 'primary-color': ['sales', 'refund'].includes(currentInfo.field) }">
-                  ₩ {{ fmt(s[currentInfo.field]) }}
+                <td class="text-right" :class="{ 'negative': ['orderCost', 'shipping', 'loss', 'commission'].includes(type), 'primary-color': ['sales', 'refund'].includes(type) }">
+                  ₩ {{ fmt(s.amount) }}
                 </td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
-                <td colspan="2">합계</td>
+                <td>합계</td>
                 <td class="text-right">₩ {{ fmt(totalAmount) }}</td>
               </tr>
             </tfoot>
@@ -177,14 +144,13 @@ const openReceipt = (store) => {
       <div class="data-table-card detail-table">
         <div class="table-header">
           <h3>상세 전표 내역</h3>
-          <span class="badge">{{ transactions.length }}건</span>
+          <span class="badge">{{ totalTxCount }}건</span>
         </div>
         <div class="table-scroll">
           <table class="data-table">
             <thead>
               <tr>
                 <th>전표번호</th>
-                <th>가맹점</th>
                 <th>내역</th>
                 <th class="text-right">금액</th>
                 <th>일시</th>
@@ -193,30 +159,22 @@ const openReceipt = (store) => {
             <tbody>
               <tr v-for="tx in transactions" :key="tx.id">
                 <td class="id-cell">{{ tx.id }}</td>
-                <td>{{ tx.storeName }}</td>
                 <td>{{ tx.description }}</td>
-                <td class="text-right fw700" :class="{ 'negative': ['orderCost', 'shipping', 'loss', 'commission'].includes(currentInfo.field), 'primary-color': ['sales', 'refund'].includes(currentInfo.field) }">
+                <td class="text-right fw700" :class="{ 'negative': ['orderCost', 'shipping', 'loss', 'commission'].includes(type), 'primary-color': ['sales', 'refund'].includes(type) }">
                   ₩ {{ fmt(tx.amount) }}
                 </td>
                 <td class="time-cell">{{ tx.date }}</td>
               </tr>
               <tr v-if="transactions.length === 0">
-                <td colspan="5" class="empty-cell">데이터가 없습니다.</td>
+                <td colspan="4" class="empty-cell">데이터가 없습니다.</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
+    <div v-else class="text-center" style="padding: 5rem;">데이터를 불러오는 중입니다...</div>
   </div>
-
-  <!-- 정산 영수증 모달 -->
-  <SettlementReceiptModal
-    :is-open="showReceiptModal"
-    :store="selectedReceiptStore"
-    :date="tab === 'daily' ? (date ? date.split('-')[0]+'년 '+(date.split('-')[1])+'월 '+(date.split('-')[2])+'일' : '') : (month ? month.split('-')[0]+'년 '+(month.split('-')[1])+'월' : '')"
-    @close="showReceiptModal = false"
-  />
 </template>
 
 <style scoped>
@@ -239,7 +197,7 @@ const openReceipt = (store) => {
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 .table-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); background: #f8fafc; }
 .table-header h3 { margin: 0; font-size: 1rem; font-weight: 700; }
-.badge { background: var(--primary); color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.badge { background: #475569; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
 
 .table-scroll { max-height: 700px; overflow-y: auto; }
 
@@ -251,19 +209,16 @@ const openReceipt = (store) => {
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 .store-cell { font-weight: 700; }
-.id-cell { font-family: monospace; color: var(--primary); font-weight: 600; font-size: 0.85rem; }
+.id-cell { font-family: monospace; color: #6366f1; font-weight: 600; font-size: 0.85rem; }
 .time-cell { color: var(--text-light); font-size: 0.85rem; }
 .fw700 { font-weight: 700; }
 .negative { color: #ef4444; }
-.primary-color { color: var(--primary); }
+.primary-color { color: #6366f1; }
 
 .total-row { background: #f1f5f9; font-weight: 800; color: var(--text-dark); }
 .total-row td { border-bottom: none; font-size: 1rem; }
 
 .empty-cell { text-align: center; color: var(--text-light); padding: 4rem !important; }
-
-.icon-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: all 0.2s; }
-.icon-btn:hover { color: var(--primary); background: #f1f5f9; }
 
 @media (max-width: 1000px) {
   .card-grid { grid-template-columns: 1fr; }

@@ -1,70 +1,108 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { settlementsApi } from '@/api/settlements.js'
 
 /* ── 월 선택 ── */
 const today = new Date()
 const pad = (n) => String(n).padStart(2, '0')
 const selectedMonth = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}`)
 
-/* ── 상태: draft(작성중), requested(확정요청), confirmed(최종확정) ── */
-const stores = ref([
-  { id: 'S001', name: '강남점',   finalAmount: 365994,  status: 'draft' },
-  { id: 'S002', name: '홍대점',   finalAmount: 278640,  status: 'requested' },
-  { id: 'S003', name: '신촌점',   finalAmount: 266950,  status: 'confirmed' },
-  { id: 'S004', name: '이태원점', finalAmount: 352185,  status: 'draft' },
-  { id: 'S005', name: '잠실점',   finalAmount: 209060,  status: 'confirmed' },
-  { id: 'S006', name: '명동점',   finalAmount: 463491,  status: 'requested' },
-  { id: 'S007', name: '건대점',   finalAmount: 266650,  status: 'confirmed' },
-  { id: 'S008', name: '서울대점', finalAmount: 243600,  status: 'draft' },
-  { id: 'S009', name: '합정점',   finalAmount: 335500,  status: 'confirmed' },
-  { id: 'S010', name: '성수점',   finalAmount: 176300,  status: 'draft' },
-])
+/* ── 데이터 상태 ── */
+const isLoading = ref(false)
+const stores = ref([])
+const statusCounts = ref({
+  draftCount: 0,
+  requestedCount: 0,
+  confirmedCount: 0
+})
 
-const draftCount = computed(() => stores.value.filter(s => s.status === 'draft').length)
-const requestedCount = computed(() => stores.value.filter(s => s.status === 'requested').length)
-const confirmedCount = computed(() => stores.value.filter(s => s.status === 'confirmed').length)
+const fetchData = async () => {
+  isLoading.value = true
+  try {
+    const [countsRes, listRes] = await Promise.all([
+      settlementsApi.getConfirmStatusCounts(selectedMonth.value),
+      settlementsApi.getConfirmFranchises({ month: selectedMonth.value, size: 100 })
+    ])
+    statusCounts.value = countsRes
+    stores.value = listRes.content
+  } catch (error) {
+    console.error('Failed to fetch confirm data:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(fetchData)
+watch(selectedMonth, fetchData)
 
 /* ── 포맷 ── */
-const fmt = (n) => new Intl.NumberFormat('ko-KR').format(n)
-const formatMonth = (d) => { const [y,m] = d.split('-'); return `${y}년 ${m}월` }
+const fmt = (n) => new Intl.NumberFormat('ko-KR').format(n || 0)
+const formatMonth = (d) => { if(!d) return ''; const [y,m] = d.split('-'); return `${y}년 ${m}월` }
 
 const monthRef = ref(null)
 const openMonthPicker = () => { monthRef.value?.showPicker() }
 
 /* ── 상태 라벨/태그 매핑 ── */
-const statusLabel = { draft: '작성중', requested: '확정요청', confirmed: '최종확정' }
-const statusTagClass = { draft: 'tag-draft', requested: 'tag-requested', confirmed: 'tag-confirmed' }
+const statusLabel = { 
+  'CALCULATED': '작성중', 
+  'CONFIRM_REQUESTED': '확정요청', 
+  'CONFIRMED': '최종확정' 
+}
+const statusTagClass = { 
+  'CALCULATED': 'tag-draft', 
+  'CONFIRM_REQUESTED': 'tag-requested', 
+  'CONFIRMED': 'tag-confirmed' 
+}
 
 /* ── 확정 요청 (작성중 → 확정요청) ── */
-const requestConfirm = (store) => {
-  if (confirm(`${store.name}의 정산을 확정 요청하시겠습니까?\n최종 정산 금액: ₩ ${fmt(store.finalAmount)}`)) {
-    store.status = 'requested'
+const requestConfirm = async (store) => {
+  if (confirm(`${store.franchiseName}의 정산을 확정 요청하시겠습니까?\n최종 정산 금액: ₩ ${fmt(store.finalSettlementAmount)}`)) {
+    try {
+      await settlementsApi.requestConfirm(store.franchiseId, selectedMonth.value)
+      fetchData()
+    } catch (err) {
+      alert('확정 요청에 실패했습니다.')
+    }
   }
 }
 
 /* ── 최종 확정 (확정요청 → 최종확정) ── */
-const finalConfirm = (store) => {
-  if (confirm(`${store.name}의 정산을 최종 확정하시겠습니까?\n최종 정산 금액: ₩ ${fmt(store.finalAmount)}`)) {
-    store.status = 'confirmed'
+const finalConfirm = async (store) => {
+  if (confirm(`${store.franchiseName}의 정산을 최종 확정하시겠습니까?\n최종 정산 금액: ₩ ${fmt(store.finalSettlementAmount)}`)) {
+    try {
+      await settlementsApi.finalConfirm(store.franchiseId, selectedMonth.value)
+      fetchData()
+    } catch (err) {
+      alert('최종 확정하에 실패했습니다.')
+    }
   }
 }
 
 /* ── 수정 (확정요청 → 작성중) ── */
-const revertToDraft = (store) => {
-  if (confirm(`${store.name}의 확정 요청을 취소하고 작성중으로 되돌리시겠습니까?`)) {
-    store.status = 'draft'
+const revertToDraft = async (store) => {
+  if (confirm(`${store.franchiseName}의 확정 요청을 취소하고 작성중으로 되돌리시겠습니까?`)) {
+    try {
+      await settlementsApi.rollbackConfirm(store.franchiseId, selectedMonth.value)
+      fetchData()
+    } catch (err) {
+      alert('되돌리기에 실패했습니다.')
+    }
   }
 }
 
 /* ── 전체 최종 확정 ── */
-const confirmAll = () => {
-  const pending = stores.value.filter(s => s.status !== 'confirmed')
-  if (pending.length === 0) {
-    alert('모든 가맹점이 이미 최종 확정되었습니다.')
+const confirmAll = async () => {
+  if (statusCounts.value.requestedCount === 0) {
+    alert('확정 요청 상태인 가맹점이 없습니다.')
     return
   }
-  if (confirm(`미확정 ${pending.length}개 가맹점을 일괄 최종 확정하시겠습니까?`)) {
-    pending.forEach(s => s.status = 'confirmed')
+  if (confirm(`확정 요청 중인 ${statusCounts.value.requestedCount}개 가맹점을 일괄 최종 확정하시겠습니까?`)) {
+    try {
+      await settlementsApi.finalConfirmAll(selectedMonth.value)
+      fetchData()
+    } catch (err) {
+      alert('일괄 확정에 실패했습니다.')
+    }
   }
 }
 </script>
@@ -95,18 +133,18 @@ const confirmAll = () => {
     </div>
 
     <!-- 상태 카드 -->
-    <section class="status-grid">
+    <section class="status-grid" v-if="!isLoading">
       <div class="stat-card">
         <span class="stat-label">작성중</span>
-        <p class="stat-num">{{ draftCount }}</p>
+        <p class="stat-num">{{ statusCounts.draftCount }}</p>
       </div>
       <div class="stat-card">
         <span class="stat-label">확정 요청</span>
-        <p class="stat-num">{{ requestedCount }}</p>
+        <p class="stat-num">{{ statusCounts.requestedCount }}</p>
       </div>
       <div class="stat-card">
         <span class="stat-label">최종 확정</span>
-        <p class="stat-num">{{ confirmedCount }}</p>
+        <p class="stat-num">{{ statusCounts.confirmedCount }}</p>
       </div>
     </section>
 
@@ -119,7 +157,7 @@ const confirmAll = () => {
     <!-- 가맹점 목록 -->
     <div class="data-table-card">
       <div class="table-header">
-        <h3>{{ selectedMonth }} 정산 확정 현황</h3>
+        <h3>{{ formatMonth(selectedMonth) }} 정산 확정 현황</h3>
       </div>
       <table class="data-table">
         <colgroup>
@@ -137,19 +175,25 @@ const confirmAll = () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in stores" :key="s.id" :class="'row-' + s.status">
-            <td class="store-cell">{{ s.name }}</td>
-            <td class="amount-cell">₩ {{ fmt(s.finalAmount) }}</td>
+          <tr v-if="isLoading">
+            <td colspan="4" class="text-center" style="padding: 2rem;">데이터를 불러오는 중입니다...</td>
+          </tr>
+          <tr v-else-if="stores.length === 0">
+            <td colspan="4" class="text-center" style="padding: 2rem;">정산 데이터가 없습니다.</td>
+          </tr>
+          <tr v-for="s in stores" :key="s.franchiseId" :class="'row-' + s.status" v-else>
+            <td class="store-cell">{{ s.franchiseName }}</td>
+            <td class="amount-cell">₩ {{ fmt(s.finalSettlementAmount) }}</td>
             <td>
               <span :class="['status-tag', statusTagClass[s.status]]">
                 {{ statusLabel[s.status] }}
               </span>
             </td>
             <td>
-              <template v-if="s.status === 'draft'">
+              <template v-if="s.status === 'CALCULATED'">
                 <button class="btn-request" @click="requestConfirm(s)">확정 요청</button>
               </template>
-              <template v-else-if="s.status === 'requested'">
+              <template v-else-if="s.status === 'CONFIRM_REQUESTED'">
                 <button class="btn-confirm" @click="finalConfirm(s)">최종 확정</button>
                 <button class="btn-revert" @click="revertToDraft(s)">수정</button>
               </template>
@@ -195,27 +239,28 @@ const confirmAll = () => {
 .data-table td { padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
 .data-table tbody tr { background: white; }
 .data-table tbody tr:hover { background: #fafafa; }
-.row-draft { background: #f8fafc !important; }
-.row-draft:hover { background: #f1f5f9 !important; }
-.row-requested { background: #fffbeb !important; }
-.row-requested:hover { background: #fef3c7 !important; }
-.row-confirmed { background: white !important; }
+.row-CALCULATED { background: #f8fafc !important; }
+.row-CALCULATED:hover { background: #f1f5f9 !important; }
+.row-CONFIRM_REQUESTED { background: #fffbeb !important; }
+.row-CONFIRM_REQUESTED:hover { background: #fef3c7 !important; }
+.row-CONFIRMED { background: white !important; }
 
 .store-cell { font-weight: 700; }
-.amount-cell { font-weight: 700; color: var(--primary); }
+.amount-cell { font-weight: 700; color: #6366f1; }
 .status-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
 .tag-draft { background: #f1f5f9; color: #64748b; }
 .tag-requested { background: #fef3c7; color: #92400e; }
 .tag-confirmed { background: #d1fae5; color: #065f46; }
 
-.btn-request { padding: 0.35rem 1rem; border-radius: 8px; border: 1px solid var(--primary); background: white; color: var(--primary); font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.btn-request { padding: 0.35rem 1rem; border-radius: 8px; border: 1px solid #6366f1; background: white; color: #6366f1; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
 .btn-request:hover { background: #f5f3ff; }
 .btn-confirm { padding: 0.35rem 1rem; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-right: 0.5rem; }
 .btn-confirm:hover { background: #059669; }
 .btn-revert { padding: 0.35rem 1rem; border-radius: 8px; border: 1px solid #94a3b8; background: white; color: #64748b; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
 .btn-revert:hover { background: #f8fafc; }
 .no-action { color: #cbd5e1; font-weight: 600; }
+.text-center { text-align: center; }
 
-.notice-bar { display: flex; align-items: flex-start; gap: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.85rem; }
+.notice-bar { display: flex; align-items: flex-start; gap: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1.5rem; }
 .notice-bar svg { flex-shrink: 0; margin-top: 2px; }
 </style>
