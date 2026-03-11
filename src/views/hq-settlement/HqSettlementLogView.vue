@@ -1,39 +1,42 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { settlementsApi } from '@/api/settlements.js'
 
 /* ── 필터 ── */
-const filterType = ref('all')
+const filterType = ref('ALL')
 const filterTypes = [
-  { key: 'all', label: '전체' },
-  { key: 'confirm', label: '정산 확정' },
-  { key: 'document', label: '문서 생성' },
-  { key: 'adjust', label: '조정 전표' },
-  { key: 'cancel', label: '취소' },
+  { key: 'ALL', label: '전체' },
+  { key: 'CONFIRM', label: '정산 확정' },
+  { key: 'DOCUMENT', label: '문서 생성' },
+  { key: 'ADJUSTMENT', label: '조정 전표' },
+  { key: 'CANCEL', label: '취소' },
 ]
 
-/* ── 로그 Mock ── */
-const allLogs = ref([
-  { id: 1, type: 'confirm', typeName: '정산 확정', store: '강남점', desc: '2026년 1월 정산 확정', user: '정산 관리자', date: '2026-02-01 10:30:22' },
-  { id: 2, type: 'confirm', typeName: '정산 확정', store: '홍대점', desc: '2026년 1월 정산 확정', user: '정산 관리자', date: '2026-02-01 10:31:05' },
-  { id: 3, type: 'document', typeName: '문서 생성', store: '강남점', desc: '2026년 1월 정산서 PDF 생성', user: '정산 관리자', date: '2026-02-01 10:35:10' },
-  { id: 4, type: 'adjust', typeName: '조정 전표', store: '명동점', desc: '본사 프로모션 보전금 +₩30,000 등록', user: '정산 관리자', date: '2026-02-05 14:20:33' },
-  { id: 5, type: 'adjust', typeName: '조정 전표', store: '홍대점', desc: '배송 파손 보상 −₩25,000 등록', user: '정산 관리자', date: '2026-02-07 09:15:41' },
-  { id: 6, type: 'confirm', typeName: '정산 확정', store: '신촌점', desc: '2026년 2월 정산 확정', user: '정산 관리자', date: '2026-02-08 11:00:18' },
-  { id: 7, type: 'document', typeName: '문서 생성', store: '잠실점', desc: '2026년 1월 전표 Excel 생성', user: '정산 관리자', date: '2026-02-08 11:05:55' },
-  { id: 8, type: 'adjust', typeName: '조정 전표', store: '강남점', desc: '본사 프로모션 보전금 +₩50,000 등록', user: '정산 관리자', date: '2026-02-08 15:20:12' },
-  { id: 9, type: 'cancel', typeName: '취소', store: '이태원점', desc: '2026년 2월 정산 확정 취소', user: '정산 관리자', date: '2026-02-09 09:10:05' },
-  { id: 10, type: 'confirm', typeName: '정산 확정', store: '건대점', desc: '2026년 2월 정산 확정', user: '정산 관리자', date: '2026-02-10 10:00:00' },
-  { id: 11, type: 'confirm', typeName: '정산 확정', store: '합정점', desc: '2026년 2월 정산 확정', user: '정산 관리자', date: '2026-02-10 10:01:30' },
-  { id: 12, type: 'document', typeName: '문서 생성', store: '건대점', desc: '2026년 2월 정산서 PDF 생성', user: '정산 관리자', date: '2026-02-10 10:05:44' },
-])
+/* ── 로그 상태 ── */
+const allLogs = ref([])
+const totalCount = ref(0)
+const isLoading = ref(false)
 
-const filteredLogs = computed(() => {
-  let list = allLogs.value
-  if (filterType.value !== 'all') {
-    list = list.filter(l => l.type === filterType.value)
-  }
-  return [...list].sort((a, b) => new Date(b.date) - new Date(a.date))
-})
+const fetchData = async () => {
+    isLoading.value = true
+    try {
+        const res = await settlementsApi.getLogs({
+            type: filterType.value,
+            size: 50
+        })
+        allLogs.value = res.content
+        totalCount.value = res.totalElements
+    } catch (err) {
+        console.error('Failed to fetch logs:', err)
+    } finally {
+        isLoading.value = false
+    }
+}
+
+onMounted(fetchData)
+watch(filterType, fetchData)
+
+const filteredLogs = computed(() => allLogs.value)
 
 const getTypeClass = (type) => ({
   confirm: 'log-confirm',
@@ -88,16 +91,19 @@ const getTypeClass = (type) => ({
           </tr>
         </thead>
         <tbody>
-          <tr v-for="log in filteredLogs" :key="log.id">
-            <td class="id-cell">#{{ log.id }}</td>
-            <td><span :class="['log-tag', getTypeClass(log.type)]">{{ log.typeName }}</span></td>
-            <td class="fw600">{{ log.store }}</td>
-            <td>{{ log.desc }}</td>
-            <td>{{ log.user }}</td>
-            <td class="time-cell">{{ log.date }}</td>
+          <tr v-if="isLoading">
+            <td colspan="6" class="text-center" style="padding: 2rem;">데이터를 불러오는 중입니다...</td>
           </tr>
-          <tr v-if="filteredLogs.length === 0">
-            <td colspan="6" class="empty-cell">해당 유형의 이력이 없습니다.</td>
+          <tr v-else-if="allLogs.length === 0">
+            <td colspan="6" class="text-center" style="padding: 2rem;">이력 데이터가 없습니다.</td>
+          </tr>
+          <tr v-for="log in allLogs" :key="log.id" v-else>
+            <td class="id-cell">#{{ log.id }}</td>
+            <td><span :class="['log-tag', getTypeClass(log.type.toLowerCase())]">{{ log.type }}</span></td>
+            <td class="fw600">{{ log.franchiseName || '-' }}</td>
+            <td>{{ log.content }}</td>
+            <td>{{ log.actorName || '-' }}</td>
+            <td class="time-cell">{{ log.createdAt?.replace('T', ' ').substring(0, 16) }}</td>
           </tr>
         </tbody>
       </table>

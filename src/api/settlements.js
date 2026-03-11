@@ -14,6 +14,10 @@ export const settlementsApi = {
     },
     getDailyTrend: (start, end) => request(`${BASE}/daily/daily-sales-graph?start=${start}&end=${end}`),
 
+    // 가맹점 상세 요약 (Hq용)
+    getDailyFranchiseSummary: (franchiseId, date) => request(`${BASE}/daily/franchises/${franchiseId}/summary?date=${date}`),
+    getMonthlyFranchiseSummary: (franchiseId, month) => request(`${BASE}/monthly/franchises/${franchiseId}/summary?month=${month}`),
+
     // 월별
     getMonthlySummary: (month) => request(`${BASE}/monthly/summary?month=${month}`),
     getMonthlyFranchises: (params) => {
@@ -72,6 +76,30 @@ export const settlementsApi = {
     getMonthlyExcel: (month, type) => {
         let url = `${BASE}/monthly/vouchers/excel?month=${month}`
         if (type) url += `&type=${type}`
+        return request(url)
+    },
+
+    /* ── 조정 전표 (Adjustment) ── */
+    getAdjustmentFranchises: () => request(`${BASE}/voucher-adjustments/franchises`),
+    getAdjustmentTypes: () => request(`${BASE}/voucher-adjustments/types`),
+    createAdjustment: (data) => request(`${BASE}/voucher-adjustments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }),
+    getAdjustments: (params) => {
+        const { month, franchiseId, type, page = 0, size = 20 } = params
+        let url = `${BASE}/voucher-adjustments?month=${month}&page=${page}&size=${size}`
+        if (franchiseId) url += `&franchiseId=${franchiseId}`
+        if (type) url += `&type=${type}`
+        return request(url)
+    },
+
+    /* ── 정산 이력 (Logs) ── */
+    getLogs: (params) => {
+        const { type, page = 0, size = 20 } = params
+        let url = `${BASE}/logs?page=${page}&size=${size}`
+        if (type && type !== 'ALL') url += `&type=${type}`
         return request(url)
     }
 }

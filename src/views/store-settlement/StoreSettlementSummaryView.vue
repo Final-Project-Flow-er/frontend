@@ -35,6 +35,20 @@ const isLoading = ref(false)
 /* ── 데이터 페칭 ── */
 const fetchData = async () => {
     isLoading.value = true
+    
+    // Reset data to avoid stale data display
+    settlementData.value = {
+        totalSaleAmount: 0,
+        orderAmount: 0,
+        deliveryFee: 0,
+        commissionFee: 0,
+        refundAmount: 0,
+        lossAmount: 0,
+        finalAmount: 0
+    }
+    salesItems.value = []
+    orderItems.value = []
+    
     try {
         if (activeTab.value === 'daily') {
             const [summaryRes, salesRes, ordersRes] = await Promise.all([
@@ -246,14 +260,16 @@ const goToVoucherWithFilter = (filterType) => {
 
 /* ── 다운로드 ── */
 const downloadExcel = async () => {
-    if (activeTab.value !== 'monthly') return
     try {
         const res = await franchiseSettlementsApi.getMonthlyExcel(selectedMonth.value)
-        if (res.data) {
-            window.open(res.data, '_blank')
+        if (res && res.startsWith('http')) {
+            window.open(res, '_blank')
+        } else if (res) {
+            alert(res)
         }
     } catch (error) {
         console.error('Failed to download Excel:', error)
+        alert('엑셀 다운로드 중 오류가 발생했습니다.')
     }
 }
 
@@ -265,11 +281,14 @@ const downloadPDF = async () => {
         } else {
             res = await franchiseSettlementsApi.getMonthlyReceiptPdf(selectedMonth.value)
         }
-        if (res.data) {
-            window.open(res.data, '_blank')
+        if (res && res.startsWith('http')) {
+            window.open(res, '_blank')
+        } else if (res) {
+            alert(res)
         }
     } catch (error) {
         console.error('Failed to download PDF:', error)
+        alert('PDF 다운로드 중 오류가 발생했습니다.')
     }
 }
 </script>

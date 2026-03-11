@@ -41,18 +41,18 @@ const fetchData = async () => {
         settlementsApi.getDailyFranchises({ date: selectedDate.value, size: 100 }),
         settlementsApi.getDailyTrend(getPastDate(selectedDate.value, 7), selectedDate.value)
       ])
-      hqSummary.value = summaryRes.data
-      franchiseList.value = listRes.data.content
-      trendDataList.value = trendRes.data
+      hqSummary.value = summaryRes
+      franchiseList.value = listRes.content
+      trendDataList.value = trendRes
     } else {
       const [summaryRes, listRes, trendRes] = await Promise.all([
         settlementsApi.getMonthlySummary(selectedMonth.value),
         settlementsApi.getMonthlyFranchises({ month: selectedMonth.value, size: 100 }),
         settlementsApi.getMonthlyTrend(getPastDate(selectedMonth.value + '-01', 30), selectedMonth.value + '-01')
       ])
-      hqSummary.value = summaryRes.data
-      franchiseList.value = listRes.data.content
-      trendDataList.value = trendRes.data
+      hqSummary.value = summaryRes
+      franchiseList.value = listRes.content
+      trendDataList.value = trendRes
     }
   } catch (error) {
     console.error('Failed to fetch settlement data:', error)
@@ -103,7 +103,8 @@ const downloadStorePDF = async (store) => {
     const res = activeTab.value === 'daily' 
       ? await settlementsApi.getDailyFranchiseReceiptPdf(store.franchiseId, selectedDate.value)
       : await settlementsApi.getMonthlyFranchiseReceiptPdf(store.franchiseId, selectedMonth.value)
-    if (res.data) window.open(res.data, '_blank')
+    if (res && res.startsWith('http')) window.open(res, '_blank')
+    else if (res) alert(res)
   } catch (error) {
     alert('PDF를 가져오는 데 실패했습니다.')
   }
@@ -115,7 +116,8 @@ const downloadBatchPDF = async () => {
     const res = activeTab.value === 'daily'
       ? await settlementsApi.getDailyAllSummaryPdf(selectedDate.value)
       : await settlementsApi.getMonthlyAllSummaryPdf(selectedMonth.value)
-    if (res.data) window.open(res.data, '_blank')
+    if (res && res.startsWith('http')) window.open(res, '_blank')
+    else if (res) alert(res)
   } catch (error) {
     alert('요약 PDF를 가져오는 데 실패했습니다.')
   }
@@ -165,7 +167,8 @@ const trendData = computed(() => {
 const downloadExcel = async () => {
   try {
     const res = await settlementsApi.getMonthlyExcel(selectedMonth.value)
-    if (res.data) window.open(res.data, '_blank')
+    if (res && res.startsWith('http')) window.open(res, '_blank')
+    else if (res) alert(res)
   } catch (error) {
     alert('Excel 파일을 가져오는 데 실패했습니다.')
   }

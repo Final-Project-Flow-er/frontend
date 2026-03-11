@@ -38,7 +38,7 @@ const fetchData = async () => {
       : await settlementsApi.getMonthlyFranchises({ month: month.value, size: 100 })
     
     const field = currentInfo.value.field
-    storesSummary.value = listRes.data.content.map(s => ({
+    storesSummary.value = listRes.content.map(s => ({
       id: s.franchiseId,
       name: s.franchiseName,
       amount: s[field] || 0

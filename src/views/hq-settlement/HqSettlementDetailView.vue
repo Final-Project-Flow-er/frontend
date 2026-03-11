@@ -35,34 +35,27 @@ const selectedFilter = ref('all')
 const fetchData = async () => {
   isLoading.value = true
   try {
-    // 1. 요약 정보 (HqSettlementListView에서 넘겨준 파라미터 기반으로 단건 조회 API가 없으면 목록에서 찾아도 되지만, 전용 API가 있음을 확인)
-    // HQSettlementFacade에 getDailyFranchiseSummary / getMonthlyFranchiseSummary 있음
-    const summaryApi = activeTab.value === 'daily' 
-      ? settlementsApi.getDailySummary(selectedDate.value) // 사실 목록조회에서 franchiseId로 필터링하는게 더 정확할수도...
-      : settlementsApi.getMonthlySummary(selectedMonth.value)
+    // 1. 요약 정보
+    const sumRes = activeTab.value === 'daily'
+      ? await settlementsApi.getDailyFranchiseSummary(franchiseId, selectedDate.value)
+      : await settlementsApi.getMonthlyFranchiseSummary(franchiseId, selectedMonth.value)
     
-    // 하지만 Facade를 보니 franchiseId별 summary API가 따로 있음 (getDailyFranchiseSummary 등)
-    // settlementsApi에 추가하지 않았으므로 직접 목록에서 가져오거나 API 추가 필요.
-    // 일단 일관성을 위해 목록에서 정보를 가져오거나 새로 추가.
-    
-    // API 레이어에 getFranchiseSettlementSummary 추가하는게 깔끔함.
-    // 하지만 이미 getMonthlyFranchises가 있으므로 이를 활용 (franchiseId로 필터링)
-    
-    const listRes = activeTab.value === 'daily'
-      ? await settlementsApi.getDailyFranchises({ date: selectedDate.value, keyword: '', size: 100 })
-      : await settlementsApi.getMonthlyFranchises({ month: selectedMonth.value, keyword: '', size: 100 })
-    
-    const storeInfo = listRes.data.content.find(s => String(s.franchiseId) === String(franchiseId))
-    if (storeInfo) {
-      storeName.value = storeInfo.franchiseName
-      summary.value = {
-        finalAmount: storeInfo.finalAmount,
-        saleAmount: storeInfo.totalSaleAmount,
-        refundAmount: storeInfo.refundAmount,
-        orderAmount: storeInfo.orderAmount,
-        deliveryFee: storeInfo.deliveryFee,
-        lossAmount: storeInfo.lossAmount,
-        commissionFee: storeInfo.commissionFee
+    if (sumRes) {
+      // storeName은 summary에 없을 수 있으므로, 필요하다면 API에서 필드 확인 필요. 
+      // 일단 DTO 구성을 보니 franchiseName 보다는 금액 위주이므로, 목록 API에서 이름을 가져오는 기존 로직 유지하거나 API 확장 필요.
+      // DTO를 보니 summary에 franchiseName이 없을 수도 있음. 
+      // 하지만 controller에서 listRes를 가져오는 로직도 나쁘지 않으므로, 
+      // 일단 '금액' 데이터는 전용 summary API로 정확하게 가져오고 '이름'은 listRes에서 찾는 방식 병합.
+      summary.value = sumRes
+      
+      // 이름만 찾기 위해 listRes 호출 (목록 UI 데이터 재사용)
+      const listRes = activeTab.value === 'daily'
+        ? await settlementsApi.getDailyFranchises({ date: selectedDate.value, keyword: '', size: 100 })
+        : await settlementsApi.getMonthlyFranchises({ month: selectedMonth.value, keyword: '', size: 100 })
+      
+      const storeInfo = listRes.content.find(s => String(s.franchiseId) === String(franchiseId))
+      if (storeInfo) {
+        storeName.value = storeInfo.franchiseName
       }
     }
 
@@ -121,7 +114,8 @@ const openReceipt = async () => {
         const res = activeTab.value === 'daily'
             ? await settlementsApi.getDailyFranchiseReceiptPdf(franchiseId, selectedDate.value)
             : await settlementsApi.getMonthlyFranchiseReceiptPdf(franchiseId, selectedMonth.value)
-        if (res.data) window.open(res.data, '_blank')
+        if (res && res.startsWith('http')) window.open(res, '_blank')
+        else if (res) alert(res)
     } catch (err) {
         alert('영수증 PDF를 가져오는 데 실패했습니다.')
     }

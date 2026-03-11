@@ -91,7 +91,7 @@ const fetchTrendData = async () => {
             start,
             end
         })
-        trendData.value = res.data.map(d => ({
+        trendData.value = res.map(d => ({
             month: d.date.split('-')[2] + '일',
             sales: d.amount
         }))
@@ -132,11 +132,14 @@ const downloadExcel = async () => {
     }
     try {
         const res = await franchiseSettlementsApi.getMonthlyExcel(selectedMonth.value)
-        if (res.data) {
-            window.open(res.data, '_blank')
+        if (res && res.startsWith('http')) {
+            window.open(res, '_blank')
+        } else if (res) {
+            alert(res)
         }
     } catch (error) {
         console.error('Failed to download Excel:', error)
+        alert('엑셀 다운로드 중 오류가 발생했습니다.')
     }
 }
 </script>
