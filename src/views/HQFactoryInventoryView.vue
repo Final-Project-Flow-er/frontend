@@ -179,6 +179,7 @@
                         <th style="width: 50px;"><input type="checkbox" :checked="isAllSelected" @change="toggleAll" /></th>
                         <th>제품 식별 코드</th>
                         <th>박스 코드</th>
+                        <th>상태</th>
                         <th>배송완료 일자</th>
                         <th>입고 완료 일자</th>
                     </tr>
@@ -188,6 +189,7 @@
                         <td><input type="checkbox" :value="item.serialCode" v-model="selectedItems" /></td>
                         <td class="sku-cell">{{ item.serialCode }}</td>
                         <td>{{ item.boxCode || '-' }}</td>
+                        <td><span :class="['status-badge', getItemStatusClass(item.status)]">{{ getStatusKor(item.status) }}</span></td>
                         <td>{{ item.shippingDate || '-' }}</td>
                         <td>{{ item.arrivalTime || '-' }}</td>
                     </tr>
@@ -354,7 +356,8 @@ const fetchItems = async (manufactureDate) => {
             boxCode: item.boxCode,
             productionDate: manufactureDate,
             shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
-            arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null
+            arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
+            status: item.status
         }))
     } catch (e) {
         console.error('아이템 조회 실패', e)
@@ -367,6 +370,30 @@ onMounted(() => {
 })
 
 // --- Status Helpers ---
+const getStatusKor = (status) => {
+    switch(status) {
+        case 'AVAILABLE': return '가용';
+        case 'EXPIRED': return '만료';
+        case 'DISCARDED': return '폐기';
+        case 'RESERVED': return '예약';
+        case 'OUTBOUND': return '출고';
+        case 'RETURN_WAIT': return '반품대기';
+        default: return status || '가용';
+    }
+}
+
+const getItemStatusClass = (status) => {
+    switch(status) {
+        case 'AVAILABLE': return 'safe';
+        case 'RESERVED': return 'warning';
+        case 'EXPIRED': return 'danger';
+        case 'DISCARDED': return 'sold';
+        case 'OUTBOUND': return 'sold';
+        case 'RETURN_WAIT': return 'warning';
+        default: return 'safe';
+    }
+}
+
 const getStatusLabel = (qty, safe) => {
     if (qty <= 0) return '품절'
     if (qty <= safe) return '위험'
