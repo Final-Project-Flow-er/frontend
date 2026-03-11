@@ -27,19 +27,24 @@ instance.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
 
-        // If 401 error and not trying to reissue
-        if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/reissue') {
-            originalRequest._retry = true
+        // If 401 error and not already retrying
+        if (error.response?.status === 401 && !originalRequest._retry) {
 
+            // If already at /login or /reissue, stop and redirect to login
+            if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/reissue')) {
+                return Promise.reject(error)
+            }
+
+            originalRequest._retry = true
             const refreshToken = localStorage.getItem('refreshToken')
+
             if (refreshToken) {
+                console.log('Access token expired. Attempting reissue with refresh token...')
                 try {
-                    // Reissue token
-                    const currentAccessToken = localStorage.getItem('accessToken')
+                    // Send reissue request with refresh token (no Authorization header needed for reissue)
                     const response = await axios.post(`${API_BASE_URL}/auth/reissue`, {}, {
                         headers: {
-                            'Authorization-Refresh': refreshToken,
-                            'Authorization': `Bearer ${currentAccessToken}`
+                            'Authorization-Refresh': refreshToken
                         }
                     })
 
@@ -48,21 +53,22 @@ instance.interceptors.response.use(
                         localStorage.setItem('accessToken', accessToken)
                         localStorage.setItem('refreshToken', newRefreshToken)
 
-                        // Re-run original request with new token
+                        console.log('Reissue successful. Retrying original request.')
+                        // Retry the original request with new token
                         originalRequest.headers.Authorization = `Bearer ${accessToken}`
                         return instance(originalRequest)
                     }
                 } catch (reissueError) {
-                    // Reissue failed: logout user
-                    localStorage.removeItem('accessToken')
-                    localStorage.removeItem('refreshToken')
-                    localStorage.removeItem('userRole')
-                    sessionStorage.removeItem('isLoggedIn')
+                    console.error('Reissue failed. Logging out user.', reissueError)
+                    localStorage.clear()
+                    sessionStorage.clear()
                     window.location.href = '/login'
                     return Promise.reject(reissueError)
                 }
             } else {
-                // No refresh token: logout user
+                console.warn('No refresh token available. Redirecting to login.')
+                localStorage.clear()
+                sessionStorage.clear()
                 window.location.href = '/login'
             }
         }
