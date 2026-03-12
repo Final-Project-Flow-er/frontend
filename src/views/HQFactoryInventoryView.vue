@@ -350,15 +350,19 @@ const fetchItems = async (manufactureDate) => {
                 manufactureDate
             }
         })
-        allItems.value = (res.data.data || []).map(item => ({
-            inventoryId: item.inventoryId,
-            serialCode: item.serialCode,
-            boxCode: item.boxCode,
-            productionDate: manufactureDate,
-            shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
-            arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
-            status: item.status
-        }))
+        allItems.value = (res.data.data || []).map(item => {
+            const rawStatus = item.status || '';
+            const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus;
+            return {
+                inventoryId: item.inventoryId,
+                serialCode: item.serialCode,
+                boxCode: item.boxCode,
+                productionDate: manufactureDate,
+                shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
+                arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
+                status: parsedStatus
+            };
+        })
     } catch (e) {
         console.error('아이템 조회 실패', e)
     }
@@ -371,27 +375,25 @@ onMounted(() => {
 
 // --- Status Helpers ---
 const getStatusKor = (status) => {
-    switch(status) {
-        case 'AVAILABLE': return '가용';
-        case 'EXPIRED': return '만료';
-        case 'DISCARDED': return '폐기';
-        case 'RESERVED': return '예약';
-        case 'OUTBOUND': return '출고';
-        case 'RETURN_WAIT': return '반품대기';
-        default: return status || '가용';
-    }
+    const s = (status || '').toUpperCase();
+    if (s.includes('AVAILABLE')) return '가용';
+    if (s.includes('EXPIRED')) return '만료';
+    if (s.includes('DISCARDED')) return '폐기';
+    if (s.includes('RESERVED')) return '예약';
+    if (s.includes('OUTBOUND')) return '출고';
+    if (s.includes('RETURN_WAIT')) return '반품대기';
+    return status || '가용';
 }
 
 const getItemStatusClass = (status) => {
-    switch(status) {
-        case 'AVAILABLE': return 'safe';
-        case 'RESERVED': return 'warning';
-        case 'EXPIRED': return 'danger';
-        case 'DISCARDED': return 'sold';
-        case 'OUTBOUND': return 'sold';
-        case 'RETURN_WAIT': return 'warning';
-        default: return 'safe';
-    }
+    const s = (status || '').toUpperCase();
+    if (s.includes('AVAILABLE')) return 'safe';
+    if (s.includes('RESERVED')) return 'warning';
+    if (s.includes('EXPIRED')) return 'danger';
+    if (s.includes('DISCARDED')) return 'sold';
+    if (s.includes('OUTBOUND')) return 'sold';
+    if (s.includes('RETURN_WAIT')) return 'warning';
+    return 'safe';
 }
 
 const getStatusLabel = (qty, safe) => {

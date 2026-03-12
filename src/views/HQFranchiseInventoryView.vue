@@ -206,8 +206,8 @@
                         <td class="sku-cell">{{ item.serialCode }}</td>
                         <td>{{ item.boxCode }}</td>
                         <td>
-                            <span :class="['status-item-badge', item.status === 'AVAILABLE' ? 'available' : 'return_pending']">
-                                {{ item.status === 'AVAILABLE' ? '가용' : '반품 대기' }}
+                            <span :class="['status-item-badge', (item.status || '').toLowerCase().split('.').pop()]">
+                                {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
                             </span>
                         </td>
                         <td>{{ item.shippingDate || '-' }}</td>
@@ -419,13 +419,17 @@ const fetchItems = async () => {
         if (step3Filter.value.inboundDate) params.receivedAt = step3Filter.value.inboundDate
 
         const res = await axios.get('/api/v1/hq/inventory/franchises/items', { params })
-        granularItems.value = (res.data.data || []).map(i => ({
-            serialCode: i.serialCode,
-            boxCode: i.boxCode,
-            status: i.status === 'AVAILABLE' ? 'AVAILABLE' : i.status,
-            shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
-            arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
-        }))
+        granularItems.value = (res.data.data || []).map(i => {
+            const rawStatus = i.status || '';
+            const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus;
+            return {
+                serialCode: i.serialCode,
+                boxCode: i.boxCode,
+                status: parsedStatus,
+                shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+                arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+            };
+        })
     } catch (e) {
         console.error('소분류 조회 실패:', e)
         granularItems.value = []
@@ -540,7 +544,8 @@ const goToDetail = (code) => {
 
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
 .status-item-badge.available { background: #e6fffa; color: #2c7a7b; }
-.status-item-badge.return_pending { background: #fff5f5; color: #e53e3e; }
+.status-item-badge.return_wait { background: #fee2e2; color: #991b1b; }
+.status-item-badge.expired { background: #fef3c7; color: #92400e; }
 
 
 /* Alert Section */

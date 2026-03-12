@@ -205,8 +205,8 @@
               <td class="sku-cell">{{ item.serialCode }}</td>
               <td>{{ item.boxCode }}</td>
               <td>
-                <span :class="['status-item-badge', item.status.toLowerCase()]">
-                  {{ item.status === 'AVAILABLE' ? '가용' : '반품 대기' }}
+                <span :class="['status-item-badge', (item.status || '').toLowerCase().split('.').pop()]">
+                  {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
                 </span>
               </td>
               <td>{{ item.shippingDate || '-' }}</td>
@@ -439,14 +439,18 @@ const fetchItems = async () => {
 		if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
 
 		const res = await api.post('/franchise/inventory/items', requestBody)
-		granularItems.value = (res.data.data || []).map(i => ({
-			inventoryId: i.inventoryId,
-			serialCode: i.serialCode,
-			boxCode: i.boxCode,
-			status: i.status === 'AVAILABLE' ? 'AVAILABLE' : i.status,
-			shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
-			arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
-		}))
+		granularItems.value = (res.data.data || []).map(i => {
+			const rawStatus = i.status || '';
+			const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus;
+			return {
+				inventoryId: i.inventoryId,
+				serialCode: i.serialCode,
+				boxCode: i.boxCode,
+				status: parsedStatus,
+				shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+				arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+			};
+		})
 	} catch (e) {
 		console.error('소분류(바코드별) 조회 실패:', e)
 		granularItems.value = []
@@ -758,7 +762,8 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
 .status-item-badge.available { background: #dcfce7; color: #166534; }
-.status-item-badge.return_pending { background: #fee2e2; color: #991b1b; }
+.status-item-badge.return_wait { background: #fee2e2; color: #991b1b; }
+.status-item-badge.expired { background: #fef3c7; color: #92400e; }
 
 .empty-cell { text-align: center; color: #94a3b8; padding: 3rem !important; }
 </style>
