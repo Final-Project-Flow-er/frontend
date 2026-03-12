@@ -218,8 +218,7 @@ const getStatusClass = (status) => {
 // [NEW] 상세 페이지 이동
 const goToDetail = (row) => {
   router.push({
-    name: 'OrderReceptionDetail',
-    state: { rowData: row }
+    name: 'OrderReceptionDetail',params: { orderCode: row.orderCode }
   })
 }
 </script>

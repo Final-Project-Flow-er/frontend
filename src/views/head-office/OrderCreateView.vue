@@ -99,7 +99,7 @@ const createOrder = async () => {
       description: orderInfo.value.requirements,
       isRegular: orderInfo.value.type === '정기',
       manufactureDate: orderInfo.value.deadline + 'T00:00:00',
-      items: selectedItems.map(s => ({ productId: s.id, quantity: s.inputQty }))
+      items: selectedItems.map(s => ({ productCode: s.code, quantity: s.inputQty }))
     })
     alert('발주가 성공적으로 생성되었습니다.')
     router.push({ name: 'head-office-order-list' })
