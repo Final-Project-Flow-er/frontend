@@ -151,6 +151,23 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Step 2 Pagination -->
+        <div class="pagination" v-if="batchTotalPages > 1">
+          <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+          <div class="page-numbers">
+            <button 
+              v-for="p in batchTotalPages" 
+              :key="p" 
+              @click="changeBatchPage(p - 1)" 
+              :class="{ active: batchPage === p - 1 }"
+              class="page-num-btn"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+        </div>
       </div>
     </template>
 
@@ -205,8 +222,8 @@
               <td class="sku-cell">{{ item.serialCode }}</td>
               <td>{{ item.boxCode }}</td>
               <td>
-                <span :class="['status-item-badge', item.status.toLowerCase()]">
-                  {{ item.status === 'AVAILABLE' ? '가용' : '반품 대기' }}
+                <span :class="['status-item-badge', (item.status || '').toLowerCase().split('.').pop()]">
+                  {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
                 </span>
               </td>
               <td>{{ item.shippingDate || '-' }}</td>
@@ -217,6 +234,23 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Step 3 Pagination -->
+        <div class="pagination" v-if="itemTotalPages > 1">
+          <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+          <div class="page-numbers">
+            <button 
+              v-for="p in itemTotalPages" 
+              :key="p" 
+              @click="changeItemPage(p - 1)" 
+              :class="{ active: itemPage === p - 1 }"
+              class="page-num-btn"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+        </div>
       </div>
 
       <!-- Bottom Actions -->
@@ -407,51 +441,84 @@ const hasMoreAlerts = computed(() => {
 
 // Step 2 Compute -> API 연동
 const sortedBatches = ref([])
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
 
 const fetchBatches = async (productId) => {
-    try {
-        const res = await api.get(`/franchise/inventory/batches/${productId}`)
-        sortedBatches.value = (res.data.data || []).map(b => ({
-            productionDate: b.manufactureDate,
-            total: b.totalQuantity,
-            available: b.availableQuantity,
-            pending: b.returnPending
-        }))
-    } catch (e) {
-        console.error('중분류(제조일별) 조회 실패:', e)
-        sortedBatches.value = []
-    }
+  try {
+    const res = await api.get(`/franchise/inventory/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
+    })
+    const pageData = res.data.data || {}
+    sortedBatches.value = (pageData.content || []).map(b => ({
+      productionDate: b.manufactureDate,
+      total: b.totalQuantity,
+      available: b.availableQuantity,
+      pending: b.returnPending
+    }))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed:', e)
+    sortedBatches.value = []
+    batchTotalPages.value = 0
+  }
 }
 
 // Step 3 Compute -> API 연동
 const granularItems = ref([])
 
 const fetchItems = async () => {
-	if (!selectedProduct.value || !selectedProductionDate.value) return
-	try {
-		const requestBody = {
-			productId: selectedProduct.value.productId,
-			manufactureDate: selectedProductionDate.value
-		}
-		if (step3Filter.value.serialCode) requestBody.serialCode = step3Filter.value.serialCode
-		if (step3Filter.value.boxCode) requestBody.boxCode = step3Filter.value.boxCode
-		if (step3Filter.value.shippingDate) requestBody.shippedAt = step3Filter.value.shippingDate
-		if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
+  if (!selectedProduct.value || !selectedProductionDate.value) return
+  try {
+    const requestBody = {
+      productId: selectedProduct.value.productId,
+      manufactureDate: selectedProductionDate.value
+    }
+    if (step3Filter.value.serialCode) requestBody.serialCode = step3Filter.value.serialCode
+    if (step3Filter.value.boxCode) requestBody.boxCode = step3Filter.value.boxCode
+    if (step3Filter.value.shippingDate) requestBody.shippedAt = step3Filter.value.shippingDate
+    if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
 
-		const res = await api.post('/franchise/inventory/items', requestBody)
-		granularItems.value = (res.data.data || []).map(i => ({
-			inventoryId: i.inventoryId,
-			serialCode: i.serialCode,
-			boxCode: i.boxCode,
-			status: i.status === 'AVAILABLE' ? 'AVAILABLE' : i.status,
-			shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
-			arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
-		}))
-	} catch (e) {
-		console.error('소분류(바코드별) 조회 실패:', e)
-		granularItems.value = []
-	}
+    const res = await api.post('/franchise/inventory/items', requestBody, {
+      params: { page: itemPage.value, size: itemSize.value }
+    })
+    const pageData = res.data.data || {}
+    granularItems.value = (pageData.content || []).map(i => {
+      const rawStatus = i.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        inventoryId: i.inventoryId,
+        serialCode: i.serialCode,
+        boxCode: i.boxCode,
+        status: parsedStatus,
+        shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+        arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed:', e)
+    granularItems.value = []
+    itemTotalPages.value = 0
+  }
 }
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems()
+}
+
 
 watch(step3Filter, () => {
     if (currentStep.value === 3) {
@@ -506,16 +573,19 @@ const createOrder = () => {
 }
 
 const goToStep2 = async (product) => {
-    selectedProduct.value = product
-    await fetchBatches(product.productId)
-    currentStep.value = 2
-    selectedItems.value = [] // Reset selection when moving
+  selectedProduct.value = product
+  selectedItems.value = []
+  batchPage.value = 0
+  currentStep.value = 2
+  await fetchBatches(product.productId)
 }
 
 const goToStep3 = async (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    await fetchItems()
-    currentStep.value = 3
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  currentStep.value = 3
+  await fetchItems(batch.productionDate)
 }
 
 const requestDisposal = async () => {
@@ -758,7 +828,8 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
 .status-item-badge.available { background: #dcfce7; color: #166534; }
-.status-item-badge.return_pending { background: #fee2e2; color: #991b1b; }
+.status-item-badge.return_wait { background: #fee2e2; color: #991b1b; }
+.status-item-badge.expired { background: #fef3c7; color: #92400e; }
 
 .empty-cell { text-align: center; color: #94a3b8; padding: 3rem !important; }
 </style>
