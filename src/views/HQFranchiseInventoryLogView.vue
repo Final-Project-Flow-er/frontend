@@ -188,7 +188,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import axios from 'axios'
 import api from '@/api/index'
 
 const showModal = ref(true) // Open on load
@@ -321,7 +320,7 @@ const isExpanded = (id) => expandedRows.value.includes(id)
 const stores = ref([])
 onMounted(async () => {
     try {
-        const res = await axios.get('/api/v1/hq/inventory/franchises')
+        const res = await api.get('/hq/inventory/franchises')
         const data = res.data.data || {}
         stores.value = Object.entries(data).map(([id, name]) => ({
             id: Number(id),

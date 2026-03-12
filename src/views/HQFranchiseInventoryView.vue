@@ -277,7 +277,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '@/api/index'
 
 const router = useRouter()
 
@@ -289,7 +289,7 @@ const stores = ref([])
 
 const fetchStores = async () => {
     try {
-        const res = await axios.get('/api/v1/hq/inventory/franchises')
+        const res = await api.get('/hq/inventory/franchises')
         const data = res.data.data || {}
         stores.value = Object.entries(data).map(([id, name]) => ({
             id: Number(id),
@@ -344,7 +344,7 @@ const fetchFranchiseInventory = async (franchiseId) => {
         currentStep.value = 1
         selectedProduct.value = null
         
-        const res = await axios.get(`/api/v1/hq/inventory/franchises/${franchiseId}`)
+        const res = await api.get(`/hq/inventory/franchises/${franchiseId}`)
         products.value = (res.data.data || []).map(p => ({
             productId: p.productId,
             productCode: p.productCode,
@@ -364,7 +364,7 @@ const fetchFranchiseInventory = async (franchiseId) => {
 
 const fetchFranchiseAlerts = async (franchiseId) => {
     try {
-        const res = await axios.get(`/api/v1/hq/inventory/franchises/${franchiseId}/alerts`)
+        const res = await api.get(`/hq/inventory/franchises/${franchiseId}/alerts`)
         const data = res.data.data || {}
         expiringItems.value = (data.expirationAlerts || []).map(e => ({
             productName: e.productName,
@@ -433,7 +433,7 @@ const itemTotalPages = ref(0)
 
 const fetchBatches = async (productId) => {
   try {
-    const res = await axios.get(`/api/v1/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`, {
+    const res = await api.get(`/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`, {
       params: { page: batchPage.value, size: batchSize.value }
     })
     const pageData = res.data.data || {}
@@ -466,7 +466,7 @@ const fetchItems = async () => {
     if (step3Filter.value.shippingDate) params.shippedAt = step3Filter.value.shippingDate
     if (step3Filter.value.inboundDate) params.receivedAt = step3Filter.value.inboundDate
 
-    const res = await axios.get('/api/v1/hq/inventory/franchises/items', { params })
+    const res = await api.get('/hq/inventory/franchises/items', { params })
     const pageData = res.data.data || {}
     granularItems.value = (pageData.content || []).map(i => {
       const rawStatus = i.status || ''
