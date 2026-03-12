@@ -65,16 +65,33 @@ const filteredReturns = computed(() => {
   })
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송 대기': 'status-info',
-  '배송중': 'status-primary',
-  '배송 완료': 'status-ok',
-  '검수': 'status-primary',
-  '대금 차감 완료': 'status-ok',
-  '대금 차감 거절': 'status-danger'
-}[s] || '')
+const RETURN_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+const toStatusLabel = (s) => RETURN_STATUS_LABEL[s] || s
+
+const getStatusClass = (s) => {
+  const label = RETURN_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '배송대기': 'status-info',
+    '배송중': 'status-primary',
+    '배송완료': 'status-ok',
+    '검수중': 'status-primary',
+    '대금 차감 완료': 'status-ok',
+    '대금 차감 거절': 'status-danger',
+    '취소': 'status-danger'
+  }[label] || ''
+}
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
@@ -169,7 +186,7 @@ const goToDetail = (item) => {
             <td>{{ item.details }}</td>
             <td>{{ item.reason }}</td>
             <td>{{ item.date }}</td>
-            <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
+            <td><span :class="['status-tag', getStatusClass(item.status)]">{{ toStatusLabel(item.status) }}</span></td>
           </tr>
         </tbody>
       </table>
