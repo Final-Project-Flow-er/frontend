@@ -83,14 +83,19 @@ const flattenedOrders = computed(() => {
   return flattened
 })
 
+const HQ_ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => HQ_ORDER_STATUS_LABEL[s] || s
+
 const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '부분 접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger'
+  PENDING: 'status-warning',
+  ACCEPTED: 'status-info',
+  CANCELED: 'status-danger',
+  REJECTED: 'status-danger'
 }[s] || '')
 
 const goToDetail = (item) => {
@@ -121,13 +126,7 @@ const goToEdit = (item) => {
         <label>발주 상태</label>
         <select v-model="filter.status">
           <option value="">전체</option>
-          <option value="대기">대기</option>
-          <option value="접수">접수</option>
-          <option value="부분 접수">부분 접수</option>
-          <option value="배송중">배송중</option>
-          <option value="배송완료">배송완료</option>
-          <option value="취소">취소</option>
-          <option value="반려">반려</option>
+          <option v-for="(label, key) in HQ_ORDER_STATUS_LABEL" :key="key" :value="key">{{ label }}</option>
         </select>
       </div>
       <div class="filter-group">
@@ -174,7 +173,7 @@ const goToEdit = (item) => {
             :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
           >
             <td class="sku-cell">{{ row.orderCode }}</td>
-            <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ row.orderStatus }}</span></td>
+            <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
             <td class="sku-cell small">{{ row.product.productCode }}</td>
             <td>{{ row.product.quantity }}</td>
             <td>{{ row.orderDate }}</td>
