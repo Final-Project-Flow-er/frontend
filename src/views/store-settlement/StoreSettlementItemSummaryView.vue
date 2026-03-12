@@ -1,39 +1,125 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { franchiseSettlementsApi } from '@/api/franchiseSettlements.js'
 
 const router = useRouter()
+const route = useRoute()
 
-/* ── 항목별 요약 데이터 ── */
+/* ── 상태 ── */
+const activeTab = ref(route.query.tab || (route.query.date ? 'daily' : 'monthly'))
+const selectedDate = ref(route.query.date || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`)
+const selectedMonth = ref(route.query.month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+
+const isLoading = ref(false)
+
 const categories = ref([
-  { key: 'sales',      label: '판매 대금',   icon: '💰', count: 37, total: 11404000,  color: '#6366f1' },
-  { key: 'order',      label: '발주 대금',   icon: '📦', count: 12, total: 3700000,   color: '#f97316' },
-  { key: 'shipping',   label: '배송비',      icon: '🚚', count: 12, total: 300000,    color: '#0ea5e9' },
-  { key: 'commission', label: '수수료',      icon: '🏷️', count: 37, total: 342120,    color: '#8b5cf6' },
-  { key: 'refund',     label: '반품 환급',   icon: '↩️', count: 3,  total: 258000,    color: '#10b981' },
-  { key: 'loss',       label: '손실 금액',   icon: '⚠️', count: 2,  total: 44000,     color: '#ef4444' },
-  { key: 'adjust',     label: '기타 조정',   icon: '✏️', count: 1,  total: -15000,    color: '#64748b' },
+  { key: 'sales',      label: '판매 대금',   icon: '💰', count: 0, total: 0,  color: '#6366f1', type: 'SALES' },
+  { key: 'order',      label: '발주 대금',   icon: '📦', count: 0, total: 0,  color: '#f97316', type: 'ORDER' },
+  { key: 'shipping',   label: '배송비',      icon: '🚚', count: 0, total: 0,  color: '#0ea5e9', type: 'DELIVERY' },
+  { key: 'commission', label: '수수료',      icon: '🏷️', count: 0, total: 0,  color: '#8b5cf6', type: 'COMMISSION' },
+  { key: 'refund',     label: '반품 환급',   icon: '↩️', count: 0, total: 0,  color: '#10b981', type: 'REFUND' },
+  { key: 'loss',       label: '손실 금액',   icon: '⚠️', count: 0, total: 0,  color: '#ef4444', type: 'LOSS' },
+  { key: 'adjust',     label: '기타 조정',   icon: '✏️', count: 0, total: 0,  color: '#64748b', type: 'ADJUSTMENT' },
 ])
 
+const summaryData = ref({
+    totalSaleAmount: 0,
+    orderAmount: 0,
+    deliveryFee: 0,
+    commissionFee: 0,
+    refundAmount: 0,
+    lossAmount: 0,
+    adjustmentAmount: 0,
+    finalAmount: 0
+})
+
+/* ── 데이터 페칭 ── */
+const fetchData = async () => {
+    isLoading.value = true
+    try {
+        let sumRes
+        if (activeTab.value === 'daily') {
+            sumRes = await franchiseSettlementsApi.getDailySummary(selectedDate.value)
+        } else {
+            sumRes = await franchiseSettlementsApi.getMonthlySummary(selectedMonth.value)
+        }
+        summaryData.value = sumRes
+        
+        // 카테고리별 금액 업데이트
+        categories.value.find(c => c.key === 'sales').total = summaryData.value.totalSaleAmount
+        categories.value.find(c => c.key === 'order').total = summaryData.value.orderAmount
+        categories.value.find(c => c.key === 'shipping').total = summaryData.value.deliveryFee
+        categories.value.find(c => c.key === 'commission').total = summaryData.value.commissionFee
+        categories.value.find(c => c.key === 'refund').total = summaryData.value.refundAmount
+        categories.value.find(c => c.key === 'loss').total = summaryData.value.lossAmount
+        categories.value.find(c => c.key === 'adjust').total = summaryData.value.adjustmentAmount
+        
+        // 카테고리별 건수 페칭 (병렬)
+        await Promise.all(categories.value.map(async (cat) => {
+            const params = {
+                period: activeTab.value.toUpperCase(),
+                type: cat.type,
+                page: 0,
+                size: 1
+            }
+            if (activeTab.value === 'daily') params.date = selectedDate.value
+            else params.month = selectedMonth.value
+            
+            try {
+                const res = await franchiseSettlementsApi.getVouchers(params)
+                cat.count = res.totalElements
+            } catch (e) {
+                console.error(`Failed to fetch count for ${cat.key}`, e)
+            }
+        }))
+        
+    } catch (error) {
+        console.error('Failed to fetch summary data:', error)
+    } finally {
+        isLoading.value = false
+    }
+}
+
+onMounted(fetchData)
+watch([selectedDate, selectedMonth, activeTab], fetchData)
+
 /* ── 포맷 ── */
-const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n))
+const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n || 0))
 
 /* ── 전표 목록으로 이동 ── */
-const goToVouchers = (filterType) => {
-  router.push({ path: '/store/settlement/vouchers', query: { filter: filterType } })
+const goToVouchers = (cat) => {
+  const query = { 
+      type: cat.type,
+      period: activeTab.value.toUpperCase()
+  }
+  if (activeTab.value === 'daily') query.date = selectedDate.value
+  else query.month = selectedMonth.value
+  
+  router.push({ path: '/store/settlement/vouchers', query })
 }
 </script>
 
 <template>
-  <div class="content-wrapper">
+  <div class="content-wrapper" :class="{ 'is-loading': isLoading }">
     <!-- 페이지 헤더 -->
     <div class="page-header">
       <div class="header-left">
         <div>
           <h1 class="page-title">정산 항목 요약</h1>
-          <p class="page-desc">항목별 건수 및 합계를 조회합니다. 클릭 시 전표 목록으로 이동합니다.</p>
+          <p class="page-desc">{{ activeTab === 'daily' ? selectedDate : selectedMonth }} 항목별 건수 및 합계입니다.</p>
         </div>
       </div>
+    </div>
+
+    <!-- 탭 및 선택 -->
+    <div class="control-bar">
+      <div class="tab-group">
+        <button :class="{ active: activeTab === 'daily' }" @click="activeTab = 'daily'">일별</button>
+        <button :class="{ active: activeTab === 'monthly' }" @click="activeTab = 'monthly'">월별</button>
+      </div>
+      <input v-if="activeTab === 'daily'" type="date" v-model="selectedDate" class="date-input" />
+      <input v-else type="month" v-model="selectedMonth" class="date-input" />
     </div>
 
     <!-- 항목 카드 그리드 -->
@@ -42,15 +128,15 @@ const goToVouchers = (filterType) => {
         v-for="cat in categories"
         :key="cat.key"
         class="category-card"
-        @click="goToVouchers(cat.key)"
+        @click="goToVouchers(cat)"
       >
         <div class="cat-top">
           <span class="cat-icon">{{ cat.icon }}</span>
           <span class="cat-count">{{ cat.count }}건</span>
         </div>
         <h3 class="cat-label">{{ cat.label }}</h3>
-        <p class="cat-amount" :class="{ minus: cat.total < 0 }">
-          {{ cat.total < 0 ? '−' : '' }}₩ {{ fmt(cat.total) }}
+        <p class="cat-amount" :class="{ minus: ['order', 'shipping', 'commission', 'loss'].includes(cat.key) || cat.total < 0 }">
+          {{ (['order', 'shipping', 'commission', 'loss'].includes(cat.key) || cat.total < 0) ? '−' : '' }}₩ {{ fmt(cat.total) }}
         </p>
         <div class="cat-bar" :style="{ backgroundColor: cat.color }"></div>
         <div class="cat-action">
@@ -64,38 +150,34 @@ const goToVouchers = (filterType) => {
     <div class="total-summary-card">
       <div class="ts-row">
         <span class="ts-label">판매 대금 합계</span>
-        <span class="ts-val plus">+ ₩ {{ fmt(categories.find(c => c.key === 'sales').total) }}</span>
+        <span class="ts-val plus">+ ₩ {{ fmt(summaryData.totalSaleAmount) }}</span>
       </div>
       <div class="ts-row">
         <span class="ts-label">차감 항목 합계 (발주 + 배송 + 수수료 + 손실)</span>
-        <span class="ts-val minus">− ₩ {{ fmt(categories.filter(c => ['order','shipping','commission','loss'].includes(c.key)).reduce((s,c) => s + c.total, 0)) }}</span>
+        <span class="ts-val minus">− ₩ {{ fmt(summaryData.orderAmount + summaryData.deliveryFee + summaryData.commissionFee + summaryData.lossAmount) }}</span>
       </div>
       <div class="ts-row">
         <span class="ts-label">반품 환급 합계</span>
-        <span class="ts-val plus">+ ₩ {{ fmt(categories.find(c => c.key === 'refund').total) }}</span>
+        <span class="ts-val plus">+ ₩ {{ fmt(summaryData.refundAmount) }}</span>
       </div>
       <div class="ts-row">
         <span class="ts-label">기타 조정</span>
-        <span class="ts-val" :class="categories.find(c => c.key === 'adjust').total < 0 ? 'minus' : 'plus'">
-          {{ categories.find(c => c.key === 'adjust').total < 0 ? '−' : '+' }} ₩ {{ fmt(categories.find(c => c.key === 'adjust').total) }}
+        <span class="ts-val" :class="summaryData.adjustmentAmount < 0 ? 'minus' : 'plus'">
+          {{ summaryData.adjustmentAmount < 0 ? '−' : '+' }} ₩ {{ fmt(summaryData.adjustmentAmount) }}
         </span>
       </div>
       <div class="ts-divider"></div>
       <div class="ts-row final">
         <span class="ts-label">최종 정산 금액</span>
-        <span class="ts-val">₩ {{ fmt(
-          categories.find(c => c.key === 'sales').total
-          - categories.filter(c => ['order','shipping','commission','loss'].includes(c.key)).reduce((s,c) => s + c.total, 0)
-          + categories.find(c => c.key === 'refund').total
-          + categories.find(c => c.key === 'adjust').total
-        ) }}</span>
+        <span class="ts-val">₩ {{ fmt(summaryData.finalAmount) }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.content-wrapper { max-width: 1400px; margin: 0 auto; }
+.content-wrapper { max-width: 1400px; margin: 0 auto; transition: opacity 0.3s; }
+.is-loading { opacity: 0.6; pointer-events: none; }
 
 /* ── 페이지 헤더 ── */
 .page-header { margin-bottom: 1.5rem; }
@@ -103,6 +185,14 @@ const goToVouchers = (filterType) => {
 
 .page-title { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0 0 0.25rem; }
 .page-desc { color: var(--text-light); font-size: 0.9rem; margin: 0; }
+
+.control-bar { margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; }
+.tab-group { display: flex; background: white; border-radius: 10px; border: 1px solid var(--border-color); overflow: hidden; }
+.tab-group button { padding: 0.5rem 1.2rem; border: none; background: transparent; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.tab-group button.active { background: #475569; color: white; }
+
+.date-input { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.9rem; background: white; color: var(--text-dark); cursor: pointer; outline: none; }
+.date-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
 
 /* ── 카테고리 그리드 ── */
 .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }

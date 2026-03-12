@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getOrderList } from '@/api/franchiseOrders.js'
 import { getReturnList } from '@/api/franchiseReturns.js'
@@ -36,23 +36,72 @@ const formatTime = (iso) => iso ? iso.replace('T', ' ').substring(11, 16) : ''
 
 const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
 
+// 백엔드 영문 상태 → 한글 표시 매핑
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+
+const RETURN_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+
+const toOrderStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+const toReturnStatusLabel = (s) => RETURN_STATUS_LABEL[s] || s
+
 // [데이터 1] 발주 데이터 (flat from API)
 const rawOrders = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-onMounted(async () => {
+const fetchOrders = async () => {
   loading.value = true
+  error.value = null
   try {
-    const [orderData, returnData] = await Promise.all([getOrderList(), getReturnList()])
-    rawOrders.value = orderData || []
-    rawReturns.value = returnData || []
+    rawOrders.value = (await getOrderList()) || []
   } catch (e) {
-    error.value = e.message
+    console.error('발주 조회 실패:', e)
+    error.value = e.message || '발주 데이터를 불러오지 못했습니다.'
   } finally {
     loading.value = false
   }
+}
+
+const fetchReturns = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    rawReturns.value = (await getReturnList()) || []
+  } catch (e) {
+    console.error('반품 조회 실패:', e)
+    error.value = e.message || '반품 데이터를 불러오지 못했습니다.'
+  } finally {
+    loading.value = false
+  }
+}
+
+// 탭 전환 시 해당 API 호출
+watch(viewMode, (mode) => {
+  if (mode === 'order') fetchOrders()
+  else fetchReturns()
 })
+
+// 초기 로드: 발주 내역
+onMounted(() => fetchOrders())
 
 // Build order total per orderCode
 const orderTotalMap = computed(() => {
@@ -118,18 +167,24 @@ const filteredReturns = computed(() => {
   })
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '배송 완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger',
-  '검수': 'status-primary',
-  '대금 차감 완료': 'status-ok',
-  '대금 차감 거절': 'status-danger'
-}[s] || '')
+const getStatusClass = (s) => {
+  const label = ORDER_STATUS_LABEL[s] || RETURN_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '부분 접수': 'status-info',
+    '배송 대기': 'status-warning',
+    '배송대기': 'status-warning',
+    '배송중': 'status-primary',
+    '배송 완료': 'status-ok',
+    '배송완료': 'status-ok',
+    '취소': 'status-danger',
+    '반려': 'status-danger',
+    '검수중': 'status-primary',
+    '대금 차감 완료': 'status-ok',
+    '대금 차감 거절': 'status-danger'
+  }[label] || ''
+}
 
 const formatNumber = (num) => new Intl.NumberFormat('ko-KR').format(num)
 
@@ -199,13 +254,14 @@ const goToDetail = (item) => {
           <label>발주 상태</label>
           <select v-model="filter.status">
             <option value="">전체</option>
-            <option value="대기">대기</option>
-            <option value="접수">접수</option>
-            <option value="부분 접수">부분 접수</option>
-            <option value="배송중">배송중</option>
-            <option value="배송완료">배송완료</option>
-            <option value="취소">취소</option>
-            <option value="반려">반려</option>
+            <option value="PENDING">대기</option>
+            <option value="ACCEPTED">접수</option>
+            <option value="PARTIAL">부분 접수</option>
+            <option value="SHIPPING_PENDING">배송 대기</option>
+            <option value="SHIPPING">배송중</option>
+            <option value="COMPLETED">배송 완료</option>
+            <option value="CANCELED">취소</option>
+            <option value="REJECTED">반려</option>
           </select>
         </div>
         <div class="filter-group">
@@ -249,6 +305,9 @@ const goToDetail = (item) => {
       </div>
     </div>
 
+    <!-- 로딩/에러 표시 -->
+    <div v-if="loading" class="status-message">데이터를 불러오는 중...</div>
+
     <!-- Data Table -->
     <div class="data-table-card">
       <!-- 1. 발주 테이블 -->
@@ -275,7 +334,7 @@ const goToDetail = (item) => {
             class="clickable-row"
         >
           <td class="sku-cell">{{ item.orderCode }}</td>
-          <td><span :class="['status-tag', getStatusClass(item.orderStatus)]">{{ item.orderStatus }}</span></td>
+          <td><span :class="['status-tag', getStatusClass(item.orderStatus)]">{{ toOrderStatusLabel(item.orderStatus) }}</span></td>
           <td class="sku-cell small">{{ item.productCode }}</td>
           <td class="text-right">{{ formatNumber(item.unitPrice) }}</td>
           <td class="text-right">{{ formatNumber(item.quantity) }}</td>
@@ -313,7 +372,7 @@ const goToDetail = (item) => {
             class="clickable-row"
         >
           <td class="sku-cell">{{ item.returnCode }}</td>
-          <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
+          <td><span :class="['status-tag', getStatusClass(item.status)]">{{ toReturnStatusLabel(item.status) }}</span></td>
           <td>{{ item.orderCode }}</td>
           <td class="sku-cell small">{{ item.productCode }}</td>
           <td style="min-width: 150px; white-space: normal;">{{ item.productName }}</td>
@@ -422,6 +481,9 @@ const goToDetail = (item) => {
 
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f8fafc; }
+
+.status-message { text-align: center; padding: 1rem; font-size: 0.95rem; color: var(--text-light); }
+.error-message { color: #991b1b; background: #fee2e2; border-radius: 8px; border: 1px solid #fecaca; }
 
 :root {
   --primary: #4f46e5;

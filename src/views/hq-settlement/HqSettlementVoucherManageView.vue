@@ -1,17 +1,14 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { settlementsApi } from '@/api/settlements.js'
 
 /* ── 가맹점 선택 ── */
-const storeOptions = [
-  { id: 'S001', name: '강남점' }, { id: 'S002', name: '홍대점' }, { id: 'S003', name: '신촌점' },
-  { id: 'S004', name: '이태원점' }, { id: 'S005', name: '잠실점' }, { id: 'S006', name: '명동점' },
-  { id: 'S007', name: '건대점' }, { id: 'S008', name: '서울대점' }, { id: 'S009', name: '합정점' }, { id: 'S010', name: '성수점' },
-]
+const storeOptions = ref([])
 
 /* ── 폼 ── */
 const form = ref({
   storeId: '',
-  type: 'adjust',
+  type: 'ADJUST',
   description: '',
   amount: '',
   isDeduction: false,
@@ -19,48 +16,68 @@ const form = ref({
 })
 
 const typeOptions = [
-  { key: 'adjust', label: '기타 조정' },
-  { key: 'sales', label: '판매 대금 보정' },
-  { key: 'order', label: '발주 대금 보정' },
-  { key: 'shipping', label: '배송비 보정' },
-  { key: 'commission', label: '수수료 보정' },
-  { key: 'refund', label: '반품 환급 보정' },
-  { key: 'loss', label: '손실 보정' },
+  { key: 'ADJUST', label: '기타 조정' },
+  { key: 'SALES_ADJUST', label: '판매 대금 보정' },
+  { key: 'ORDER_ADJUST', label: '발주 대금 보정' },
+  { key: 'SHIPPING_ADJUST', label: '배송비 보정' },
+  { key: 'COMMISSION_ADJUST', label: '수수료 보정' },
+  { key: 'REFUND_ADJUST', label: '반품 환급 보정' },
+  { key: 'LOSS_ADJUST', label: '손실 보정' },
 ]
 
-/* ── 기등록 전표 Mock ── */
-const registeredVouchers = ref([
-  { id: 'AD-001', store: '강남점', type: '기타 조정', desc: '본사 프로모션 보전금', amount: 50000, isDeduction: false, date: '2026-02-08', registrant: '정산관리자' },
-  { id: 'AD-002', store: '홍대점', type: '손실 보정', desc: '배송 파손 보상', amount: -25000, isDeduction: true, date: '2026-02-07', registrant: '정산관리자' },
-  { id: 'AD-003', store: '명동점', type: '기타 조정', desc: '이벤트 추가 정산', amount: 30000, isDeduction: false, date: '2026-02-05', registrant: '정산관리자' },
-])
+/* ── 기등록 전표 상태 ── */
+const registeredVouchers = ref([])
+const totalCount = ref(0)
+const isLoading = ref(false)
+
+const fetchData = async () => {
+    isLoading.value = true
+    try {
+        // 1. 가맹점 목록 (드롭다운용)
+        const stores = await settlementsApi.getAdjustmentFranchises()
+        storeOptions.value = stores
+
+        // 2. 조정 전표 목록 (현재 달 기준)
+        const today = new Date()
+        const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+        const res = await settlementsApi.getAdjustments({ month: monthStr, size: 50 })
+        registeredVouchers.value = res.content
+        totalCount.value = res.totalElements
+    } catch (err) {
+        console.error('Failed to fetch adjustments:', err)
+    } finally {
+        isLoading.value = false
+    }
+}
+
+onMounted(fetchData)
 
 const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n))
 
 /* ── 등록 ── */
-const submitVoucher = () => {
+const submitVoucher = async () => {
   if (!form.value.storeId) { alert('가맹점을 선택해주세요.'); return }
   if (!form.value.description) { alert('내역을 입력해주세요.'); return }
   if (!form.value.amount || isNaN(form.value.amount)) { alert('금액을 입력해주세요.'); return }
 
-  const store = storeOptions.find(s => s.id === form.value.storeId)
-  const amt = form.value.isDeduction ? -Math.abs(Number(form.value.amount)) : Math.abs(Number(form.value.amount))
-
-  registeredVouchers.value.unshift({
-    id: `AD-${String(registeredVouchers.value.length + 1).padStart(3, '0')}`,
-    store: store.name,
-    type: typeOptions.find(t => t.key === form.value.type).label,
-    desc: form.value.description,
-    amount: amt,
-    isDeduction: form.value.isDeduction,
-    date: form.value.date,
-    registrant: '정산관리자',
-  })
-
-  alert(`조정 전표가 등록되었습니다.\n가맹점: ${store.name}\n금액: ${amt < 0 ? '−' : '+'}₩ ${fmt(amt)}`)
-
-  // 초기화
-  form.value = { storeId: '', type: 'adjust', description: '', amount: '', isDeduction: false, date: new Date().toISOString().split('T')[0] }
+  try {
+      await settlementsApi.createAdjustment({
+          franchiseId: form.value.storeId,
+          type: form.value.type,
+          occurredAt: form.value.date + 'T00:00:00',
+          amount: Number(form.value.amount),
+          isMinus: form.value.isDeduction,
+          reason: form.value.description
+      })
+      
+      alert('조정 전표가 등록되었습니다.')
+      
+      // 초기화 및 리프레시
+      form.value = { storeId: '', type: 'ADJUST', description: '', amount: '', isDeduction: false, date: new Date().toISOString().split('T')[0] }
+      fetchData()
+  } catch (err) {
+      alert('전표 등록에 실패했습니다: ' + err.message)
+  }
 }
 </script>
 
@@ -87,7 +104,7 @@ const submitVoucher = () => {
           <label>가맹점 <span class="required">*</span></label>
           <select v-model="form.storeId" class="form-select">
             <option value="" disabled>선택하세요</option>
-            <option v-for="s in storeOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+            <option v-for="s in storeOptions" :key="s.franchiseId" :value="s.franchiseId">{{ s.franchiseName }}</option>
           </select>
         </div>
         <div class="form-group">
@@ -140,16 +157,22 @@ const submitVoucher = () => {
           <tr><th>전표번호</th><th>가맹점</th><th>유형</th><th>내역</th><th class="text-right">금액</th><th>발생일</th><th>등록자</th></tr>
         </thead>
         <tbody>
-          <tr v-for="v in registeredVouchers" :key="v.id">
-            <td class="id-cell">{{ v.id }}</td>
-            <td class="fw600">{{ v.store }}</td>
+          <tr v-if="isLoading">
+            <td colspan="7" class="text-center" style="padding: 2rem;">데이터를 불러오는 중입니다...</td>
+          </tr>
+          <tr v-else-if="registeredVouchers.length === 0">
+            <td colspan="7" class="text-center" style="padding: 2rem;">등록된 조정 전표가 없습니다.</td>
+          </tr>
+          <tr v-for="v in registeredVouchers" :key="v.adjustmentId" v-else>
+            <td class="id-cell">#{{ v.adjustmentId }}</td>
+            <td class="fw600">{{ v.franchiseName }}</td>
             <td><span class="type-tag">{{ v.type }}</span></td>
-            <td>{{ v.desc }}</td>
+            <td>{{ v.reason }}</td>
             <td class="text-right" :class="v.amount < 0 ? 'negative' : 'positive'">
               {{ v.amount < 0 ? '−' : '+' }}₩ {{ fmt(v.amount) }}
             </td>
-            <td class="time-cell">{{ v.date }}</td>
-            <td>{{ v.registrant }}</td>
+            <td class="time-cell">{{ v.occurredAt }}</td>
+            <td>관리자</td>
           </tr>
         </tbody>
       </table>
