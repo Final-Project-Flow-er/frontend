@@ -361,6 +361,8 @@ const handleDriverPhoneInput = (e) => {
 
 // 주소 검색 (Daum Postcode)
 const openPostcode = () => {
+  const width = 500
+  const height = 600
   new window.daum.Postcode({
     oncomplete: (data) => {
       let fullAddress = data.address
@@ -382,7 +384,10 @@ const openPostcode = () => {
       const mapped = sidoMap[data.sido] || Object.entries(sidoMap).find(([k]) => data.sido.includes(k))?.[1]
       if (mapped) companyData.usableRegion = mapped
     }
-  }).open()
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  })
 }
 
 // 날짜 유효성 검사

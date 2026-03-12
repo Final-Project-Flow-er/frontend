@@ -321,6 +321,8 @@ const handleVehicleNumberInput = (e) => {
 }
 
 const openPostcode = () => {
+  const width = 500
+  const height = 600
   new window.daum.Postcode({
     oncomplete: (data) => {
       formData.value.address = data.address
@@ -334,7 +336,10 @@ const openPostcode = () => {
       const mapped = sidoMap[data.sido] || Object.entries(sidoMap).find(([k]) => data.sido.includes(k))?.[1]
       if (mapped) formData.value.usableRegion = mapped
     }
-  }).open()
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  })
 }
 
 const validateDates = () => {
