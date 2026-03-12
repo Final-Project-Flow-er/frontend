@@ -11,6 +11,18 @@ const orderItem = ref(null)
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 const formatTime = (iso) => iso ? iso.replace('T', ' ').substring(11, 16) : ''
 
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+
 onMounted(async () => {
   try {
     const data = await getOrderDetail(orderId)
@@ -36,17 +48,22 @@ onMounted(async () => {
   }
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger'
-}[s] || '')
+const getStatusClass = (s) => {
+  const label = ORDER_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '부분 접수': 'status-info',
+    '배송 대기': 'status-warning',
+    '배송중': 'status-primary',
+    '배송 완료': 'status-ok',
+    '취소': 'status-danger',
+    '반려': 'status-danger'
+  }[label] || ''
+}
 
 const cancelOrder = async () => {
-  if (orderItem.value.orderStatus !== '대기') {
+  if (orderItem.value.orderStatus !== 'PENDING') {
     alert('발주 상태가 대기가 아니면 취소할 수 없습니다.')
     return
   }
@@ -72,8 +89,8 @@ const goToEdit = () => {
     <div class="header-row">
       <h2>발주 상세 정보</h2>
       <div class="header-actions">
-        <button v-if="orderItem.orderStatus === '대기'" @click="cancelOrder" class="delete-btn">발주 취소</button>
-        <button v-if="orderItem.orderStatus === '대기'" @click="goToEdit" class="edit-btn">수정</button>
+        <button v-if="orderItem.orderStatus === 'PENDING'" @click="cancelOrder" class="delete-btn">발주 취소</button>
+        <button v-if="orderItem.orderStatus === 'PENDING'" @click="goToEdit" class="edit-btn">수정</button>
         <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
       </div>
     </div>
@@ -81,7 +98,7 @@ const goToEdit = () => {
     <div class="detail-card">
       <div class="section-title">
         <h3>기본 정보</h3>
-        <span :class="['status-tag', getStatusClass(orderItem.orderStatus)]">{{ orderItem.orderStatus }}</span>
+        <span :class="['status-tag', getStatusClass(orderItem.orderStatus)]">{{ toStatusLabel(orderItem.orderStatus) }}</span>
       </div>
       <div class="info-grid">
         <div class="info-item">
