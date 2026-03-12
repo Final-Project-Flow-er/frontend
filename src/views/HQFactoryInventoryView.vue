@@ -138,12 +138,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="batch in sortedBatches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
+                    <tr v-for="batch in batches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
                         <td>{{ batch.productionDate }}</td>
                         <td class="number-cell">{{ batch.quantity }}</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 2 Pagination -->
+            <div class="pagination" v-if="batchTotalPages > 1">
+                <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in batchTotalPages" 
+                        :key="p" 
+                        @click="changeBatchPage(p - 1)" 
+                        :class="{ active: batchPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+            </div>
         </div>
     </template>
 
@@ -195,6 +212,23 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 3 Pagination -->
+            <div class="pagination" v-if="itemTotalPages > 1">
+                <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in itemTotalPages" 
+                        :key="p" 
+                        @click="changeItemPage(p - 1)" 
+                        :class="{ active: itemPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+            </div>
         </div>
 
         <!-- Step 3 Bottom Actions -->
@@ -292,6 +326,14 @@ const batches = ref([])
 const allItems = ref([])
 const expirationItems = ref([])
 
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
 // --- API Calls ---
 const fetchProducts = async () => {
     try {
@@ -329,39 +371,65 @@ const fetchAlerts = async () => {
 }
 
 const fetchBatches = async (productId) => {
-    try {
-        const res = await api.get(`/hq/inventory/batches/${productId}`)
-        batches.value = (res.data.data || [])
-            .map(b => ({
-                productionDate: b.manufactureDate,
-                quantity: b.totalQuantity
-            }))
-            .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
-    } catch (e) {
-        console.error('배치 조회 실패', e)
-    }
+  try {
+    const res = await api.get(`/hq/inventory/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
+    })
+    const pageData = res.data.data || {}
+    batches.value = (pageData.content || [])
+        .map(b => ({
+          productionDate: b.manufactureDate,
+          quantity: b.totalQuantity
+        }))
+        .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed', e)
+    batches.value = []
+    batchTotalPages.value = 0
+  }
 }
 
 const fetchItems = async (manufactureDate) => {
-    try {
-        const res = await api.get('/hq/inventory/items', {
-            params: {
-                productId: selectedProduct.value.productId,
-                manufactureDate
-            }
-        })
-        allItems.value = (res.data.data || []).map(item => ({
-            inventoryId: item.inventoryId,
-            serialCode: item.serialCode,
-            boxCode: item.boxCode,
-            productionDate: manufactureDate,
-            shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
-            arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
-            status: item.status
-        }))
-    } catch (e) {
-        console.error('아이템 조회 실패', e)
-    }
+  try {
+    const res = await api.get('/hq/inventory/items', {
+      params: {
+        productId: selectedProduct.value.productId,
+        manufactureDate,
+        page: itemPage.value,
+        size: itemSize.value
+      }
+    })
+    const pageData = res.data.data || {}
+    allItems.value = (pageData.content || []).map(item => {
+      const rawStatus = item.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        inventoryId: item.inventoryId,
+        serialCode: item.serialCode,
+        boxCode: item.boxCode,
+        productionDate: manufactureDate,
+        shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
+        arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
+        status: parsedStatus
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed', e)
+    allItems.value = []
+    itemTotalPages.value = 0
+  }
+}
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems(selectedProductionDate.value)
 }
 
 onMounted(() => {
@@ -371,27 +439,25 @@ onMounted(() => {
 
 // --- Status Helpers ---
 const getStatusKor = (status) => {
-    switch(status) {
-        case 'AVAILABLE': return '가용';
-        case 'EXPIRED': return '만료';
-        case 'DISCARDED': return '폐기';
-        case 'RESERVED': return '예약';
-        case 'OUTBOUND': return '출고';
-        case 'RETURN_WAIT': return '반품대기';
-        default: return status || '가용';
-    }
+    const s = (status || '').toUpperCase();
+    if (s.includes('AVAILABLE')) return '가용';
+    if (s.includes('EXPIRED')) return '만료';
+    if (s.includes('DISCARDED')) return '폐기';
+    if (s.includes('RESERVED')) return '예약';
+    if (s.includes('OUTBOUND')) return '출고';
+    if (s.includes('RETURN_WAIT')) return '반품대기';
+    return status || '가용';
 }
 
 const getItemStatusClass = (status) => {
-    switch(status) {
-        case 'AVAILABLE': return 'safe';
-        case 'RESERVED': return 'warning';
-        case 'EXPIRED': return 'danger';
-        case 'DISCARDED': return 'sold';
-        case 'OUTBOUND': return 'sold';
-        case 'RETURN_WAIT': return 'warning';
-        default: return 'safe';
-    }
+    const s = (status || '').toUpperCase();
+    if (s.includes('AVAILABLE')) return 'safe';
+    if (s.includes('RESERVED')) return 'warning';
+    if (s.includes('EXPIRED')) return 'danger';
+    if (s.includes('DISCARDED')) return 'sold';
+    if (s.includes('OUTBOUND')) return 'sold';
+    if (s.includes('RETURN_WAIT')) return 'warning';
+    return 'safe';
 }
 
 const getStatusLabel = (qty, safe) => {
@@ -444,18 +510,21 @@ const granularItems = computed(() => {
 
 // --- Actions ---
 const goToStep2 = async (product) => {
-    selectedProduct.value = product
-    selectedItems.value = []
-    currentStep.value = 2
-    await fetchBatches(product.productId)
+  selectedProduct.value = product
+  selectedItems.value = []
+  batchPage.value = 0
+  currentStep.value = 2
+  await fetchBatches(product.productId)
 }
 
 const goToStep3 = async (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    selectedItems.value = []
-    currentStep.value = 3
-    await fetchItems(batch.productionDate)
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  currentStep.value = 3
+  await fetchItems(batch.productionDate)
 }
+
 
 const isAllSelected = computed(() => {
     return granularItems.value.length > 0 && selectedItems.value.length === granularItems.value.length

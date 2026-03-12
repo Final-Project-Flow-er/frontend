@@ -104,35 +104,7 @@ const selectAll = ref(false)
 const items = ref([])
 
 onMounted(() => {
-  // Generate dummy items based on productCode
-  // Box Code format: UL01{YYYYMMDD}{ProductCodeWithPadd}{Seq}
-  // User Req: UL01 + Factory Numbering ? For now assume UL01 is fixed prefix.
-  // Actually regex-like: UL01 + Date + Product Code + Box Code
-  
-  const today = '20260209'
-  const prefix = productCode.value 
-  
-  for (let b = 1; b <= 5; b++) { // 5 boxes
-    const boxSeq = b < 10 ? '0' + b : b
-    // Box Code ends in '00'
-    const boxCode = `SEO001${today}${prefix}${boxSeq}00`
-    
-    for (let i = 1; i <= 20; i++) { // 20 items per box
-      const itemSeq = i < 10 ? '0' + i : i
-      // Identification Code ends in 01~20
-      const serialCode = `SEO001${today}${prefix}${boxSeq}${itemSeq}`
-      
-      items.value.push({
-        boxCode: boxCode,
-        serialCode: serialCode, 
-        expireDate: '2026-08-09',
-        manufactureDate: '2026-02-09',
-        deliveryCompleteDate: '2026-02-10 14:00:00',
-        inboundCompleteDate: '2026-02-10 15:30:00',
-        status: (b * i) > 90 ? 'RETURN_WAIT' : 'AVAILABLE'
-      })
-    }
-  }
+  // TODO: 실제 API 연동 필요 (현재는 더미 제거 상태)
 })
 
 const filteredItems = computed(() => {
