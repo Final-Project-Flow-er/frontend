@@ -437,12 +437,14 @@ const fetchBatches = async (productId) => {
       params: { page: batchPage.value, size: batchSize.value }
     })
     const pageData = res.data.data || {}
-    sortedBatches.value = (pageData.content || []).map(b => ({
-      productionDate: b.manufactureDate,
-      total: b.totalQuantity,
-      available: b.availableQuantity,
-      pending: b.returnPending
-    }))
+    sortedBatches.value = (pageData.content || [])
+      .map(b => ({
+        productionDate: b.manufactureDate,
+        total: b.totalQuantity,
+        available: b.availableQuantity,
+        pending: b.returnPending
+      }))
+      .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
     batchTotalPages.value = pageData.totalPages || 0
   } catch (e) {
     console.error('batch fetch failed:', e)
@@ -669,6 +671,57 @@ const goToDetail = (code) => {
 }
 .data-table-card::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
 }
 
 </style>

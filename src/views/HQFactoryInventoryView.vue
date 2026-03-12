@@ -203,7 +203,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="item in granularItems" :key="item.serialCode">
-                        <td><input type="checkbox" :value="item.serialCode" v-model="selectedItems" /></td>
+                        <td><input type="checkbox" :checked="selectedItems.includes(item.serialCode)" @change="toggleItemSelection(item)" /></td>
                         <td class="sku-cell">{{ item.serialCode }}</td>
                         <td>{{ item.boxCode || '-' }}</td>
                         <td><span :class="['status-badge', getItemStatusClass(item.status)]">{{ getStatusKor(item.status) }}</span></td>
@@ -446,6 +446,7 @@ const getStatusKor = (status) => {
     if (s.includes('RESERVED')) return '예약';
     if (s.includes('OUTBOUND')) return '출고';
     if (s.includes('RETURN_WAIT')) return '반품대기';
+    if (s.includes('SHIPPING')) return '배송 중';
     return status || '가용';
 }
 
@@ -457,6 +458,7 @@ const getItemStatusClass = (status) => {
     if (s.includes('DISCARDED')) return 'sold';
     if (s.includes('OUTBOUND')) return 'sold';
     if (s.includes('RETURN_WAIT')) return 'warning';
+    if (s.includes('SHIPPING')) return 'shipping';
     return 'safe';
 }
 
@@ -535,6 +537,31 @@ const toggleAll = () => {
         selectedItems.value = []
     } else {
         selectedItems.value = granularItems.value.map(i => i.serialCode)
+    }
+}
+
+const toggleItemSelection = (item) => {
+    const isSelected = selectedItems.value.includes(item.serialCode)
+    // 박스 단위 선택 로직: 동일한 boxCode를 가진 상품들을 찾아서 처리
+    // 단, boxCode가 없는 경우는 개별 상품으로 처리
+    const sameBoxItems = item.boxCode 
+        ? granularItems.value.filter(i => i.boxCode === item.boxCode)
+        : [item]
+    
+    const boxSerials = sameBoxItems.map(i => i.serialCode)
+    
+    if (isSelected) {
+        // 이미 선택된 경우 박스 전체 해제
+        selectedItems.value = selectedItems.value.filter(s => !boxSerials.includes(s))
+    } else {
+        // 선택되지 않은 경우 박스 전체 추가
+        const newSelected = [...selectedItems.value]
+        boxSerials.forEach(s => {
+            if (!newSelected.includes(s)) {
+                newSelected.push(s)
+            }
+        })
+        selectedItems.value = newSelected
     }
 }
 
@@ -740,6 +767,7 @@ const resetSettings = async () => {
 .status-badge.warning { background: #fffaf0; color: #dd6b20; }
 .status-badge.danger { background: #fff5f5; color: #e53e3e; }
 .status-badge.sold { background: #edf2f7; color: #4a5568; }
+.status-badge.shipping { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
 
 .icon-btn {
   background: none; border: none; cursor: pointer; font-size: 1rem; margin-left: 0.5rem;
@@ -806,5 +834,56 @@ const resetSettings = async () => {
 }
 .data-table-card::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
 }
 </style>
