@@ -292,6 +292,14 @@ const batches = ref([])
 const allItems = ref([])
 const expirationItems = ref([])
 
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
 // --- API Calls ---
 const fetchProducts = async () => {
     try {
@@ -329,43 +337,55 @@ const fetchAlerts = async () => {
 }
 
 const fetchBatches = async (productId) => {
-    try {
-        const res = await api.get(`/hq/inventory/batches/${productId}`)
-        batches.value = (res.data.data || [])
-            .map(b => ({
-                productionDate: b.manufactureDate,
-                quantity: b.totalQuantity
-            }))
-            .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
-    } catch (e) {
-        console.error('배치 조회 실패', e)
-    }
+  try {
+    const res = await api.get(`/hq/inventory/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
+    })
+    const pageData = res.data.data || {}
+    batches.value = (pageData.content || [])
+        .map(b => ({
+          productionDate: b.manufactureDate,
+          quantity: b.totalQuantity
+        }))
+        .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed', e)
+    batches.value = []
+    batchTotalPages.value = 0
+  }
 }
 
 const fetchItems = async (manufactureDate) => {
-    try {
-        const res = await api.get('/hq/inventory/items', {
-            params: {
-                productId: selectedProduct.value.productId,
-                manufactureDate
-            }
-        })
-        allItems.value = (res.data.data || []).map(item => {
-            const rawStatus = item.status || '';
-            const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus;
-            return {
-                inventoryId: item.inventoryId,
-                serialCode: item.serialCode,
-                boxCode: item.boxCode,
-                productionDate: manufactureDate,
-                shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
-                arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
-                status: parsedStatus
-            };
-        })
-    } catch (e) {
-        console.error('아이템 조회 실패', e)
-    }
+  try {
+    const res = await api.get('/hq/inventory/items', {
+      params: {
+        productId: selectedProduct.value.productId,
+        manufactureDate,
+        page: itemPage.value,
+        size: itemSize.value
+      }
+    })
+    const pageData = res.data.data || {}
+    allItems.value = (pageData.content || []).map(item => {
+      const rawStatus = item.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        inventoryId: item.inventoryId,
+        serialCode: item.serialCode,
+        boxCode: item.boxCode,
+        productionDate: manufactureDate,
+        shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
+        arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
+        status: parsedStatus
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed', e)
+    allItems.value = []
+    itemTotalPages.value = 0
+  }
 }
 
 onMounted(() => {
@@ -446,18 +466,21 @@ const granularItems = computed(() => {
 
 // --- Actions ---
 const goToStep2 = async (product) => {
-    selectedProduct.value = product
-    selectedItems.value = []
-    currentStep.value = 2
-    await fetchBatches(product.productId)
+  selectedProduct.value = product
+  selectedItems.value = []
+  batchPage.value = 0
+  currentStep.value = 2
+  await fetchBatches(product.productId)
 }
 
 const goToStep3 = async (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    selectedItems.value = []
-    currentStep.value = 3
-    await fetchItems(batch.productionDate)
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  currentStep.value = 3
+  await fetchItems(batch.productionDate)
 }
+
 
 const isAllSelected = computed(() => {
     return granularItems.value.length > 0 && selectedItems.value.length === granularItems.value.length

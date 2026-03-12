@@ -389,64 +389,84 @@ const sortedBatches = ref([])
 
 const granularItems = ref([])
 
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
 const fetchBatches = async (productId) => {
-    try {
-        const res = await axios.get(`/api/v1/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`)
-        sortedBatches.value = (res.data.data || []).map(b => ({
-            productionDate: b.manufactureDate,
-            total: b.totalQuantity,
-            available: b.availableQuantity,
-            pending: b.returnPending
-        }))
-    } catch (e) {
-        console.error('중분류 조회 실패:', e)
-        sortedBatches.value = []
-    }
+  try {
+    const res = await axios.get(`/api/v1/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
+    })
+    const pageData = res.data.data || {}
+    sortedBatches.value = (pageData.content || []).map(b => ({
+      productionDate: b.manufactureDate,
+      total: b.totalQuantity,
+      available: b.availableQuantity,
+      pending: b.returnPending
+    }))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed:', e)
+    sortedBatches.value = []
+    batchTotalPages.value = 0
+  }
 }
 
 const fetchItems = async () => {
-    if (!selectedProduct.value || !selectedProductionDate.value || !selectedStore.value) return
-    try {
-        // 백엔드 명세에 맞추어 query parameter 생성. date는 YYYY-MM-DD 형식.
-        const params = {
-            franchiseId: selectedStore.value.id,
-            productId: selectedProduct.value.productId,
-            manufactureDate: selectedProductionDate.value
-        }
-        if (step3Filter.value.serialCode) params.serialCode = step3Filter.value.serialCode
-        if (step3Filter.value.boxCode) params.boxCode = step3Filter.value.boxCode
-        if (step3Filter.value.shippingDate) params.shippedAt = step3Filter.value.shippingDate
-        if (step3Filter.value.inboundDate) params.receivedAt = step3Filter.value.inboundDate
-
-        const res = await axios.get('/api/v1/hq/inventory/franchises/items', { params })
-        granularItems.value = (res.data.data || []).map(i => {
-            const rawStatus = i.status || '';
-            const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus;
-            return {
-                serialCode: i.serialCode,
-                boxCode: i.boxCode,
-                status: parsedStatus,
-                shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
-                arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
-            };
-        })
-    } catch (e) {
-        console.error('소분류 조회 실패:', e)
-        granularItems.value = []
+  if (!selectedProduct.value || !selectedProductionDate.value || !selectedStore.value) return
+  try {
+    const params = {
+      franchiseId: selectedStore.value.id,
+      productId: selectedProduct.value.productId,
+      manufactureDate: selectedProductionDate.value,
+      page: itemPage.value,
+      size: itemSize.value
     }
+    if (step3Filter.value.serialCode) params.serialCode = step3Filter.value.serialCode
+    if (step3Filter.value.boxCode) params.boxCode = step3Filter.value.boxCode
+    if (step3Filter.value.shippingDate) params.shippedAt = step3Filter.value.shippingDate
+    if (step3Filter.value.inboundDate) params.receivedAt = step3Filter.value.inboundDate
+
+    const res = await axios.get('/api/v1/hq/inventory/franchises/items', { params })
+    const pageData = res.data.data || {}
+    granularItems.value = (pageData.content || []).map(i => {
+      const rawStatus = i.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        serialCode: i.serialCode,
+        boxCode: i.boxCode,
+        status: parsedStatus,
+        shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+        arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed:', e)
+    granularItems.value = []
+    itemTotalPages.value = 0
+  }
 }
 
 const goToStep2 = async (product) => {
-    selectedProduct.value = product
-    await fetchBatches(product.productId)
-    currentStep.value = 2
+  selectedProduct.value = product
+  batchPage.value = 0
+  await fetchBatches(product.productId)
+  currentStep.value = 2
 }
 
 const goToStep3 = async (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    await fetchItems()
-    currentStep.value = 3
+  selectedProductionDate.value = batch.productionDate
+  itemPage.value = 0
+  await fetchItems()
+  currentStep.value = 3
 }
+
 
 // ----------------
 

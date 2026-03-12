@@ -407,55 +407,74 @@ const hasMoreAlerts = computed(() => {
 
 // Step 2 Compute -> API 연동
 const sortedBatches = ref([])
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
 
 const fetchBatches = async (productId) => {
-    try {
-        const res = await api.get(`/franchise/inventory/batches/${productId}`)
-        sortedBatches.value = (res.data.data || []).map(b => ({
-            productionDate: b.manufactureDate,
-            total: b.totalQuantity,
-            available: b.availableQuantity,
-            pending: b.returnPending
-        }))
-    } catch (e) {
-        console.error('중분류(제조일별) 조회 실패:', e)
-        sortedBatches.value = []
-    }
+  try {
+    const res = await api.get(`/franchise/inventory/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
+    })
+    const pageData = res.data.data || {}
+    sortedBatches.value = (pageData.content || []).map(b => ({
+      productionDate: b.manufactureDate,
+      total: b.totalQuantity,
+      available: b.availableQuantity,
+      pending: b.returnPending
+    }))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed:', e)
+    sortedBatches.value = []
+    batchTotalPages.value = 0
+  }
 }
 
 // Step 3 Compute -> API 연동
 const granularItems = ref([])
 
 const fetchItems = async () => {
-	if (!selectedProduct.value || !selectedProductionDate.value) return
-	try {
-		const requestBody = {
-			productId: selectedProduct.value.productId,
-			manufactureDate: selectedProductionDate.value
-		}
-		if (step3Filter.value.serialCode) requestBody.serialCode = step3Filter.value.serialCode
-		if (step3Filter.value.boxCode) requestBody.boxCode = step3Filter.value.boxCode
-		if (step3Filter.value.shippingDate) requestBody.shippedAt = step3Filter.value.shippingDate
-		if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
+  if (!selectedProduct.value || !selectedProductionDate.value) return
+  try {
+    const requestBody = {
+      productId: selectedProduct.value.productId,
+      manufactureDate: selectedProductionDate.value
+    }
+    if (step3Filter.value.serialCode) requestBody.serialCode = step3Filter.value.serialCode
+    if (step3Filter.value.boxCode) requestBody.boxCode = step3Filter.value.boxCode
+    if (step3Filter.value.shippingDate) requestBody.shippedAt = step3Filter.value.shippingDate
+    if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
 
-		const res = await api.post('/franchise/inventory/items', requestBody)
-		granularItems.value = (res.data.data || []).map(i => {
-			const rawStatus = i.status || '';
-			const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus;
-			return {
-				inventoryId: i.inventoryId,
-				serialCode: i.serialCode,
-				boxCode: i.boxCode,
-				status: parsedStatus,
-				shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
-				arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
-			};
-		})
-	} catch (e) {
-		console.error('소분류(바코드별) 조회 실패:', e)
-		granularItems.value = []
-	}
+    const res = await api.post('/franchise/inventory/items', requestBody, {
+      params: { page: itemPage.value, size: itemSize.value }
+    })
+    const pageData = res.data.data || {}
+    granularItems.value = (pageData.content || []).map(i => {
+      const rawStatus = i.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        inventoryId: i.inventoryId,
+        serialCode: i.serialCode,
+        boxCode: i.boxCode,
+        status: parsedStatus,
+        shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+        arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed:', e)
+    granularItems.value = []
+    itemTotalPages.value = 0
+  }
 }
+
 
 watch(step3Filter, () => {
     if (currentStep.value === 3) {
@@ -510,16 +529,19 @@ const createOrder = () => {
 }
 
 const goToStep2 = async (product) => {
-    selectedProduct.value = product
-    await fetchBatches(product.productId)
-    currentStep.value = 2
-    selectedItems.value = [] // Reset selection when moving
+  selectedProduct.value = product
+  selectedItems.value = []
+  batchPage.value = 0
+  currentStep.value = 2
+  await fetchBatches(product.productId)
 }
 
 const goToStep3 = async (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    await fetchItems()
-    currentStep.value = 3
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  currentStep.value = 3
+  await fetchItems(batch.productionDate)
 }
 
 const requestDisposal = async () => {
