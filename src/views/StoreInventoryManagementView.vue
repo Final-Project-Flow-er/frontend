@@ -151,6 +151,23 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Step 2 Pagination -->
+        <div class="pagination" v-if="batchTotalPages > 1">
+          <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+          <div class="page-numbers">
+            <button 
+              v-for="p in batchTotalPages" 
+              :key="p" 
+              @click="changeBatchPage(p - 1)" 
+              :class="{ active: batchPage === p - 1 }"
+              class="page-num-btn"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+        </div>
       </div>
     </template>
 
@@ -217,6 +234,23 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Step 3 Pagination -->
+        <div class="pagination" v-if="itemTotalPages > 1">
+          <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+          <div class="page-numbers">
+            <button 
+              v-for="p in itemTotalPages" 
+              :key="p" 
+              @click="changeItemPage(p - 1)" 
+              :class="{ active: itemPage === p - 1 }"
+              class="page-num-btn"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+        </div>
       </div>
 
       <!-- Bottom Actions -->
@@ -473,6 +507,16 @@ const fetchItems = async () => {
     granularItems.value = []
     itemTotalPages.value = 0
   }
+}
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems()
 }
 
 

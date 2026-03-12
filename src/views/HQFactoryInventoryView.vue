@@ -138,12 +138,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="batch in sortedBatches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
+                    <tr v-for="batch in batches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
                         <td>{{ batch.productionDate }}</td>
                         <td class="number-cell">{{ batch.quantity }}</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 2 Pagination -->
+            <div class="pagination" v-if="batchTotalPages > 1">
+                <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in batchTotalPages" 
+                        :key="p" 
+                        @click="changeBatchPage(p - 1)" 
+                        :class="{ active: batchPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+            </div>
         </div>
     </template>
 
@@ -195,6 +212,23 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 3 Pagination -->
+            <div class="pagination" v-if="itemTotalPages > 1">
+                <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in itemTotalPages" 
+                        :key="p" 
+                        @click="changeItemPage(p - 1)" 
+                        :class="{ active: itemPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+            </div>
         </div>
 
         <!-- Step 3 Bottom Actions -->
@@ -386,6 +420,16 @@ const fetchItems = async (manufactureDate) => {
     allItems.value = []
     itemTotalPages.value = 0
   }
+}
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems(selectedProductionDate.value)
 }
 
 onMounted(() => {
