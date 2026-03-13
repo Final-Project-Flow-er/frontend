@@ -12,6 +12,17 @@ const instance = axios.create({
 // Request interceptor: add tokens
 instance.interceptors.request.use(
     (config) => {
+        // Let the browser set multipart boundary automatically for FormData.
+        if (config.data instanceof FormData) {
+            if (config.headers) {
+                if (typeof config.headers.set === 'function') {
+                    config.headers.set('Content-Type', undefined)
+                }
+                delete config.headers['Content-Type']
+                delete config.headers['content-type']
+            }
+        }
+
         const accessToken = localStorage.getItem('accessToken')
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`
