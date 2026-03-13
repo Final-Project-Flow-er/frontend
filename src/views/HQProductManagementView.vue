@@ -737,7 +737,7 @@ const saveProduct = async () => {
             }
             await api.patch(`/hq/product/${form.value.productId}`, formData)
         } else {
-            await api.post('/hq/product/create', formData)
+            await api.post('/hq/product', formData)
         }
         await fetchProducts()
         closeModal()
