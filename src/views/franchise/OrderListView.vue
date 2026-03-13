@@ -192,7 +192,7 @@ const goToDetail = (item) => {
   if (viewMode.value === 'order') {
     router.push({ name: 'franchise-order-detail', params: { id: item.orderCode } })
   } else {
-    router.push(`/franchise/returns/${item.returnCode}`)
+    router.push({ name: 'franchise-return-detail', params: { id: item.returnCode } })
   }
 }
 </script>
