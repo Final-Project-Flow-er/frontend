@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getRequestedOrders } from '@/api/hqOrders.js'
+import { getRequestedOrders, cancelFranchiseOrder } from '@/api/hqOrders.js'
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
@@ -37,7 +37,18 @@ const isSelectionMode = ref(false)
 const isCancelModalOpen = ref(false)
 const cancelReason = ref('')
 
-const statuses = ['대기', '접수', '부분 접수', '배송중', '배송완료', '취소', '반려']
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+const statuses = Object.keys(ORDER_STATUS_LABEL)
 
 const filteredOrders = computed(() => {
   return orders.value.filter(item => {
@@ -50,7 +61,7 @@ const filteredOrders = computed(() => {
   })
 })
 
-const isCancellable = (status) => ['대기', '접수', '부분 접수'].includes(status)
+const isCancellable = (status) => ['PENDING', 'ACCEPTED', 'PARTIAL'].includes(status)
 
 const enterSelectionMode = () => {
   isSelectionMode.value = true
@@ -81,21 +92,28 @@ const openCancelModal = () => {
   isCancelModalOpen.value = true
 }
 
-const confirmCancel = () => {
+const confirmCancel = async () => {
   if (!cancelReason.value.trim()) {
     alert('취소 사유를 입력해주세요.')
     return
   }
 
-  orders.value = orders.value.map(o => {
-    if (selectedCodes.value.includes(o.orderCode)) {
-      return { ...o, status: '취소' }
-    }
-    return o
-  })
-
-  alert('발주 접수 취소가 완료되었습니다.')
-  closeModal()
+  try {
+    await cancelFranchiseOrder(selectedCodes.value.map(code => ({
+      orderCode: code,
+      canceledReason: cancelReason.value.trim()
+    })))
+    orders.value = orders.value.map(o => {
+      if (selectedCodes.value.includes(o.orderCode)) {
+        return { ...o, status: 'CANCELED' }
+      }
+      return o
+    })
+    alert('발주 접수 취소가 완료되었습니다.')
+    closeModal()
+  } catch (e) {
+    alert(e.message || '접수 취소 처리에 실패했습니다.')
+  }
 }
 
 const closeModal = () => {
@@ -116,13 +134,14 @@ const toggleSelectAll = (event) => {
 }
 
 const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '부분 접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger'
+  PENDING: 'status-warning',
+  ACCEPTED: 'status-info',
+  PARTIAL: 'status-info',
+  SHIPPING_PENDING: 'status-warning',
+  SHIPPING: 'status-primary',
+  COMPLETED: 'status-ok',
+  CANCELED: 'status-danger',
+  REJECTED: 'status-danger'
 }[s] || '')
 
 </script>
@@ -153,7 +172,7 @@ const getStatusClass = (s) => ({
           <label>발주 요청 상태</label>
           <select v-model="filter.status">
             <option value="">전체</option>
-            <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
+            <option v-for="s in statuses" :key="s" :value="s">{{ toStatusLabel(s) }}</option>
           </select>
         </div>
         <div class="filter-group">
@@ -198,7 +217,7 @@ const getStatusClass = (s) => ({
               <input type="checkbox" :value="order.orderCode" v-model="selectedCodes" :disabled="!isCancellable(order.status)" />
             </td>
             <td class="sku-cell">{{ order.orderCode }}</td>
-            <td><span :class="['status-tag', getStatusClass(order.status)]">{{ order.status }}</span></td>
+            <td><span :class="['status-tag', getStatusClass(order.status)]">{{ toStatusLabel(order.status) }}</span></td>
             <td>{{ order.franchiseCode }}</td>
             <td class="sku-cell">{{ order.productCode }}</td>
             <td>{{ order.receiver }}</td>

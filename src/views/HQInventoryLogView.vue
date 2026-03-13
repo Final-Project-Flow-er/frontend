@@ -18,7 +18,6 @@
         <label>반품/발주 코드</label>
         <input type="text" v-model="filter.orderCode" placeholder="코드 입력" />
       </div>
-      <button class="search-btn" @click="search">검색</button>
     </div>
 
     <!-- Toggle Selector -->
@@ -90,11 +89,13 @@
               <td :colspan="activeLogType === 'DISPOSAL' ? 5 : (activeLogType === 'RETURN_IN' || activeLogType === 'RETURN_OUT' ? 7 : 8)">
                 <div class="expanded-content">
                   <div v-if="loadingBoxCodes[log.id]" class="loading-text">박스 코드 불러오는 중...</div>
-                  <div v-else-if="boxCodesMap[log.id] && boxCodesMap[log.id].length > 0">
-                    <strong>박스 코드:</strong> 
-                    <span class="code-cell" v-for="(box, index) in boxCodesMap[log.id]" :key="index">
-                      {{ box.boxCode }}<span v-if="index < boxCodesMap[log.id].length - 1">, </span>
-                    </span>
+                  <div v-else-if="boxCodesMap[log.id] && boxCodesMap[log.id].length > 0" class="boxcode-panel">
+                    <div class="boxcode-title">박스 코드</div>
+                    <div class="boxcode-list">
+                      <span class="boxcode-pill" v-for="(box, index) in boxCodesMap[log.id]" :key="index">
+                        {{ box.boxCode }}
+                      </span>
+                    </div>
                   </div>
                   <div v-else class="empty-code-text">조회된 박스 코드가 없습니다.</div>
                 </div>
@@ -106,6 +107,22 @@
           </tr>
         </tbody>
       </table>
+    </div>
+    <!-- Pagination -->
+    <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+            <button 
+                v-for="p in totalPages" 
+                :key="p" 
+                @click="changePage(p - 1)" 
+                :class="{ active: currentPage === p - 1 }"
+                class="page-num-btn"
+            >
+                {{ p }}
+            </button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
     </div>
 
   </div>
@@ -129,6 +146,13 @@ const loading = ref(false)
 const expandedRows = ref([])
 const boxCodesMap = ref({})
 const loadingBoxCodes = ref({})
+const franchiseNames = ref({})
+
+// Pagination state
+const currentPage = ref(0)
+const totalPages = ref(0)
+const pageSize = ref(20)
+let filterDebounceTimer = null
 
 const fetchLogs = async () => {
     loading.value = true
@@ -139,7 +163,8 @@ const fetchLogs = async () => {
         else if (activeLogType.value === 'DISPOSAL') endpoint = '/hq/log/disposal'
 
         const params = {
-           size: 100 // default size
+           page: currentPage.value,
+           size: pageSize.value
         }
 
         if (filter.value.startDate) params.startDate = filter.value.startDate
@@ -149,7 +174,8 @@ const fetchLogs = async () => {
 
         const response = await api.get(endpoint, { params })
         if (response.data && response.data.success) {
-            logs.value = response.data.data.inventoryLogResponses.map((item, index) => ({
+            const data = response.data.data
+            logs.value = (data.inventoryLogResponses || []).map((item, index) => ({
                 id: item.id || `log-${index}`, // use temporary id if missing
                 arrivalTime: item.date,
                 orderCode: item.transactionCode || '-',
@@ -161,8 +187,10 @@ const fetchLogs = async () => {
                 changedQuantity: item.changedQuantity,
                 boxCode: item.boxCode // fallback
             }))
+            totalPages.value = data.totalPages || 0
         } else {
             logs.value = []
+            totalPages.value = 0
         }
     } catch (error) {
         console.error("Failed to fetch logs:", error)
@@ -175,14 +203,40 @@ const fetchLogs = async () => {
 watch(activeLogType, () => {
     expandedRows.value = []
     boxCodesMap.value = {}
+    currentPage.value = 0
     fetchLogs()
 })
+
+watch(filter, () => {
+    currentPage.value = 0
+    if (filterDebounceTimer) clearTimeout(filterDebounceTimer)
+    filterDebounceTimer = setTimeout(() => {
+        fetchLogs()
+    }, 120)
+}, { deep: true })
 
 onMounted(() => {
+    fetchFranchiseNames()
     fetchLogs()
 })
 
-const search = () => {
+const fetchFranchiseNames = async () => {
+    try {
+        const res = await api.get('/hq/inventory/franchises')
+        franchiseNames.value = res.data?.data || {}
+    } catch (error) {
+        console.error("Failed to fetch franchise names:", error)
+        franchiseNames.value = {}
+    }
+}
+
+const getFranchiseName = (franchiseId) => {
+    if (!franchiseId) return '가맹점'
+    return franchiseNames.value[String(franchiseId)] || `가맹점 (${franchiseId})`
+}
+
+const changePage = (page) => {
+    currentPage.value = page
     fetchLogs()
 }
 
@@ -241,6 +295,8 @@ const getLogTypeLabel = (type) => {
         case 'RETURN_INBOUND': return '반품 입고'
         case 'RETURN_OUT': 
         case 'RETURN_OUTBOUND': return '반품 출고'
+        case 'INBOUND': return '입고'
+        case 'OUTBOUND': return '출고'
         case 'DISPOSAL': return '폐기'
         default: return type
     }
@@ -260,8 +316,10 @@ const getTypeClass = (type) => {
 // API maps from/to locationId, UI mapping might need franchise store lookups
 const getSource = (log) => {
     switch (log.logType) {
-        case 'RETURN_IN': return (log.fromLocationId ? `가맹점 (${log.fromLocationId})` : '가맹점')
-        case 'RETURN_OUT': return '본사'
+        case 'RETURN_IN':
+        case 'RETURN_INBOUND': return getFranchiseName(log.fromLocationId)
+        case 'RETURN_OUT':
+        case 'RETURN_OUTBOUND': return '본사'
         case 'DISPOSAL': return '본사'
         default: return '-'
     }
@@ -269,8 +327,10 @@ const getSource = (log) => {
 
 const getDestination = (log) => {
     switch (log.logType) {
-        case 'RETURN_IN': return '본사'
-        case 'RETURN_OUT': return (log.toLocationId ? `가맹점 (${log.toLocationId})` : '가맹점')
+        case 'RETURN_IN':
+        case 'RETURN_INBOUND': return '본사'
+        case 'RETURN_OUT':
+        case 'RETURN_OUTBOUND': return getFranchiseName(log.toLocationId)
         case 'DISPOSAL': return '폐기장'
         default: return '-'
     }
@@ -278,8 +338,13 @@ const getDestination = (log) => {
 
 // 1 Box = 20 Items
 const getChangeQuantity = (log) => {
-    if (log.changedQuantity != null) return log.changedQuantity;
-    return 0;
+    const qty = Math.abs(log.changedQuantity || 0);
+    const positiveTypes = ['PRODUCTION', 'INBOUND', 'RETURN_IN', 'RETURN_INBOUND'];
+    const negativeTypes = ['DISTRIBUTION', 'OUTBOUND', 'RETURN_OUT', 'RETURN_OUTBOUND', 'DISPOSAL'];
+    
+    if (positiveTypes.includes(log.logType)) return qty;
+    if (negativeTypes.includes(log.logType)) return -qty;
+    return qty;
 }
 
 const getChangeClass = (qty) => {
@@ -333,13 +398,28 @@ tr:hover { background: #f8fafc; }
 .clickable-row:hover { background-color: #f1f5f9 !important; }
 .expanded-row td { background-color: #f8fafc; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); text-align: left; }
 .expanded-content { display: flex; flex-direction: column; gap: 0.5rem; color: #475569; font-size: 0.9rem; justify-content: flex-start; }
-.loading-text { font-style: italic; color: #64748b; }
-.empty-code-text { color: #94a3b8; }
+.loading-text { font-style: italic; color: #64748b; font-size: 0.82rem; }
+.empty-code-text { color: #94a3b8; font-size: 0.82rem; }
+.boxcode-panel { background: #f7f7f5; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.6rem 0.7rem; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); }
+.boxcode-title { font-size: 0.74rem; color: #52525b; font-weight: 700; margin-bottom: 0.45rem; }
+.boxcode-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.boxcode-pill { font-family: monospace; font-size: 0.78rem; color: #3f3f46; background: #ffffff; border: 1px solid #d4d4d8; border-radius: 999px; padding: 0.2rem 0.5rem; }
 
 /* Badges */
-.type-badge { padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; min-width: 60px; text-align: center; }
-.type-badge.return-in { background: #dcfce7; color: #166534; } /* Green */
-.type-badge.return-out { background: #ffedd5; color: #9a3412; } /* Orange */
+.type-badge {
+  padding: 0.35rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-block;
+  min-width: 75px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  letter-spacing: -0.01em;
+}
+.type-badge.return-in { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; } /* Emerald Green */
+.type-badge.return-out { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; } /* Bright Orange */
+.type-badge.refund { background: #f3e8ff; color: #9333ea; border: 1px solid #e9d5ff; } /* Rich Purple */
 
 .plus { color: #166534; font-weight: 700; }
 .minus { color: #991b1b; font-weight: 700; }
@@ -361,5 +441,56 @@ tr:hover { background: #f8fafc; }
 .radio-group label:hover { background: rgba(255,255,255,0.5); }
 .radio-group label.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .radio-group input[type="radio"] { display: none; }
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1rem 0;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
+}
 
 </style>

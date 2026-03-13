@@ -133,7 +133,7 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
           <select v-model="selectedOrderCode" class="full-width-input" @change="selectedItemIndices.clear(); Object.keys(returnQuantities).forEach(key => delete returnQuantities[key])">
              <option value="" disabled>발주 번호를 선택하세요</option>
              <option v-for="order in availableOrders" :key="order.orderCode" :value="order.orderCode">
-               {{ order.orderCode }} ({{ order.recipientName }})
+               {{ order.recipientName }} / {{ order.orderCode }}
              </option>
           </select>
         </div>

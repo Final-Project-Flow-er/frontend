@@ -47,19 +47,36 @@ onMounted(async () => {
   }
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송 대기': 'status-info',
-  '배송중': 'status-primary',
-  '배송 완료': 'status-ok',
-  '검수': 'status-primary',
-  '대금 차감 완료': 'status-ok',
-  '대금 차감 거절': 'status-danger'
-}[s] || '')
+const RETURN_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+const toStatusLabel = (s) => RETURN_STATUS_LABEL[s] || s
+
+const getStatusClass = (s) => {
+  const label = RETURN_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '배송대기': 'status-info',
+    '배송중': 'status-primary',
+    '배송완료': 'status-ok',
+    '검수중': 'status-primary',
+    '대금 차감 완료': 'status-ok',
+    '대금 차감 거절': 'status-danger',
+    '취소': 'status-danger'
+  }[label] || ''
+}
 
 const cancelReturnRequest = async () => {
-  if (returnItem.value.status !== '대기') {
+  if (returnItem.value.status !== 'PENDING') {
     alert('처리 상태가 대기가 아니면 취소할 수 없습니다.')
     return
   }
@@ -110,8 +127,8 @@ const saveChanges = async () => {
       <h2>반품 상세 정보</h2>
       <div class="header-actions">
         <template v-if="!isEditing">
-          <button v-if="returnItem && returnItem.status === '대기'" @click="cancelReturnRequest" class="delete-btn">반품 취소</button>
-          <button v-if="returnItem && returnItem.status === '대기'" @click="startEditing" class="edit-btn">수정</button>
+          <button v-if="returnItem && returnItem.status === 'PENDING'" @click="cancelReturnRequest" class="delete-btn">반품 취소</button>
+          <button v-if="returnItem && returnItem.status === 'PENDING'" @click="startEditing" class="edit-btn">수정</button>
           <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
         </template>
         <template v-else>
@@ -124,7 +141,7 @@ const saveChanges = async () => {
     <div v-if="returnItem" class="detail-card">
       <div class="section-title">
         <h3>기본 정보</h3>
-        <span :class="['status-tag', getStatusClass(returnItem.status)]">{{ returnItem.status }}</span>
+        <span :class="['status-tag', getStatusClass(returnItem.status)]">{{ toStatusLabel(returnItem.status) }}</span>
       </div>
       <div class="info-grid">
         <div class="info-item">

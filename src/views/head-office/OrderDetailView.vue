@@ -26,25 +26,34 @@ onMounted(async () => {
       arrivalDate: formatDate(info.manufacturedDate),
       products: items.map(item => ({
         productCode: item.productCode || '',
-        productName: item.productName || '',
         quantity: item.quantity || 0,
-        amount: Number(item.unitPrice || 0)
+        unitPrice: Number(item.unitPrice || 0),
+        totalPrice: Number(item.totalPrice || 0)
       })),
-      totalAmount: items.reduce((sum, item) => sum + (item.quantity * Number(item.unitPrice || 0)), 0)
+      totalAmount: items.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0)
     }
   } catch (e) {
     alert(e.message)
   }
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수 완료': 'status-ok',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger'
-}[s] || '')
+const HQ_ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => HQ_ORDER_STATUS_LABEL[s] || s
+
+const getStatusClass = (s) => {
+  const label = HQ_ORDER_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-ok',
+    '취소': 'status-danger',
+    '반려': 'status-danger'
+  }[label] || ''
+}
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
@@ -69,8 +78,8 @@ const cancelOrder = async () => {
     <div class="header-row">
       <h2>본사 발주 상세 내역</h2>
       <div class="header-actions">
-        <button v-if="orderItem.orderStatus === '대기'" @click="goToEdit" class="edit-btn">수정</button>
-        <button v-if="orderItem.orderStatus === '대기'" @click="cancelOrder" class="cancel-btn-outline">발주 취소</button>
+        <button v-if="orderItem.orderStatus === 'PENDING'" @click="goToEdit" class="edit-btn">수정</button>
+        <button v-if="orderItem.orderStatus === 'PENDING'" @click="cancelOrder" class="cancel-btn-outline">발주 취소</button>
         <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
       </div>
     </div>
@@ -78,7 +87,7 @@ const cancelOrder = async () => {
     <div class="detail-card">
       <div class="section-title">
         <h3>기본 정보</h3>
-        <span :class="['status-tag', getStatusClass(orderItem.orderStatus)]">{{ orderItem.orderStatus }}</span>
+        <span :class="['status-tag', getStatusClass(orderItem.orderStatus)]">{{ toStatusLabel(orderItem.orderStatus) }}</span>
       </div>
       <div class="info-grid">
         <div class="info-item">
@@ -118,14 +127,16 @@ const cancelOrder = async () => {
       <div class="section-title"><h3>상품 정보</h3></div>
       <div class="product-list-table">
         <div class="product-list-header">
-          <span>상품 코드</span>
-          <span>상품명</span>
-          <span>수량</span>
+          <span>제품 코드</span>
+          <span class="text-right">수량</span>
+          <span class="text-right">단가</span>
+          <span class="text-right">총 금액</span>
         </div>
         <div v-for="(product, index) in orderItem.products" :key="index" class="product-list-item">
           <span>{{ product.productCode }}</span>
-          <span>{{ product.productName }}</span>
-          <span>{{ product.quantity }}개</span>
+          <span class="text-right">{{ product.quantity }}개</span>
+          <span class="text-right">{{ formatPrice(product.unitPrice) }}원</span>
+          <span class="text-right">{{ formatPrice(product.totalPrice) }}원</span>
         </div>
         <div class="product-list-total">
           <label>총 발주 금액</label>
@@ -165,7 +176,8 @@ const cancelOrder = async () => {
 .status-danger { background: #fee2e2; color: #991b1b; }
 
 .product-list-table { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-top: 1.5rem; }
-.product-list-header, .product-list-item { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr 1fr; padding: 0.8rem 1.5rem; align-items: center; border-bottom: 1px solid var(--border-color); }
+.product-list-header, .product-list-item { display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr; padding: 0.8rem 1.5rem; align-items: center; border-bottom: 1px solid var(--border-color); }
+.text-right { text-align: right; }
 .product-list-header { background: #f8fafc; font-weight: 600; color: var(--text-light); font-size: 0.9rem; }
 .product-list-item { font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
 .product-list-item:last-child { border-bottom: none; }

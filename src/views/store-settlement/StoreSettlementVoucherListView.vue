@@ -1,142 +1,151 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import * as XLSX from 'xlsx'
+import { franchiseSettlementsApi } from '@/api/franchiseSettlements.js'
 
 const route = useRoute()
 const router = useRouter()
 
 /* ── 탭 ── */
-const activeTab = ref('daily') // 'daily' | 'monthly'
+const activeTab = ref(route.query.period === 'MONTHLY' || route.query.month ? 'monthly' : 'daily')
 
 /* ── 날짜 선택 ── */
 const today = new Date()
 const pad = (n) => String(n).padStart(2, '0')
-const selectedDate = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`)
-const selectedMonth = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}`)
+const selectedDate = ref(route.query.date || `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`)
+const selectedMonth = ref(route.query.month || `${today.getFullYear()}-${pad(today.getMonth() + 1)}`)
 
 /* ── 필터 ── */
 const filterTypes = [
-  { key: 'all', label: '전체' },
-  { key: 'sales', label: '판매' },
-  { key: 'order', label: '발주' },
-  { key: 'shipping', label: '배송' },
-  { key: 'commission', label: '수수료' },
-  { key: 'refund', label: '반품' },
-  { key: 'loss', label: '손실' },
+  { key: 'all', label: '전체', value: null },
+  { key: 'sales', label: '판매', value: 'SALES' },
+  { key: 'order', label: '발주', value: 'ORDER' },
+  { key: 'shipping', label: '배송', value: 'DELIVERY' },
+  { key: 'commission', label: '수수료', value: 'COMMISSION' },
+  { key: 'refund', label: '반품', value: 'REFUND' },
+  { key: 'loss', label: '손실', value: 'LOSS' },
+  { key: 'adjust', label: '조정', value: 'ADJUSTMENT' },
 ]
+
 const selectedFilter = ref('all')
 
+/* ── 전표 데이터 ── */
+const vouchers = ref([])
+const totalCount = ref(0)
+const isLoading = ref(false)
+const currentPage = ref(0)
+const totalPages = ref(0)
+
+const fetchVouchers = async () => {
+    isLoading.value = true
+    try {
+        const filterItem = filterTypes.find(f => f.key === selectedFilter.value)
+        const params = {
+            period: activeTab.value.toUpperCase(),
+            type: filterItem?.value,
+            page: currentPage.value,
+            size: 20
+        }
+        
+        if (activeTab.value === 'daily') {
+            params.date = selectedDate.value
+        } else {
+            params.month = selectedMonth.value
+        }
+        
+        const res = await franchiseSettlementsApi.getVouchers(params)
+        vouchers.value = res.content
+        totalCount.value = res.totalElements
+        totalPages.value = res.totalPages
+    } catch (error) {
+        console.error('Failed to fetch vouchers:', error)
+    } finally {
+        isLoading.value = false
+    }
+}
+
 onMounted(() => {
-  if (route.query.filter) {
-    selectedFilter.value = route.query.filter
-  }
-  if (route.query.date) {
-    activeTab.value = 'daily'
-    selectedDate.value = route.query.date
-    selectedMonth.value = route.query.date.substring(0, 7)
-  } else if (route.query.month) {
-    activeTab.value = 'monthly'
-    selectedMonth.value = route.query.month
-  }
+    if (route.query.type) {
+        const found = filterTypes.find(f => f.value === route.query.type)
+        if (found) selectedFilter.value = found.key
+    }
+    fetchVouchers()
 })
 
-/* ── 전표 Mock 데이터 ── */
-const allVouchers = ref([
-  { id: 'SL-20260210-001', type: 'sales', typeName: '판매', product: '오리지널 떡볶이 밀키트', qty: 5, unitPrice: 12900, amount: 64500, date: '2026-02-10 09:30:21' },
-  { id: 'SL-20260210-002', type: 'sales', typeName: '판매', product: '마라 떡볶이 밀키트', qty: 3, unitPrice: 14900, amount: 44700, date: '2026-02-10 10:12:05' },
-  { id: 'SL-20260210-003', type: 'sales', typeName: '판매', product: '로제 떡볶이 밀키트', qty: 2, unitPrice: 13900, amount: 27800, date: '2026-02-10 11:45:33' },
-  { id: 'PO-20260210-001', type: 'order', typeName: '발주', product: '오리지널 떡볶이 밀키트 외 3종', qty: 50, unitPrice: null, amount: 185000, date: '2026-02-10 08:00:00' },
-  { id: 'DL-20260210-001', type: 'shipping', typeName: '배송', product: '정기 배송 (02/10)', qty: 1, unitPrice: null, amount: 15000, date: '2026-02-10 08:30:00' },
-  { id: 'CM-20260210-001', type: 'commission', typeName: '수수료', product: '정산 수수료 3%', qty: null, unitPrice: null, amount: 17106, date: '2026-02-10 23:59:59' },
-  { id: 'RF-20260210-001', type: 'refund', typeName: '반품', product: '오리지널 떡볶이 밀키트 (유통기한 임박)', qty: 1, unitPrice: 12900, amount: 12900, date: '2026-02-10 14:20:10' },
-  { id: 'SL-20260210-004', type: 'sales', typeName: '판매', product: '오리지널 떡볶이 (대용량)', qty: 2, unitPrice: 22000, amount: 44000, date: '2026-02-10 13:07:55' },
-  { id: 'SL-20260210-005', type: 'sales', typeName: '판매', product: '오리지널 떡볶이 밀키트', qty: 3, unitPrice: 12900, amount: 38700, date: '2026-02-10 15:22:18' },
-  { id: 'SL-20260210-006', type: 'sales', typeName: '판매', product: '마라 떡볶이 밀키트', qty: 2, unitPrice: 14900, amount: 29800, date: '2026-02-10 16:50:41' },
-  { id: 'LS-20260210-001', type: 'loss', typeName: '손실', product: '로제 떡볶이 밀키트 (유통기한 만료 폐기)', qty: 1, unitPrice: 13900, amount: 13900, date: '2026-02-10 17:00:00' },
-])
+watch([selectedDate, selectedMonth, activeTab, selectedFilter, currentPage], fetchVouchers)
 
-const filteredVouchers = computed(() => {
-  let list = allVouchers.value
-  if (selectedFilter.value !== 'all') {
-    list = list.filter(v => v.type === selectedFilter.value)
-  }
-  // 최신순 정렬
-  return [...list].sort((a, b) => new Date(b.date) - new Date(a.date))
-})
-
-/* ── 월별 그래프 데이터 ── */
+/* ── 월별 매출 데이터 (상단 요약/그래프 레이어용) ── */
 const showGraph = ref(false)
-const monthlyGraphData = ref([
-  { month: '1월', sales: 8500000, orders: 120 },
-  { month: '2월', sales: 9200000, orders: 135 },
-  { month: '3월', sales: 7800000, orders: 108 },
-  { month: '4월', sales: 10500000, orders: 152 },
-  { month: '5월', sales: 11200000, orders: 168 },
-  { month: '6월', sales: 9800000, orders: 140 },
-  { month: '7월', sales: 12100000, orders: 175 },
-  { month: '8월', sales: 11800000, orders: 170 },
-  { month: '9월', sales: 10200000, orders: 148 },
-  { month: '10월', sales: 11404000, orders: 165 },
-  { month: '11월', sales: 0, orders: 0 },
-  { month: '12월', sales: 0, orders: 0 },
-])
-const maxSales = computed(() => Math.max(...monthlyGraphData.value.map(d => d.sales), 1))
+const trendData = ref([])
+const maxSales = computed(() => Math.max(...trendData.value.map(d => d.amount), 1))
+
+const fetchTrendData = async () => {
+    try {
+        const [year, month] = selectedMonth.value.split('-').map(Number)
+        const start = `${selectedMonth.value}-01`
+        const lastDay = new Date(year, month, 0).getDate()
+        const end = `${selectedMonth.value}-${pad(lastDay)}`
+        
+        const res = await franchiseSettlementsApi.getMonthlyDailyGraph({
+            month: selectedMonth.value,
+            start,
+            end
+        })
+        trendData.value = res.map(d => ({
+            month: d.date.split('-')[2] + '일',
+            sales: d.amount
+        }))
+    } catch (error) {
+        console.error('Failed to fetch trend data:', error)
+    }
+}
+
+watch(showGraph, (val) => {
+    if (val && trendData.value.length === 0) {
+        fetchTrendData()
+    }
+})
 
 /* ── 포맷 ── */
-const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n))
+const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n || 0))
 
 const getTypeClass = (type) => ({
-  sales: 'type-sales',
-  order: 'type-order',
-  shipping: 'type-shipping',
-  commission: 'type-commission',
-  refund: 'type-refund',
-  loss: 'type-loss',
-  adjust: 'type-adjust',
+  SALES: 'type-sales',
+  ORDER: 'type-order',
+  DELIVERY: 'type-shipping',
+  COMMISSION: 'type-commission',
+  REFUND: 'type-refund',
+  LOSS: 'type-loss',
+  ADJUSTMENT: 'type-adjust',
 }[type] || '')
 
-/* ── PDF 다운로드 ── */
-const downloadPDF = () => {
-  const label = activeTab.value === 'daily' ? selectedDate.value : selectedMonth.value
-  alert(`정산서 PDF 다운로드: ${label}\n(실제 API 연동 시 구현)`)
+const getTypeName = (type) => {
+    const found = filterTypes.find(f => f.value === type)
+    return found ? found.label : type
 }
 
 /* ── Excel 다운로드 ── */
-const downloadExcel = () => {
-  const filterLabel = filterTypes.find(f => f.key === selectedFilter.value)?.label || '전체'
-  const rows = filteredVouchers.value.map(v => ({
-    '전표번호': v.id,
-    '유형': v.typeName,
-    '상품/내역': v.product,
-    '수량': v.qty != null ? v.qty : '-',
-    '금액': v.amount,
-    '발생일시': v.date,
-  }))
-
-  const ws = XLSX.utils.json_to_sheet(rows)
-
-  /* 컬럼 너비 설정 */
-  ws['!cols'] = [
-    { wch: 20 },  // 전표번호
-    { wch: 8 },   // 유형
-    { wch: 35 },  // 상품/내역
-    { wch: 8 },   // 수량
-    { wch: 14 },  // 금액
-    { wch: 20 },  // 발생일시
-  ]
-
-  /* 자동 필터 설정 */
-  ws['!autofilter'] = { ref: `A1:F${rows.length + 1}` }
-
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, `전표_${filterLabel}`)
-  XLSX.writeFile(wb, `전표상세_${selectedMonth.value}_${filterLabel}.xlsx`)
+const downloadExcel = async () => {
+    if (activeTab.value !== 'monthly') {
+        alert('엑셀 다운로드는 월별 정산에서만 지원됩니다.')
+        return
+    }
+    try {
+        const res = await franchiseSettlementsApi.getMonthlyExcel(selectedMonth.value)
+        if (res && res.startsWith('http')) {
+            window.open(res, '_blank')
+        } else if (res) {
+            alert(res)
+        }
+    } catch (error) {
+        console.error('Failed to download Excel:', error)
+        alert('엑셀 다운로드 중 오류가 발생했습니다.')
+    }
 }
 </script>
 
 <template>
-  <div class="content-wrapper">
+  <div class="content-wrapper" :class="{ 'is-loading': isLoading }">
     <!-- 페이지 헤더 -->
     <div class="page-header">
       <div class="header-left">
@@ -146,7 +155,7 @@ const downloadExcel = () => {
         </div>
       </div>
       <div class="header-actions">
-        <button class="action-btn excel" @click="downloadExcel">
+        <button v-if="activeTab === 'monthly'" class="action-btn excel" @click="downloadExcel">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
           전표 Excel 다운로드
         </button>
@@ -169,7 +178,7 @@ const downloadExcel = () => {
         v-for="ft in filterTypes"
         :key="ft.key"
         :class="['filter-chip', { active: selectedFilter === ft.key }]"
-        @click="selectedFilter = ft.key"
+        @click="selectedFilter = ft.key; currentPage = 0"
       >
         {{ ft.label }}
       </button>
@@ -179,39 +188,46 @@ const downloadExcel = () => {
     <div class="data-table-card">
       <div class="table-header">
         <h3>전표 목록</h3>
-        <span class="badge">{{ filteredVouchers.length }}건</span>
+        <span class="badge">{{ totalCount }}건</span>
       </div>
       <table class="data-table">
         <thead>
           <tr>
-            <th>전표번호</th>
+            <th>참조번호</th>
             <th>유형</th>
-            <th>상품/내역</th>
+            <th>내역</th>
             <th class="text-right">수량</th>
             <th class="text-right">금액</th>
-            <th>발생일시</th>
+            <th>일시</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="v in filteredVouchers" :key="v.id">
-            <td class="id-cell">{{ v.id }}</td>
-            <td><span :class="['type-tag', getTypeClass(v.type)]">{{ v.typeName }}</span></td>
-            <td>{{ v.product }}</td>
-            <td class="text-right">{{ v.qty != null ? v.qty : '−' }}</td>
-            <td class="text-right amount-cell" :class="{ refund: v.type === 'refund', loss: v.type === 'loss' || v.amount < 0 }">
+          <tr v-for="v in vouchers" :key="v.referenceCode">
+            <td class="id-cell">{{ v.referenceCode }}</td>
+            <td><span :class="['type-tag', getTypeClass(v.voucherType)]">{{ getTypeName(v.voucherType) }}</span></td>
+            <td>{{ v.description }}</td>
+            <td class="text-right">{{ v.quantity != null ? v.quantity : '−' }}</td>
+            <td class="text-right amount-cell" :class="{ refund: v.voucherType === 'REFUND', loss: v.voucherType === 'LOSS' || v.amount < 0 }">
               {{ v.amount < 0 ? '−' : '' }}₩ {{ fmt(v.amount) }}
             </td>
-            <td class="time-cell">{{ v.date }}</td>
+            <td class="time-cell">{{ v.occurredAt }}</td>
           </tr>
-          <tr v-if="filteredVouchers.length === 0">
-            <td colspan="5" class="empty-cell">해당 기간에 전표가 없습니다.</td>
+          <tr v-if="vouchers.length === 0 && !isLoading">
+            <td colspan="6" class="empty-cell">해당 기간에 전표가 없습니다.</td>
           </tr>
         </tbody>
       </table>
+      
+      <!-- 페이지네이션 -->
+      <div v-if="totalPages > 1" class="pagination">
+          <button :disabled="currentPage === 0" @click="currentPage--">이전</button>
+          <span>{{ currentPage + 1 }} / {{ totalPages }}</span>
+          <button :disabled="currentPage === totalPages - 1" @click="currentPage++">다음</button>
+      </div>
     </div>
 
     <!-- 월별 그래프 (월별 탭만) -->
-    <div class="graph-section">
+    <div v-if="activeTab === 'monthly'" class="graph-section">
       <div class="table-header">
         <h3>월별 매출 추이</h3>
         <button class="graph-toggle" @click="showGraph = !showGraph">
@@ -229,7 +245,7 @@ const downloadExcel = () => {
           </div>
           <div class="chart-bars">
             <div
-              v-for="(d, idx) in monthlyGraphData"
+              v-for="(d, idx) in trendData"
               :key="idx"
               class="bar-col"
             >
@@ -244,10 +260,8 @@ const downloadExcel = () => {
               </div>
               <span class="bar-month">{{ d.month }}</span>
             </div>
+            <div v-if="trendData.length === 0" class="empty-chart">데이터가 없습니다.</div>
           </div>
-        </div>
-        <div class="chart-legend">
-          <span class="legend-item"><span class="legend-dot"></span> 매출 금액</span>
         </div>
       </div>
     </div>
@@ -255,7 +269,8 @@ const downloadExcel = () => {
 </template>
 
 <style scoped>
-.content-wrapper { max-width: 1400px; margin: 0 auto; }
+.content-wrapper { max-width: 1400px; margin: 0 auto; transition: opacity 0.3s; }
+.is-loading { opacity: 0.6; pointer-events: none; }
 
 /* ── 페이지 헤더 ── */
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
@@ -265,7 +280,7 @@ const downloadExcel = () => {
 .page-desc { color: var(--text-light); font-size: 0.9rem; margin: 0; }
 
 .header-actions { display: flex; gap: 0.75rem; }
-.action-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.2rem; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
+.action-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
 .action-btn.pdf { background: #ef4444; color: white; }
 .action-btn.pdf:hover { background: #dc2626; transform: translateY(-1px); }
 .action-btn.excel { background: #10b981; color: white; }
@@ -301,7 +316,11 @@ const downloadExcel = () => {
 .amount-cell { font-weight: 700; }
 .amount-cell.refund { color: #10b981; }
 .amount-cell.loss { color: #ef4444; }
-.empty-cell { text-align: center; color: var(--text-light); padding: 3rem 1.5rem !important; }
+.empty-cell { text-align: center; color: var(--text-light); padding: 5rem 1.5rem !important; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; padding: 1rem; border-top: 1px solid var(--border-color); }
+.pagination button { padding: 0.4rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: white; cursor: pointer; }
+.pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── 유형 태그 ── */
 .type-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
@@ -320,15 +339,13 @@ const downloadExcel = () => {
 .chart-area { padding: 1.5rem; }
 .chart-container { display: flex; gap: 0.5rem; height: 280px; }
 .chart-y-labels { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; font-size: 0.7rem; color: var(--text-light); min-width: 70px; padding-bottom: 24px; }
-.chart-bars { flex: 1; display: flex; align-items: flex-end; gap: 4px; border-left: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 0 0.5rem; }
-.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.chart-bars { flex: 1; display: flex; align-items: flex-end; gap: 4px; border-left: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 0 0.5rem; position: relative; overflow-x: auto; }
+.bar-col { flex: 0 0 40px; display: flex; flex-direction: column; align-items: center; height: 100%; }
 .bar-wrapper { flex: 1; display: flex; align-items: flex-end; width: 100%; }
-.bar { width: 100%; max-width: 40px; margin: 0 auto; background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%); border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.5s ease; position: relative; cursor: pointer; }
+.bar { width: 100%; max-width: 32px; margin: 0 auto; background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%); border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.5s ease; position: relative; cursor: pointer; }
 .bar:hover { opacity: 0.85; }
 .bar-label { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: var(--text-light); white-space: nowrap; display: none; }
 .bar:hover .bar-label { display: block; }
-.bar-month { font-size: 0.75rem; color: var(--text-light); margin-top: 6px; }
-.chart-legend { display: flex; justify-content: center; gap: 1.5rem; padding-top: 1rem; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-light); }
-.legend-dot { width: 10px; height: 10px; border-radius: 3px; background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.bar-month { font-size: 0.7rem; color: var(--text-light); margin-top: 6px; white-space: nowrap; transform: rotate(-45deg); transform-origin: top; }
+.empty-chart { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; }
 </style>

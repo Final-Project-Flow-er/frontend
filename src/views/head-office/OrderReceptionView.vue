@@ -100,7 +100,7 @@ const currentReservedStock = computed(() => {
 })
 
 const getRowAvailability = (row) => {
-  if (row.status !== '대기') return null
+  if (row.status !== 'PENDING') return null
   const stock = centralStock.value[row.productCode] || 0
   const reservedTotal = currentReservedStock.value[row.productCode] || 0
   const isSelected = selectedRowKeys.value.includes(row.rowKey)
@@ -116,10 +116,10 @@ const updateParentOrderStatus = (orderId) => {
   const order = orders.value.find(o => o.id === orderId)
   if (!order) return
   const statuses = order.products.map(p => p.status)
-  if (statuses.every(s => s === '접수 완료')) order.status = '접수 완료'
-  else if (statuses.every(s => s === '반려')) order.status = '반려'
-  else if (statuses.every(s => s === '대기')) order.status = '대기'
-  else order.status = '부분 접수'
+  if (statuses.every(s => s === 'ACCEPTED')) order.status = 'ACCEPTED'
+  else if (statuses.every(s => s === 'REJECTED')) order.status = 'REJECTED'
+  else if (statuses.every(s => s === 'PENDING')) order.status = 'PENDING'
+  else order.status = 'PARTIAL'
 }
 
 const confirmAccept = async () => {
@@ -151,7 +151,7 @@ const confirmAccept = async () => {
         }
         const order = orders.value.find(o => o.id === row.orderId)
         if (order) {
-          order.products[row.productIndex].status = '접수 완료'
+          order.products[row.productIndex].status = 'ACCEPTED'
           updateParentOrderStatus(order.id)
         }
       }
@@ -182,7 +182,7 @@ const confirmReject = async () => {
       if (row) {
         const order = orders.value.find(o => o.id === row.orderId)
         if (order) {
-          order.products[row.productIndex].status = '반려'
+          order.products[row.productIndex].status = 'REJECTED'
           updateParentOrderStatus(order.id)
         }
       }
@@ -201,16 +201,28 @@ const enterRejectMode = () => { selectionMode.value = 'reject'; selectedRowKeys.
 const cancelSelection = () => { selectionMode.value = null; selectedRowKeys.value = [] }
 const toggleSelectAll = (e) => {
   if (e.target.checked) {
-    selectedRowKeys.value = filteredRows.value.filter(r => r.status === '대기').map(r => r.rowKey)
+    selectedRowKeys.value = filteredRows.value.filter(r => r.status === 'PENDING').map(r => r.rowKey)
   } else {
     selectedRowKeys.value = []
   }
 }
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+
 const getStatusClass = (status) => {
   switch (status) {
-    case '접수 완료': return 'status-ok'
-    case '부분 접수': return 'status-primary'
-    case '반려': return 'status-danger'
+    case 'ACCEPTED': return 'status-ok'
+    case 'PARTIAL': return 'status-primary'
+    case 'REJECTED': case 'CANCELED': return 'status-danger'
     default: return 'status-warning'
   }
 }
@@ -218,8 +230,7 @@ const getStatusClass = (status) => {
 // [NEW] 상세 페이지 이동
 const goToDetail = (row) => {
   router.push({
-    name: 'OrderReceptionDetail',
-    state: { rowData: row }
+    name: 'OrderReceptionDetail',params: { orderCode: row.orderCode }
   })
 }
 </script>
@@ -287,7 +298,7 @@ const goToDetail = (row) => {
             <input type="checkbox"
                    :value="row.rowKey"
                    v-model="selectedRowKeys"
-                   :disabled="row.status !== '대기'" />
+                   :disabled="row.status !== 'PENDING'" />
           </td>
 
           <td class="sku-cell">{{ row.orderCode }}</td>
@@ -298,7 +309,7 @@ const goToDetail = (row) => {
           <td class="sku-cell">{{ row.productCode }}</td>
 
           <td>
-            <span :class="['status-tag', getStatusClass(row.status)]">{{ row.status }}</span>
+            <span :class="['status-tag', getStatusClass(row.status)]">{{ toStatusLabel(row.status) }}</span>
           </td>
           <td class="text-right">{{ row.quantity }}</td>
           <td class="text-right">
@@ -307,7 +318,7 @@ const goToDetail = (row) => {
               </span>
           </td>
           <td>
-            <template v-if="row.status === '대기'">
+            <template v-if="row.status === 'PENDING'">
               <span v-if="getRowAvailability(row) === 'possible'" class="status-tag status-ok">가능</span>
               <span v-else-if="getRowAvailability(row) === 'partial'" class="status-tag status-warning">부족</span>
               <span v-else class="status-tag status-danger">불가</span>
