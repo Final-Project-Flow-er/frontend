@@ -456,12 +456,14 @@ const fetchBatches = async (productId) => {
       params: { page: batchPage.value, size: batchSize.value }
     })
     const pageData = res.data.data || {}
-    sortedBatches.value = (pageData.content || []).map(b => ({
-      productionDate: b.manufactureDate,
-      total: b.totalQuantity,
-      available: b.availableQuantity,
-      pending: b.returnPending
-    }))
+    sortedBatches.value = (pageData.content || [])
+      .map(b => ({
+        productionDate: b.manufactureDate,
+        total: b.totalQuantity,
+        available: b.availableQuantity,
+        pending: b.returnPending
+      }))
+      .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
     batchTotalPages.value = pageData.totalPages || 0
   } catch (e) {
     console.error('batch fetch failed:', e)
@@ -548,8 +550,11 @@ const toggleAllInStep3 = () => {
 
 const toggleItemSelection = (item) => {
     const isSelected = selectedItems.value.includes(item.serialCode)
-    // Business Rule: Return is BOX-based. Selecting one selects the whole box.
-    const boxItems = inventoryItems.value.filter(i => i.boxCode === item.boxCode)
+    // Business Rule: Return/Disposal is BOX-based. Selecting one selects the whole box.
+    // granularItems(현재 페이지/필터링된 목록) 내에서 동일한 boxCode를 가진 상품들을 찾아 처리
+    const boxItems = item.boxCode 
+        ? granularItems.value.filter(i => i.boxCode === item.boxCode)
+        : [item]
     const boxSerials = boxItems.map(i => i.serialCode)
     
     if (isSelected) {
@@ -832,4 +837,55 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 .status-item-badge.expired { background: #fef3c7; color: #92400e; }
 
 .empty-cell { text-align: center; color: #94a3b8; padding: 3rem !important; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
+}
 </style>
