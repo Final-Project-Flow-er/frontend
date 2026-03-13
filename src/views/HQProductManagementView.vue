@@ -151,9 +151,9 @@
               <label>상태</label>
               <select v-model="form.status">
                 <option value="ON_SALE">판매중</option>
-                <option value="SOLD_OUT">단종</option>
-                <option value="TEMPORARY_OUT">일시품절</option>
-                <option value="SALE_SCHEDULED">판매예정</option>
+                <option value="DISCONTINUED">단종</option>
+                <option value="TEMP_SOLD_OUT">일시품절</option>
+                <option value="COMING_SOON">판매예정</option>
               </select>
             </div>
             <div class="form-group">
@@ -179,8 +179,14 @@
           </div>
 
           <div class="form-group full-width">
-            <label>구성용품 (쉼표로 구분하여 입력)</label>
-            <input type="text" v-model="form.componentsInput" placeholder="예: 떡, 어묵, 소스, 파" />
+            <label>구성용품</label>
+            <div class="component-selection-row">
+              <div class="component-chip-wrap" v-if="form.components && form.components.length">
+                <span class="component-chip" v-for="c in form.components" :key="c">{{ c }}</span>
+              </div>
+              <span v-else class="component-empty">선택된 구성용품이 없습니다.</span>
+              <button type="button" class="action-btn secondary" @click="openComponentModal">구성용품 선택</button>
+            </div>
           </div>
 
           <div class="form-group full-width">
@@ -233,6 +239,45 @@
       </div>
     </div>
 
+    <!-- Component Select Modal -->
+    <div v-if="showComponentModal" class="modal-overlay">
+      <div class="modal-content component-modal">
+        <h3>구성용품 선택</h3>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>구성용품 검색</label>
+              <input type="text" v-model="componentSearch" placeholder="구성용품 검색" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>신규 구성용품 추가</label>
+              <input type="text" v-model="newComponentName" placeholder="예: 마라 소스" @keyup.enter="addComponentToCatalog" />
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="action-btn secondary" @click="addComponentToCatalog">추가</button>
+            </div>
+          </div>
+
+          <div class="component-list">
+            <label class="component-item" v-for="component in filteredComponentCatalog" :key="component.componentId ?? component.name">
+              <input type="checkbox" :value="component.name" v-model="selectedComponentDraft" />
+              <span>{{ component.name }}</span>
+              <button type="button" class="delete-link" @click.stop="removeComponentFromCatalog(component)">삭제</button>
+            </label>
+            <div v-if="filteredComponentCatalog.length === 0" class="component-empty">검색 결과가 없습니다.</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeComponentModal">취소</button>
+          <button class="primary" @click="applyComponentSelection">적용</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Admin Password Verification Popup -->
     <div v-if="showPasswordPopup" class="modal-overlay">
       <div class="modal-content type-modal">
@@ -264,6 +309,7 @@ const filter = ref({
 
 const showModal = ref(false)
 const showTypeModal = ref(false)
+const showComponentModal = ref(false)
 const isEditMode = ref(false)
 
 // Admin Password State
@@ -300,13 +346,17 @@ const createDefaultForm = () => ({
   supplyPrice: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
-  baseSafeStock: 10,
   kcal: 0,
   weight: 0,
+  components: [],
   componentsInput: ''
 })
 
 const form = ref(createDefaultForm())
+const componentCatalog = ref([])
+const componentSearch = ref('')
+const newComponentName = ref('')
+const selectedComponentDraft = ref([])
 
 const products = ref([])
 
@@ -350,7 +400,6 @@ const fetchProducts = async () => {
                     supplyPrice: p.supplyPrice,
                     kcal: p.kcal || 0,
                     weight: p.weight || 0,
-                    baseSafeStock: p.safetyStock || 0,
                     components: [...new Set((p.components || []).map(c => (c || '').trim()).filter(Boolean))],
                     componentsInput: [...new Set((p.components || []).map(c => (c || '').trim()).filter(Boolean))].join(', '),
                     imageUrl: p.imageUrl || '',
@@ -359,6 +408,7 @@ const fetchProducts = async () => {
                     status: p.status || 'ON_SALE'
                 }
             })
+            syncComponentCatalogFromProducts(products.value)
         } else {
             products.value = []
         }
@@ -373,10 +423,16 @@ watch(filter, () => {
 
 onMounted(() => {
     fetchProducts()
+    fetchComponentCatalog()
 })
 
 const filteredProducts = computed(() => {
   return products.value
+})
+const filteredComponentCatalog = computed(() => {
+    const keyword = (componentSearch.value || '').trim().toLowerCase()
+    if (!keyword) return componentCatalog.value
+    return componentCatalog.value.filter(component => component.name.toLowerCase().includes(keyword))
 })
 const previewImageSrc = computed(() => {
     return form.value.imagePreviewUrl || form.value.currentImageUrl || ''
@@ -499,14 +555,14 @@ const executeOpenEditModal = (product) => {
   const size = product.productCode.substring(4, 6)
 
   const uniqueComponents = [...new Set((product.components || []).map(c => (c || '').trim()).filter(Boolean))]
-  const componentsInput = uniqueComponents.join(', ')
 
   form.value = { 
       ...JSON.parse(JSON.stringify(product)),
       type,
       spiceLevel: spice,
       sizeCode: size,
-      componentsInput,
+      components: uniqueComponents,
+      componentsInput: uniqueComponents.join(', '),
       currentImageUrl: product.imageUrl || '',
       imagePreviewUrl: '',
       imageFile: null
@@ -524,6 +580,109 @@ const closeModal = () => {
   }
 }
 
+const syncComponentCatalogFromProducts = (productList) => {
+    const fromProducts = (productList || [])
+        .flatMap(p => p.components || [])
+        .map(name => (name || '').trim())
+        .filter(Boolean)
+    const existingNames = new Set(componentCatalog.value.map(c => c.name))
+    const merged = [...componentCatalog.value]
+    for (const name of fromProducts) {
+        if (!existingNames.has(name)) {
+            merged.push({ componentId: null, name })
+            existingNames.add(name)
+        }
+    }
+    componentCatalog.value = merged.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+const fetchComponentCatalog = async () => {
+    try {
+        const res = await api.get('/hq/product/components')
+        const data = res.data?.data || []
+        componentCatalog.value = (data || [])
+            .map(c => ({ componentId: c.componentId, name: (c.name || '').trim() }))
+            .filter(c => c.name)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        syncComponentCatalogFromProducts(products.value)
+    } catch (err) {
+        console.error('구성용품 목록 조회 실패:', err)
+        syncComponentCatalogFromProducts(products.value)
+    }
+}
+
+const openComponentModal = () => {
+    selectedComponentDraft.value = [...new Set((form.value.components || []).map(name => (name || '').trim()).filter(Boolean))]
+    componentSearch.value = ''
+    newComponentName.value = ''
+    showComponentModal.value = true
+}
+
+const closeComponentModal = () => {
+    showComponentModal.value = false
+}
+
+const addComponentToCatalog = async () => {
+    const normalized = (newComponentName.value || '').trim()
+    if (!normalized) {
+        alert('추가할 구성용품명을 입력해주세요.')
+        return
+    }
+    if (componentCatalog.value.some(c => c.name === normalized)) {
+        alert('이미 존재하는 구성용품입니다.')
+        return
+    }
+    try {
+        const res = await api.post('/hq/product/components', { name: normalized })
+        const created = res.data?.data
+        if (!created?.name) {
+            alert('구성용품 추가에 실패했습니다.')
+            return
+        }
+        const createdName = created.name.trim()
+        componentCatalog.value = [...componentCatalog.value, {
+            componentId: created.componentId ?? null,
+            name: createdName
+        }].sort((a, b) => a.name.localeCompare(b.name))
+        selectedComponentDraft.value = [...new Set([...selectedComponentDraft.value, createdName])]
+        newComponentName.value = ''
+    } catch (err) {
+        console.error('구성용품 추가 실패:', err)
+        alert(err?.response?.data?.message || '구성용품 추가에 실패했습니다.')
+    }
+}
+
+const removeComponentFromCatalog = async (component) => {
+    const targetName = (component?.name || '').trim()
+    if (!targetName) return
+
+    if (!confirm(`[${targetName}] 구성용품을 삭제할까요?`)) {
+        return
+    }
+
+    if (!component.componentId) {
+        componentCatalog.value = componentCatalog.value.filter(c => c.name !== targetName)
+        selectedComponentDraft.value = selectedComponentDraft.value.filter(c => c !== targetName)
+        return
+    }
+
+    try {
+        await api.delete(`/hq/product/components/${component.componentId}`)
+        componentCatalog.value = componentCatalog.value.filter(c => c.componentId !== component.componentId)
+        selectedComponentDraft.value = selectedComponentDraft.value.filter(c => c !== targetName)
+    } catch (err) {
+        console.error('구성용품 삭제 실패:', err)
+        alert(err?.response?.data?.message || '구성용품 삭제에 실패했습니다.')
+    }
+}
+
+const applyComponentSelection = () => {
+    const normalized = [...new Set((selectedComponentDraft.value || []).map(name => (name || '').trim()).filter(Boolean))]
+    form.value.components = normalized
+    form.value.componentsInput = normalized.join(', ')
+    showComponentModal.value = false
+}
+
 const clearImage = () => {
     if (form.value.imagePreviewUrl) {
         URL.revokeObjectURL(form.value.imagePreviewUrl)
@@ -537,12 +696,7 @@ const clearImage = () => {
 }
 
 const saveProduct = async () => {
-    const normalizedComponents = [...new Set(
-        (form.value.componentsInput || '')
-            .split(',')
-            .map(s => s.trim())
-            .filter(Boolean)
-    )]
+    const normalizedComponents = [...new Set((form.value.components || []).map(s => (s || '').trim()).filter(Boolean))]
 
     const productData = {
         name: form.value.name,
@@ -551,8 +705,6 @@ const saveProduct = async () => {
         costPrice: form.value.costPrice,
         originalPrice: form.value.costPrice, // for update request
         supplyPrice: form.value.supplyPrice,
-        safetyStock: form.value.baseSafeStock,
-        baseSafeStock: form.value.baseSafeStock, // for update request
         status: form.value.status,
         kcal: form.value.kcal,
         weight: form.value.weight,
@@ -680,10 +832,10 @@ const handleImageUpload = (event) => {
 .card-image { height: 200px; background: #f1f5f9; position: relative; overflow: hidden; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
 .status-badge { position: absolute; top: 10px; right: 10px; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.status-badge.on_sale { background: #e6fffa; color: #2c7a7b; }
-.status-badge.sold_out { background: #fee2e2; color: #991b1b; }
-.status-badge.temporary_out { background: #fffaf0; color: #9c4221; }
-.status-badge.sale_scheduled { background: #e0e7ff; color: #3730a3; }
+.status-badge.on_sale { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.status-badge.discontinued { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.status-badge.temp_sold_out { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+.status-badge.coming_soon { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
 .card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
 .card-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem; }
 .product-code { font-size: 0.8rem; color: var(--text-light); }
@@ -707,6 +859,7 @@ const handleImageUpload = (event) => {
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 600px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
 .modal-content.type-modal { width: 400px; }
+.modal-content.component-modal { width: 520px; }
 .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; }
 .modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 1.25rem; }
 .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; width: 100%; }
@@ -729,5 +882,17 @@ const handleImageUpload = (event) => {
 .image-placeholder { width: 120px; height: 120px; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #64748b; background: #f8fafc; transition: all 0.2s; }
 .image-placeholder:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
 .image-placeholder .plus-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+
+/* Component Selector */
+.component-selection-row { display: flex; align-items: center; gap: 0.75rem; justify-content: space-between; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; }
+.component-chip-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.component-chip { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 999px; background: #f1f5f9; color: #334155; font-size: 0.82rem; font-weight: 600; }
+.component-empty { color: #64748b; font-size: 0.9rem; }
+.component-list { border: 1px solid var(--border-color); border-radius: 8px; max-height: 260px; overflow: auto; }
+.component-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; border-bottom: 1px solid #eef2f7; }
+.component-item:last-child { border-bottom: none; }
+.component-item input[type="checkbox"] { width: auto; }
+.delete-link { margin-left: auto; border: none; background: transparent; color: #dc2626; font-size: 0.85rem; cursor: pointer; }
+.delete-link:hover { text-decoration: underline; }
 
 </style>

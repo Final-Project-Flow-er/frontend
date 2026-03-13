@@ -384,10 +384,10 @@ const handleImageUpload = (event) => {
 .card-image { height: 200px; background: #f1f5f9; position: relative; overflow: hidden; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
 .status-badge { position: absolute; top: 10px; right: 10px; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.status-badge.on_sale { background: #e6fffa; color: #2c7a7b; }
-.status-badge.sold_out { background: #fee2e2; color: #991b1b; }
-.status-badge.temporary_out { background: #fffaf0; color: #9c4221; }
-.status-badge.sale_scheduled { background: #e0e7ff; color: #3730a3; }
+.status-badge.on_sale { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.status-badge.discontinued { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.status-badge.temp_sold_out { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+.status-badge.coming_soon { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
 .card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
 .card-header h3 { margin: 0; font-size: 1.1rem; font-weight: normal; color: var(--text-dark); margin-bottom: 0.25rem; }
 .product-code { font-size: 0.8rem; color: var(--text-light); }
