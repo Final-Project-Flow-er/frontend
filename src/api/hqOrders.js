@@ -27,3 +27,9 @@ export const cancelFranchiseOrder = (data) => request(`${BASE}/cancellation`, {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(data),
 })
+
+export const updateOrderShippingPending = (data) => request(`${BASE}/shipping-pending`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data),
+})

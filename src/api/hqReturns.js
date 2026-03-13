@@ -14,3 +14,9 @@ export const updateReturn = (returnCode, data) => request(`${BASE}/${returnCode}
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(data),
 })
+
+export const updateReturnShippingPending = (data) => request(`${BASE}/shipping-pending`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data),
+})

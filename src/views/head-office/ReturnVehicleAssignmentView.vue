@@ -1,30 +1,48 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '@/components/common/Modal.vue'
+import { getAvailableVehicles, getUnassignedReturns, assignReturns as assignReturnsAPI } from '@/api/internalTransport.js'
+import { updateReturnShippingPending } from '@/api/hqReturns.js'
 
 const router = useRouter()
 
-// Mock Data - Vehicles
-const vehicles = ref([
-  { company: '우리통상', driver: '홍길동', phone: '010-1234-5678', type: '5톤 트럭', number: '서울 12가 3456', maxWeight: 5000, orderWeight: 1200, returnWeight: 0 },
-  { company: '대한물류', driver: '김철수', phone: '010-2222-3333', type: '1톤 탑차', number: '경기 88나 9999', maxWeight: 1000, orderWeight: 0, returnWeight: 0 },
-  { company: '에이원', driver: '이영희', phone: '010-5555-6666', type: '2.5톤 트럭', number: '인천 77다 1111', maxWeight: 2500, orderWeight: 500, returnWeight: 0 },
-  { company: '우리통상', driver: '정지훈', phone: '010-8888-9999', type: '1톤 탑차', number: '서울 55라 1234', maxWeight: 1000, orderWeight: 0, returnWeight: 0 },
-  { company: '대한물류', driver: '차유진', phone: '010-4444-5555', type: '5톤 트럭', number: '경기 22마 5678', maxWeight: 5000, orderWeight: 0, returnWeight: 0 },
-])
+const vehicles = ref([])
 
-// Mock Data - Unassigned Return Requests
-const unassignedReturns = ref([
-  { returnCode: 'RESE0120260209001', franchise: '강남점', address: '서울 강남구 역삼동 123-45', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 300, transportCost: 30000 },
-  { returnCode: 'RESE0220260209002', franchise: '홍대점', address: '서울 마포구 서교동 456-78', product: '마라 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-09', weight: 500, transportCost: 40000 },
-  { returnCode: 'RESE0320260210001', franchise: '잠실점', address: '서울 송파구 신천동 789-01', product: '로제 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-10', weight: 200, transportCost: 25000 },
-  { returnCode: 'RESE0420260211001', franchise: '신촌점', address: '서울 서대문구 창천동 111-22', product: '오리지널 떡볶이 밀키트', recipient: '본사 창고', contact: '02-123-4567', requestDate: '2026-02-11', weight: 800, transportCost: 55000 },
-])
+const unassignedReturns = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getAvailableVehicles()
+    vehicles.value = (data || []).map(v => ({
+      vehicleId: v.vehicleId,
+      company: v.transportName,
+      driver: v.driverName,
+      phone: v.driverPhoneNumber,
+      number: v.vehicleNumber,
+      maxWeight: v.maxLoad || 0,
+      currentWeight: v.currentLoad || 0
+    }))
+  } catch (error) {
+    console.error('차량 목록을 불러오는 중 오류 발생:', error)
+  }
+
+  try {
+    const returnData = await getUnassignedReturns()
+    unassignedReturns.value = (returnData || []).map(r => ({
+      returnId: r.returnId,
+      returnCode: r.returnCode,
+      franchise: r.franchiseName,
+      address: r.address,
+      requestDate: r.requestedDate ? r.requestedDate.split('T')[0] : ''
+    }))
+  } catch (error) {
+    console.error('미배정 반품 목록을 불러오는 중 오류 발생:', error)
+  }
+})
 
 const vehicleFilter = ref({
   company: '',
-  type: '',
   maxWeight: '',
   number: ''
 })
@@ -33,14 +51,15 @@ const returnFilter = ref({
   search: ''
 })
 
-const companies = ['우리통상', '대한물류', '에이원']
-const vehicleTypes = ['1톤 탑차', '2.5톤 트럭', '5톤 트럭']
+const companies = computed(() => {
+  const companySet = new Set(vehicles.value.map(v => v.company).filter(Boolean))
+  return Array.from(companySet).sort()
+})
 const weightOptions = [1000, 2500, 5000]
 
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
     return (!vehicleFilter.value.company || v.company === vehicleFilter.value.company) &&
-           (!vehicleFilter.value.type || v.type === vehicleFilter.value.type) &&
            (!vehicleFilter.value.maxWeight || v.maxWeight >= parseInt(vehicleFilter.value.maxWeight)) &&
            (!vehicleFilter.value.number || v.number.includes(vehicleFilter.value.number))
   })
@@ -70,40 +89,47 @@ const toggleReturn = (returnCode) => {
 }
 
 const canCheckReturn = (ret) => {
-  if (!selectedVehicle.value) return false
-  
-  let totalWeightInVehicle = selectedVehicle.value.orderWeight + selectedVehicle.value.returnWeight
-  unassignedReturns.value.forEach(r => {
-    if (selectedReturnCodes.value.has(r.returnCode) && r.returnCode !== ret.returnCode) {
-      totalWeightInVehicle += r.weight
-    }
-  })
-  
-  if (selectedReturnCodes.value.has(ret.returnCode)) return true
-  
-  return (totalWeightInVehicle + ret.weight) <= selectedVehicle.value.maxWeight
+  // 차량이 선택되어 있으면 모든 반품 건 선택 가능하도록 수정
+  return !!selectedVehicle.value
 }
 
 const assignVehicle = () => {
   if (!selectedVehicle.value || selectedReturnCodes.value.size === 0) return
   
-  let weightToAdd = 0
-  unassignedReturns.value.forEach(r => {
-    if (selectedReturnCodes.value.has(r.returnCode)) {
-      weightToAdd += r.weight
-    }
-  })
+  const totalWeightToAdd = Array.from(selectedReturnCodes.value)
+    .map(code => unassignedReturns.value.find(r => r.returnCode === code)?.weight || 0)
+    .reduce((a, b) => a + b, 0)
 
-  openModal('배정 확인', `${selectedVehicle.value.number} 차량에 ${selectedReturnCodes.value.size}건의 반품을 배정하시겠습니까?`, () => {
-    const vehicleIdx = vehicles.value.findIndex(v => v.number === selectedVehicle.value.number)
-    if (vehicleIdx !== -1) {
-        vehicles.value[vehicleIdx].returnWeight += weightToAdd
-        selectedVehicle.value = vehicles.value[vehicleIdx]
-    }
+  openModal('배정 확인', `${selectedVehicle.value.number} 차량에 ${selectedReturnCodes.value.size}건의 반품을 배정하시겠습니까?`, async () => {
+    try {
+      const selectedReturnObjects = Array.from(selectedReturnCodes.value)
+        .map(code => unassignedReturns.value.find(r => r.returnCode === code))
+        .filter(r => r !== undefined)
 
-    unassignedReturns.value = unassignedReturns.value.filter(r => !selectedReturnCodes.value.has(r.returnCode))
-    selectedReturnCodes.value.clear()
-    openModal('알림', '반품 차량 배정이 완료되었습니다.', null, false)
+      const selectedIds = selectedReturnObjects.map(r => r.returnId)
+
+      const payload = {
+        vehicleId: selectedVehicle.value.vehicleId,
+        selectedIds: selectedIds
+      }
+      
+      // 1. 반품 차량 배정 요청
+      await assignReturnsAPI(payload)
+
+      // 2. 배정 후 반품 상태를 배송 대기로 업데이트
+      const shippingPendingPayload = selectedReturnObjects.map(r => ({ returnCode: r.returnCode }))
+      await updateReturnShippingPending(shippingPendingPayload)
+
+      openModal('알림', '반품 차량 배정이 완료되었습니다.', null, false)
+
+      // 차량 무게 업데이트 (화면상 반영)
+      // 반품 건의 경우 개별 중량이 넘어오지 않으므로 일단 0으로 처리하거나 단순히 목록 새로고침 유도
+      unassignedReturns.value = unassignedReturns.value.filter(r => !selectedReturnCodes.value.has(r.returnCode))
+      selectedReturnCodes.value.clear()
+    } catch (error) {
+      console.error('반품 배정 중 오류 발생:', error)
+      alert(error.response?.data?.message || '반품 배정에 실패했습니다.')
+    }
   })
 }
 
@@ -133,7 +159,6 @@ const handleModalClose = () => {
 }
 
 const goBack = () => router.back()
-
 </script>
 
 <template>
@@ -159,13 +184,6 @@ const goBack = () => router.back()
               </select>
             </div>
             <div class="filter-group">
-              <label>차량 종류</label>
-              <select v-model="vehicleFilter.type">
-                <option value="">전체</option>
-                <option v-for="t in vehicleTypes" :key="t" :value="t">{{ t }}</option>
-              </select>
-            </div>
-            <div class="filter-group">
               <label>최대 적재량(≥)</label>
               <select v-model="vehicleFilter.maxWeight">
                 <option value="">전체</option>
@@ -188,9 +206,8 @@ const goBack = () => router.back()
                   <th>운송 업체</th>
                   <th>운전자</th>
                   <th>운전자 번호</th>
-                  <th>차종</th>
                   <th>차량 번호</th>
-                  <th>중량(적재/최대)</th>
+                  <th>최대 적재량</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,24 +221,13 @@ const goBack = () => router.back()
                   <td>{{ v.company }}</td>
                   <td>{{ v.driver }}</td>
                   <td>{{ v.phone }}</td>
-                  <td>{{ v.type }}</td>
                   <td class="code-cell">{{ v.number }}</td>
                   <td class="text-right weight-cell">
-                    <div class="weight-details">
-                      <span class="weight-item order">발: {{ v.orderWeight.toLocaleString() }}</span>
-                      <span class="weight-item return">반: {{ v.returnWeight.toLocaleString() }}</span>
-                    </div>
-                    <div class="weight-total">
-                      <span :class="{ 'overload': (v.orderWeight + v.returnWeight) >= v.maxWeight }">
-                        {{ (v.orderWeight + v.returnWeight).toLocaleString() }}
-                      </span>
-                      <span class="divider">/</span>
-                      <span class="max-weight">{{ v.maxWeight.toLocaleString() }}kg</span>
-                    </div>
+                    {{ v.maxWeight.toLocaleString() }}kg
                   </td>
                 </tr>
                 <tr v-if="filteredVehicles.length === 0">
-                  <td colspan="6" class="empty-state">조건에 맞는 차량이 없습니다.</td>
+                  <td colspan="5" class="empty-state">조건에 맞는 차량이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -251,11 +257,6 @@ const goBack = () => router.back()
                   <th>반품 코드</th>
                   <th>가맹점</th>
                   <th>주소</th>
-                  <th>제품</th>
-                  <th>수령인</th>
-                  <th>연락처</th>
-                  <th>중량</th>
-                  <th>운송비</th>
                   <th>반품 요청일</th>
                 </tr>
               </thead>
@@ -272,15 +273,10 @@ const goBack = () => router.back()
                   <td class="code-cell">{{ r.returnCode }}</td>
                   <td>{{ r.franchise }}</td>
                   <td class="address-cell" :title="r.address">{{ r.address }}</td>
-                  <td class="name-cell">{{ r.product }}</td>
-                  <td>{{ r.recipient }}</td>
-                  <td>{{ r.contact }}</td>
-                  <td class="text-right">{{ r.weight.toLocaleString() }}kg</td>
-                  <td class="text-right cost-cell">{{ r.transportCost.toLocaleString() }}원</td>
                   <td>{{ r.requestDate }}</td>
                 </tr>
                 <tr v-if="filteredReturns.length === 0">
-                   <td colspan="10" class="empty-state">미배정 반품 내역이 없습니다.</td>
+                   <td colspan="5" class="empty-state">미배정 반품 내역이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -472,49 +468,7 @@ const goBack = () => router.back()
 
 .checkbox-col { width: 40px; text-align: center; }
 .weight-cell {
-  padding: 0.5rem 0.75rem !important;
-}
-
-.weight-details {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  font-size: 0.75rem;
-  margin-bottom: 2px;
-}
-
-.weight-item {
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-.weight-item.order {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.weight-item.return {
-  background: #f0f9ff;
-  color: #0369a1;
-  font-weight: 600;
-}
-
-.weight-total {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-.weight-cell .divider {
-  margin: 0 4px;
-  color: #94a3b8;
-}
-.weight-cell .max-weight {
-  color: #64748b;
-  font-size: 0.8rem;
-}
-.weight-cell .overload {
-  color: #ef4444;
-  font-weight: 700;
+  font-family: inherit;
 }
 .code-cell { font-family: monospace; font-weight: 600; color: #64748b; }
 .address-cell { 
