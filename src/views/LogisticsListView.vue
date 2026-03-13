@@ -521,8 +521,9 @@ const handleSave = async ({ type, data }) => {
     isDetailModalOpen.value = false
     alert('수정이 완료되었습니다.')
   } catch (err) {
-    console.error(err)
-    alert('수정 중 오류가 발생했습니다: ' + (err.response?.data?.message || err.message))
+    console.error('Failed to save:', err)
+    const errorMsg = err.response?.data?.message || '수정 중 오류가 발생했습니다.'
+    alert(errorMsg)
   }
 }
 
@@ -558,7 +559,9 @@ const restoreItem = async (type, id) => {
         await fetchVehicles()
       }
     } catch (err) {
-      console.error(err)
+      console.error('Failed to restore:', err)
+      const errorMsg = err.response?.data?.message || '다시 활성화하는 중 오류가 발생했습니다.'
+      alert(errorMsg)
     }
   }
 }

@@ -41,7 +41,8 @@ onMounted(async () => {
         quantity: p.quantity,
         amount: Number(p.unitPrice || 0)
       })),
-      totalAmount: (data.items || []).reduce((sum, p) => sum + (p.quantity * Number(p.unitPrice || 0)), 0)
+      totalAmount: (data.items || []).reduce((sum, p) => sum + (p.quantity * Number(p.unitPrice || 0)), 0),
+      canceledReason: data.canceledReason || null
     }
   } catch (e) {
     alert(e.message)
@@ -164,6 +165,14 @@ const goToEdit = () => {
         </div>
       </div>
 
+      <!-- 취소 사유 -->
+      <template v-if="orderItem.canceledReason">
+        <div class="divider"></div>
+        <div class="section-title"><h3>취소 사유</h3></div>
+        <div class="cancel-reason-box">
+          <p>{{ orderItem.canceledReason }}</p>
+        </div>
+      </template>
 
     </div>
   </div>
@@ -254,6 +263,19 @@ const goToEdit = () => {
 .product-list-total .total-price {
   color: var(--primary);
   font-size: 1.2rem !important;
+}
+
+.cancel-reason-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+.cancel-reason-box p {
+  margin: 0;
+  color: #991b1b;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 </style>

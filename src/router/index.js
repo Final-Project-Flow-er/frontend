@@ -250,9 +250,10 @@ const router = createRouter({
             component: HeadOfficeOrderReceptionView
         },
         {
-            path: '/head-office/orders/reception/detail',
+            path: '/head-office/orders/reception/:orderCode',
             name: 'OrderReceptionDetail',
             component: OrderReceptionDetailView,
+            props: true,
         },
         {
             path: '/head-office/returns/reception',
