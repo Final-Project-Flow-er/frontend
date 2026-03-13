@@ -61,9 +61,6 @@
           <div class="card-info-row">
             <span class="info-label">구성용품:</span> {{ product.components ? product.components.join(', ') : '없음' }}
           </div>
-          <div class="card-info-row">
-            <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
-          </div>
 
             <div class="price-row">
               <span class="price-label">판매가</span>

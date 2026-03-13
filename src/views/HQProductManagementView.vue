@@ -67,9 +67,6 @@
           <div class="card-info-row">
             <span class="info-label">구성용품:</span> {{ product.components ? product.components.join(', ') : '없음' }}
           </div>
-          <div class="card-info-row">
-            <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
-          </div>
 
             <div class="price-row">
               <span class="price-label">판매가</span>
@@ -160,10 +157,6 @@
               </select>
             </div>
             <div class="form-group">
-              <label>기준 안전재고 (공통)</label>
-              <input type="number" v-model="form.baseSafeStock" min="0" />
-            </div>
-            <div class="form-group">
               <label>칼로리 (kcal)</label>
               <input type="number" v-model="form.kcal" min="0" />
             </div>
@@ -199,19 +192,15 @@
           <div class="form-group full-width">
             <label>상품 이미지</label>
             <div class="image-upload-wrapper">
-              <div class="image-preview" v-if="form.imageUrl">
-                <img :src="form.imageUrl" alt="Preview" />
-                <button class="remove-img" @click="form.imageUrl = ''">×</button>
+              <div class="image-preview" v-if="previewImageSrc">
+                <img :src="previewImageSrc" alt="Preview" />
+                <button type="button" class="remove-img" @click="clearImage">×</button>
               </div>
-              <div class="image-placeholder" v-else @click="$refs.fileInput.click()">
+              <div class="image-placeholder" v-else @click="fileInput?.click()">
                 <span class="plus-icon">+</span>
                 <span>이미지 선택</span>
               </div>
               <input type="file" ref="fileInput" @change="handleImageUpload" accept="image/*" hidden />
-              <div class="url-input-alt">
-                <label>또는 이미지 URL 입력</label>
-                <input type="text" v-model="form.imageUrl" placeholder="http://..." />
-              </div>
             </div>
           </div>
 
@@ -282,6 +271,7 @@ const showPasswordPopup = ref(false)
 const adminPassword = ref('')
 const pendingAction = ref(null) // 'ADD_PRODUCT', 'EDIT_PRODUCT', 'ADD_TYPE'
 const pendingData = ref(null)
+const fileInput = ref(null)
 
 
 const productTypes = ref([
@@ -295,14 +285,16 @@ const typeForm = ref({
     code: ''
 })
 
-const form = ref({
+const createDefaultForm = () => ({
   type: 'OR',
   spiceLevel: '01',
   sizeCode: '01',
   productCode: '',
   name: '',
   description: '',
-  imageUrl: '',
+  currentImageUrl: '', // 기존 이미지 URL
+  imagePreviewUrl: '', // 업로드 파일 미리보기 URL
+  imageFile: null, // 업로드할 파일
   price: 0,
   costPrice: 0,
   supplyPrice: 0,
@@ -313,6 +305,8 @@ const form = ref({
   weight: 0,
   componentsInput: ''
 })
+
+const form = ref(createDefaultForm())
 
 const products = ref([])
 
@@ -357,8 +351,8 @@ const fetchProducts = async () => {
                     kcal: p.kcal || 0,
                     weight: p.weight || 0,
                     baseSafeStock: p.safetyStock || 0,
-                    components: p.components || [],
-                    componentsInput: p.components ? p.components.join(', ') : '',
+                    components: [...new Set((p.components || []).map(c => (c || '').trim()).filter(Boolean))],
+                    componentsInput: [...new Set((p.components || []).map(c => (c || '').trim()).filter(Boolean))].join(', '),
                     imageUrl: p.imageUrl || '',
                     startDate: p.startDate,
                     endDate: p.endDate,
@@ -383,6 +377,9 @@ onMounted(() => {
 
 const filteredProducts = computed(() => {
   return products.value
+})
+const previewImageSrc = computed(() => {
+    return form.value.imagePreviewUrl || form.value.currentImageUrl || ''
 })
 
 const getStatusLabel = (status) => {
@@ -440,14 +437,32 @@ const requestVerification = (action, data = null) => {
     showPasswordPopup.value = true
 }
 
-const handlePasswordConfirmation = () => {
-    if (adminPassword.value === '1234') {
-        showPasswordPopup.value = false
-        if (pendingAction.value === 'ADD_PRODUCT') executeOpenAddModal()
-        else if (pendingAction.value === 'EDIT_PRODUCT') executeOpenEditModal(pendingData.value)
-        else if (pendingAction.value === 'ADD_TYPE') executeOpenTypeModal()
-    } else {
+const handlePasswordConfirmation = async () => {
+    if (!adminPassword.value?.trim()) {
+        alert('비밀번호를 입력해주세요.')
+        return
+    }
+
+    try {
+        const res = await api.post('/hq/inventory/verify-password', {
+            password: adminPassword.value
+        })
+
+        if (res.data?.data) {
+            showPasswordPopup.value = false
+            if (pendingAction.value === 'ADD_PRODUCT') executeOpenAddModal()
+            else if (pendingAction.value === 'EDIT_PRODUCT') executeOpenEditModal(pendingData.value)
+            else if (pendingAction.value === 'ADD_TYPE') executeOpenTypeModal()
+            pendingAction.value = null
+            pendingData.value = null
+            adminPassword.value = ''
+            return
+        }
+
         alert('비밀번호가 틀렸습니다.')
+    } catch (err) {
+        console.error('비밀번호 확인 실패:', err)
+        alert('비밀번호 확인 중 오류가 발생했습니다.')
     }
 }
 
@@ -464,11 +479,9 @@ const openAddModal = () => {
 const executeOpenAddModal = () => {
   isEditMode.value = false
   form.value = {
-      type: 'OR', spiceLevel: '01', sizeCode: '01',
-      productCode: '', name: '', description: '', imageUrl: '', 
-      price: 0, costPrice: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
-      kcal: 0, weight: 0, componentsInput: '',
-      startDate: '2024-01-01', endDate: '2025-12-31'
+      ...createDefaultForm(),
+      startDate: '2024-01-01',
+      endDate: '2025-12-31'
   }
   updateCodeAndName()
   showModal.value = true
@@ -485,24 +498,55 @@ const executeOpenEditModal = (product) => {
   const spice = product.productCode.substring(2, 4)
   const size = product.productCode.substring(4, 6)
 
-  const componentsInput = product.components ? product.components.join(', ') : ''
+  const uniqueComponents = [...new Set((product.components || []).map(c => (c || '').trim()).filter(Boolean))]
+  const componentsInput = uniqueComponents.join(', ')
 
   form.value = { 
       ...JSON.parse(JSON.stringify(product)),
-      type, spiceLevel: spice, sizeCode: size, componentsInput
+      type,
+      spiceLevel: spice,
+      sizeCode: size,
+      componentsInput,
+      currentImageUrl: product.imageUrl || '',
+      imagePreviewUrl: '',
+      imageFile: null
   }
   showModal.value = true
 }
 
 const closeModal = () => {
   showModal.value = false
+  if (form.value.imagePreviewUrl) {
+      URL.revokeObjectURL(form.value.imagePreviewUrl)
+  }
+  if (fileInput.value) {
+      fileInput.value.value = ''
+  }
+}
+
+const clearImage = () => {
+    if (form.value.imagePreviewUrl) {
+        URL.revokeObjectURL(form.value.imagePreviewUrl)
+    }
+    form.value.imagePreviewUrl = ''
+    form.value.imageFile = null
+    form.value.currentImageUrl = ''
+    if (fileInput.value) {
+        fileInput.value.value = ''
+    }
 }
 
 const saveProduct = async () => {
+    const normalizedComponents = [...new Set(
+        (form.value.componentsInput || '')
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+    )]
+
     const productData = {
         name: form.value.name,
         description: form.value.description,
-        imageUrl: form.value.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image',
         price: form.value.price,
         costPrice: form.value.costPrice,
         originalPrice: form.value.costPrice, // for update request
@@ -514,7 +558,22 @@ const saveProduct = async () => {
         weight: form.value.weight,
         startDate: form.value.startDate,
         endDate: form.value.endDate,
-        components: form.value.componentsInput ? form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean) : []
+        components: normalizedComponents
+    }
+
+    if (!isEditMode.value && !form.value.imageFile) {
+        productData.imageUrl = 'https://via.placeholder.com/300x200?text=No+Image'
+    }
+
+    const formData = new FormData()
+    formData.append('request', new Blob([JSON.stringify(
+        isEditMode.value
+            ? productData
+            : { ...productData, productCode: form.value.productCode }
+    )], { type: 'application/json' }))
+
+    if (form.value.imageFile) {
+        formData.append('image', form.value.imageFile)
     }
     
     try {
@@ -524,9 +583,9 @@ const saveProduct = async () => {
                 alert('상품 ID가 없어 수정할 수 없습니다.')
                 return
             }
-            await api.patch(`/hq/product/${form.value.productId}`, productData)
+            await api.patch(`/hq/product/${form.value.productId}`, formData)
         } else {
-            await api.post('/hq/product/create', { ...productData, productCode: form.value.productCode })
+            await api.post('/hq/product/create', formData)
         }
         await fetchProducts()
         closeModal()
@@ -584,13 +643,17 @@ const handleImageUpload = (event) => {
     if (file) {
         if (file.size > 2 * 1024 * 1024) {
             alert('이미지 크기는 2MB를 초과할 수 없습니다.')
+            if (fileInput.value) {
+                fileInput.value.value = ''
+            }
             return
         }
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            form.value.imageUrl = e.target.result
+        if (form.value.imagePreviewUrl) {
+            URL.revokeObjectURL(form.value.imagePreviewUrl)
         }
-        reader.readAsDataURL(file)
+        form.value.imageFile = file
+        form.value.imagePreviewUrl = URL.createObjectURL(file)
+        form.value.currentImageUrl = ''
     }
 }
 
@@ -666,8 +729,5 @@ const handleImageUpload = (event) => {
 .image-placeholder { width: 120px; height: 120px; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #64748b; background: #f8fafc; transition: all 0.2s; }
 .image-placeholder:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
 .image-placeholder .plus-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
-.url-input-alt { display: flex; flex-direction: column; gap: 0.4rem; }
-.url-input-alt label { font-size: 0.75rem; color: #94a3b8; }
-.url-input-alt input { font-size: 0.85rem !important; color: #64748b; }
 
 </style>
