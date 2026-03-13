@@ -619,6 +619,8 @@ const handleBizNumInput = (e, type) => {
 
 // 주소 검색 (Daum Postcode)
 const openPostcode = (type) => {
+  const width = 500;
+  const height = 600;
   new window.daum.Postcode({
     oncomplete: (data) => {
       let fullAddress = data.address;
@@ -639,7 +641,10 @@ const openPostcode = (type) => {
         updateRegionByAddress(data.sido, 'factory');
       }
     }
-  }).open();
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  });
 }
 
 const updateRegionByAddress = (sido, type) => {

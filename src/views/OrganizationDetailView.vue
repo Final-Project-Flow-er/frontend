@@ -581,6 +581,8 @@ const handleBizNumInput = (e) => {
 
 // 주소 검색 (Daum Postcode)
 const openPostcode = () => {
+  const width = 500;
+  const height = 600;
   new window.daum.Postcode({
     oncomplete: (data) => {
       let fullAddress = data.address;
@@ -605,7 +607,10 @@ const openPostcode = () => {
       const mapped = sidoMap[data.sido] || Object.entries(sidoMap).find(([key]) => data.sido.includes(key))?.[1];
       if (mapped) organization.value.region = mapped;
     }
-  }).open();
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  });
 }
 
 const getOrgNameLabel = (type) => {
