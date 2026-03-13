@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://k8s-default-backendi-ce0c9621d6-886419047.ap-northeast-2.elb.amazonaws.com'
+const API_BASE_URL = 'http://k8s-default-backendi-ce0c9621d6-886419047.ap-northeast-2.elb.amazonaws.com'
 
 const instance = axios.create({
     baseURL: API_BASE_URL,
