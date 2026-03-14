@@ -67,9 +67,6 @@
           <div class="card-info-row">
             <span class="info-label">구성용품:</span> {{ product.components ? product.components.join(', ') : '없음' }}
           </div>
-          <div class="card-info-row">
-            <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
-          </div>
 
             <div class="price-row">
               <span class="price-label">판매가</span>
@@ -154,14 +151,10 @@
               <label>상태</label>
               <select v-model="form.status">
                 <option value="ON_SALE">판매중</option>
-                <option value="SOLD_OUT">단종</option>
-                <option value="TEMPORARY_OUT">일시품절</option>
-                <option value="SALE_SCHEDULED">판매예정</option>
+                <option value="DISCONTINUED">단종</option>
+                <option value="TEMP_SOLD_OUT">일시품절</option>
+                <option value="COMING_SOON">판매예정</option>
               </select>
-            </div>
-            <div class="form-group">
-              <label>기준 안전재고 (공통)</label>
-              <input type="number" v-model="form.baseSafeStock" min="0" />
             </div>
             <div class="form-group">
               <label>칼로리 (kcal)</label>
@@ -186,8 +179,14 @@
           </div>
 
           <div class="form-group full-width">
-            <label>구성용품 (쉼표로 구분하여 입력)</label>
-            <input type="text" v-model="form.componentsInput" placeholder="예: 떡, 어묵, 소스, 파" />
+            <label>구성용품</label>
+            <div class="component-selection-row">
+              <div class="component-chip-wrap" v-if="form.components && form.components.length">
+                <span class="component-chip" v-for="c in form.components" :key="c">{{ c }}</span>
+              </div>
+              <span v-else class="component-empty">선택된 구성용품이 없습니다.</span>
+              <button type="button" class="action-btn secondary" @click="openComponentModal">구성용품 선택</button>
+            </div>
           </div>
 
           <div class="form-group full-width">
@@ -199,19 +198,15 @@
           <div class="form-group full-width">
             <label>상품 이미지</label>
             <div class="image-upload-wrapper">
-              <div class="image-preview" v-if="form.imageUrl">
-                <img :src="form.imageUrl" alt="Preview" />
-                <button class="remove-img" @click="form.imageUrl = ''">×</button>
+              <div class="image-preview" v-if="previewImageSrc">
+                <img :src="previewImageSrc" alt="Preview" />
+                <button type="button" class="remove-img" @click="clearImage">×</button>
               </div>
-              <div class="image-placeholder" v-else @click="$refs.fileInput.click()">
+              <div class="image-placeholder" v-else @click="fileInput?.click()">
                 <span class="plus-icon">+</span>
                 <span>이미지 선택</span>
               </div>
               <input type="file" ref="fileInput" @change="handleImageUpload" accept="image/*" hidden />
-              <div class="url-input-alt">
-                <label>또는 이미지 URL 입력</label>
-                <input type="text" v-model="form.imageUrl" placeholder="http://..." />
-              </div>
             </div>
           </div>
 
@@ -240,6 +235,45 @@
         <div class="modal-actions">
           <button @click="closeTypeModal">취소</button>
           <button class="primary" @click="addType">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Select Modal -->
+    <div v-if="showComponentModal" class="modal-overlay">
+      <div class="modal-content component-modal">
+        <h3>구성용품 선택</h3>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>구성용품 검색</label>
+              <input type="text" v-model="componentSearch" placeholder="구성용품 검색" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>신규 구성용품 추가</label>
+              <input type="text" v-model="newComponentName" placeholder="예: 마라 소스" @keyup.enter="addComponentToCatalog" />
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="action-btn secondary" @click="addComponentToCatalog">추가</button>
+            </div>
+          </div>
+
+          <div class="component-list">
+            <label class="component-item" v-for="component in filteredComponentCatalog" :key="component.componentId ?? component.name">
+              <input type="checkbox" :value="component.name" v-model="selectedComponentDraft" />
+              <span>{{ component.name }}</span>
+              <button type="button" class="delete-link" @click.stop="removeComponentFromCatalog(component)">삭제</button>
+            </label>
+            <div v-if="filteredComponentCatalog.length === 0" class="component-empty">검색 결과가 없습니다.</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeComponentModal">취소</button>
+          <button class="primary" @click="applyComponentSelection">적용</button>
         </div>
       </div>
     </div>
@@ -275,6 +309,7 @@ const filter = ref({
 
 const showModal = ref(false)
 const showTypeModal = ref(false)
+const showComponentModal = ref(false)
 const isEditMode = ref(false)
 
 // Admin Password State
@@ -282,6 +317,7 @@ const showPasswordPopup = ref(false)
 const adminPassword = ref('')
 const pendingAction = ref(null) // 'ADD_PRODUCT', 'EDIT_PRODUCT', 'ADD_TYPE'
 const pendingData = ref(null)
+const fileInput = ref(null)
 
 
 const productTypes = ref([
@@ -295,24 +331,32 @@ const typeForm = ref({
     code: ''
 })
 
-const form = ref({
+const createDefaultForm = () => ({
   type: 'OR',
   spiceLevel: '01',
   sizeCode: '01',
   productCode: '',
   name: '',
   description: '',
-  imageUrl: '',
+  currentImageUrl: '', // 기존 이미지 URL
+  imagePreviewUrl: '', // 업로드 파일 미리보기 URL
+  imageFile: null, // 업로드할 파일
   price: 0,
   costPrice: 0,
   supplyPrice: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
-  baseSafeStock: 10,
   kcal: 0,
   weight: 0,
+  components: [],
   componentsInput: ''
 })
+
+const form = ref(createDefaultForm())
+const componentCatalog = ref([])
+const componentSearch = ref('')
+const newComponentName = ref('')
+const selectedComponentDraft = ref([])
 
 const products = ref([])
 
@@ -356,15 +400,15 @@ const fetchProducts = async () => {
                     supplyPrice: p.supplyPrice,
                     kcal: p.kcal || 0,
                     weight: p.weight || 0,
-                    baseSafeStock: p.safetyStock || 0,
-                    components: p.components || [],
-                    componentsInput: p.components ? p.components.join(', ') : '',
+                    components: [...new Set((p.components || []).map(c => (c || '').trim()).filter(Boolean))],
+                    componentsInput: [...new Set((p.components || []).map(c => (c || '').trim()).filter(Boolean))].join(', '),
                     imageUrl: p.imageUrl || '',
                     startDate: p.startDate,
                     endDate: p.endDate,
                     status: p.status || 'ON_SALE'
                 }
             })
+            syncComponentCatalogFromProducts(products.value)
         } else {
             products.value = []
         }
@@ -379,10 +423,19 @@ watch(filter, () => {
 
 onMounted(() => {
     fetchProducts()
+    fetchComponentCatalog()
 })
 
 const filteredProducts = computed(() => {
   return products.value
+})
+const filteredComponentCatalog = computed(() => {
+    const keyword = (componentSearch.value || '').trim().toLowerCase()
+    if (!keyword) return componentCatalog.value
+    return componentCatalog.value.filter(component => component.name.toLowerCase().includes(keyword))
+})
+const previewImageSrc = computed(() => {
+    return form.value.imagePreviewUrl || form.value.currentImageUrl || ''
 })
 
 const getStatusLabel = (status) => {
@@ -440,14 +493,32 @@ const requestVerification = (action, data = null) => {
     showPasswordPopup.value = true
 }
 
-const handlePasswordConfirmation = () => {
-    if (adminPassword.value === '1234') {
-        showPasswordPopup.value = false
-        if (pendingAction.value === 'ADD_PRODUCT') executeOpenAddModal()
-        else if (pendingAction.value === 'EDIT_PRODUCT') executeOpenEditModal(pendingData.value)
-        else if (pendingAction.value === 'ADD_TYPE') executeOpenTypeModal()
-    } else {
+const handlePasswordConfirmation = async () => {
+    if (!adminPassword.value?.trim()) {
+        alert('비밀번호를 입력해주세요.')
+        return
+    }
+
+    try {
+        const res = await api.post('/hq/inventory/verify-password', {
+            password: adminPassword.value
+        })
+
+        if (res.data?.data) {
+            showPasswordPopup.value = false
+            if (pendingAction.value === 'ADD_PRODUCT') executeOpenAddModal()
+            else if (pendingAction.value === 'EDIT_PRODUCT') executeOpenEditModal(pendingData.value)
+            else if (pendingAction.value === 'ADD_TYPE') executeOpenTypeModal()
+            pendingAction.value = null
+            pendingData.value = null
+            adminPassword.value = ''
+            return
+        }
+
         alert('비밀번호가 틀렸습니다.')
+    } catch (err) {
+        console.error('비밀번호 확인 실패:', err)
+        alert('비밀번호 확인 중 오류가 발생했습니다.')
     }
 }
 
@@ -464,11 +535,9 @@ const openAddModal = () => {
 const executeOpenAddModal = () => {
   isEditMode.value = false
   form.value = {
-      type: 'OR', spiceLevel: '01', sizeCode: '01',
-      productCode: '', name: '', description: '', imageUrl: '', 
-      price: 0, costPrice: 0, supplyPrice: 0, status: 'ON_SALE', servingSize: 1, baseSafeStock: 10,
-      kcal: 0, weight: 0, componentsInput: '',
-      startDate: '2024-01-01', endDate: '2025-12-31'
+      ...createDefaultForm(),
+      startDate: '2024-01-01',
+      endDate: '2025-12-31'
   }
   updateCodeAndName()
   showModal.value = true
@@ -485,36 +554,178 @@ const executeOpenEditModal = (product) => {
   const spice = product.productCode.substring(2, 4)
   const size = product.productCode.substring(4, 6)
 
-  const componentsInput = product.components ? product.components.join(', ') : ''
+  const uniqueComponents = [...new Set((product.components || []).map(c => (c || '').trim()).filter(Boolean))]
 
   form.value = { 
       ...JSON.parse(JSON.stringify(product)),
-      type, spiceLevel: spice, sizeCode: size, componentsInput
+      type,
+      spiceLevel: spice,
+      sizeCode: size,
+      components: uniqueComponents,
+      componentsInput: uniqueComponents.join(', '),
+      currentImageUrl: product.imageUrl || '',
+      imagePreviewUrl: '',
+      imageFile: null
   }
   showModal.value = true
 }
 
 const closeModal = () => {
   showModal.value = false
+  if (form.value.imagePreviewUrl) {
+      URL.revokeObjectURL(form.value.imagePreviewUrl)
+  }
+  if (fileInput.value) {
+      fileInput.value.value = ''
+  }
+}
+
+const syncComponentCatalogFromProducts = (productList) => {
+    const fromProducts = (productList || [])
+        .flatMap(p => p.components || [])
+        .map(name => (name || '').trim())
+        .filter(Boolean)
+    const existingNames = new Set(componentCatalog.value.map(c => c.name))
+    const merged = [...componentCatalog.value]
+    for (const name of fromProducts) {
+        if (!existingNames.has(name)) {
+            merged.push({ componentId: null, name })
+            existingNames.add(name)
+        }
+    }
+    componentCatalog.value = merged.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+const fetchComponentCatalog = async () => {
+    try {
+        const res = await api.get('/hq/product/components')
+        const data = res.data?.data || []
+        componentCatalog.value = (data || [])
+            .map(c => ({ componentId: c.componentId, name: (c.name || '').trim() }))
+            .filter(c => c.name)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        syncComponentCatalogFromProducts(products.value)
+    } catch (err) {
+        console.error('구성용품 목록 조회 실패:', err)
+        syncComponentCatalogFromProducts(products.value)
+    }
+}
+
+const openComponentModal = () => {
+    selectedComponentDraft.value = [...new Set((form.value.components || []).map(name => (name || '').trim()).filter(Boolean))]
+    componentSearch.value = ''
+    newComponentName.value = ''
+    showComponentModal.value = true
+}
+
+const closeComponentModal = () => {
+    showComponentModal.value = false
+}
+
+const addComponentToCatalog = async () => {
+    const normalized = (newComponentName.value || '').trim()
+    if (!normalized) {
+        alert('추가할 구성용품명을 입력해주세요.')
+        return
+    }
+    if (componentCatalog.value.some(c => c.name === normalized)) {
+        alert('이미 존재하는 구성용품입니다.')
+        return
+    }
+    try {
+        const res = await api.post('/hq/product/components', { name: normalized })
+        const created = res.data?.data
+        if (!created?.name) {
+            alert('구성용품 추가에 실패했습니다.')
+            return
+        }
+        const createdName = created.name.trim()
+        componentCatalog.value = [...componentCatalog.value, {
+            componentId: created.componentId ?? null,
+            name: createdName
+        }].sort((a, b) => a.name.localeCompare(b.name))
+        selectedComponentDraft.value = [...new Set([...selectedComponentDraft.value, createdName])]
+        newComponentName.value = ''
+    } catch (err) {
+        console.error('구성용품 추가 실패:', err)
+        alert(err?.response?.data?.message || '구성용품 추가에 실패했습니다.')
+    }
+}
+
+const removeComponentFromCatalog = async (component) => {
+    const targetName = (component?.name || '').trim()
+    if (!targetName) return
+
+    if (!confirm(`[${targetName}] 구성용품을 삭제할까요?`)) {
+        return
+    }
+
+    if (!component.componentId) {
+        componentCatalog.value = componentCatalog.value.filter(c => c.name !== targetName)
+        selectedComponentDraft.value = selectedComponentDraft.value.filter(c => c !== targetName)
+        return
+    }
+
+    try {
+        await api.delete(`/hq/product/components/${component.componentId}`)
+        componentCatalog.value = componentCatalog.value.filter(c => c.componentId !== component.componentId)
+        selectedComponentDraft.value = selectedComponentDraft.value.filter(c => c !== targetName)
+    } catch (err) {
+        console.error('구성용품 삭제 실패:', err)
+        alert(err?.response?.data?.message || '구성용품 삭제에 실패했습니다.')
+    }
+}
+
+const applyComponentSelection = () => {
+    const normalized = [...new Set((selectedComponentDraft.value || []).map(name => (name || '').trim()).filter(Boolean))]
+    form.value.components = normalized
+    form.value.componentsInput = normalized.join(', ')
+    showComponentModal.value = false
+}
+
+const clearImage = () => {
+    if (form.value.imagePreviewUrl) {
+        URL.revokeObjectURL(form.value.imagePreviewUrl)
+    }
+    form.value.imagePreviewUrl = ''
+    form.value.imageFile = null
+    form.value.currentImageUrl = ''
+    if (fileInput.value) {
+        fileInput.value.value = ''
+    }
 }
 
 const saveProduct = async () => {
+    const normalizedComponents = [...new Set((form.value.components || []).map(s => (s || '').trim()).filter(Boolean))]
+
     const productData = {
         name: form.value.name,
         description: form.value.description,
-        imageUrl: form.value.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image',
         price: form.value.price,
         costPrice: form.value.costPrice,
         originalPrice: form.value.costPrice, // for update request
         supplyPrice: form.value.supplyPrice,
-        safetyStock: form.value.baseSafeStock,
-        baseSafeStock: form.value.baseSafeStock, // for update request
         status: form.value.status,
         kcal: form.value.kcal,
         weight: form.value.weight,
         startDate: form.value.startDate,
         endDate: form.value.endDate,
-        components: form.value.componentsInput ? form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean) : []
+        components: normalizedComponents
+    }
+
+    if (!isEditMode.value && !form.value.imageFile) {
+        productData.imageUrl = 'https://via.placeholder.com/300x200?text=No+Image'
+    }
+
+    const formData = new FormData()
+    formData.append('request', new Blob([JSON.stringify(
+        isEditMode.value
+            ? productData
+            : { ...productData, productCode: form.value.productCode }
+    )], { type: 'application/json' }))
+
+    if (form.value.imageFile) {
+        formData.append('image', form.value.imageFile)
     }
     
     try {
@@ -524,9 +735,9 @@ const saveProduct = async () => {
                 alert('상품 ID가 없어 수정할 수 없습니다.')
                 return
             }
-            await api.patch(`/hq/product/${form.value.productId}`, productData)
+            await api.patch(`/hq/product/${form.value.productId}`, formData)
         } else {
-            await api.post('/hq/product/create', { ...productData, productCode: form.value.productCode })
+            await api.post('/hq/product', formData)
         }
         await fetchProducts()
         closeModal()
@@ -584,13 +795,17 @@ const handleImageUpload = (event) => {
     if (file) {
         if (file.size > 2 * 1024 * 1024) {
             alert('이미지 크기는 2MB를 초과할 수 없습니다.')
+            if (fileInput.value) {
+                fileInput.value.value = ''
+            }
             return
         }
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            form.value.imageUrl = e.target.result
+        if (form.value.imagePreviewUrl) {
+            URL.revokeObjectURL(form.value.imagePreviewUrl)
         }
-        reader.readAsDataURL(file)
+        form.value.imageFile = file
+        form.value.imagePreviewUrl = URL.createObjectURL(file)
+        form.value.currentImageUrl = ''
     }
 }
 
@@ -617,10 +832,10 @@ const handleImageUpload = (event) => {
 .card-image { height: 200px; background: #f1f5f9; position: relative; overflow: hidden; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
 .status-badge { position: absolute; top: 10px; right: 10px; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.status-badge.on_sale { background: #e6fffa; color: #2c7a7b; }
-.status-badge.sold_out { background: #fee2e2; color: #991b1b; }
-.status-badge.temporary_out { background: #fffaf0; color: #9c4221; }
-.status-badge.sale_scheduled { background: #e0e7ff; color: #3730a3; }
+.status-badge.on_sale { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.status-badge.discontinued { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.status-badge.temp_sold_out { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+.status-badge.coming_soon { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
 .card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
 .card-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem; }
 .product-code { font-size: 0.8rem; color: var(--text-light); }
@@ -644,6 +859,7 @@ const handleImageUpload = (event) => {
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 600px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
 .modal-content.type-modal { width: 400px; }
+.modal-content.component-modal { width: 520px; }
 .modal-content h3 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; }
 .modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 1.25rem; }
 .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; width: 100%; }
@@ -666,8 +882,17 @@ const handleImageUpload = (event) => {
 .image-placeholder { width: 120px; height: 120px; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #64748b; background: #f8fafc; transition: all 0.2s; }
 .image-placeholder:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
 .image-placeholder .plus-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
-.url-input-alt { display: flex; flex-direction: column; gap: 0.4rem; }
-.url-input-alt label { font-size: 0.75rem; color: #94a3b8; }
-.url-input-alt input { font-size: 0.85rem !important; color: #64748b; }
+
+/* Component Selector */
+.component-selection-row { display: flex; align-items: center; gap: 0.75rem; justify-content: space-between; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; }
+.component-chip-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.component-chip { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 999px; background: #f1f5f9; color: #334155; font-size: 0.82rem; font-weight: 600; }
+.component-empty { color: #64748b; font-size: 0.9rem; }
+.component-list { border: 1px solid var(--border-color); border-radius: 8px; max-height: 260px; overflow: auto; }
+.component-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; border-bottom: 1px solid #eef2f7; }
+.component-item:last-child { border-bottom: none; }
+.component-item input[type="checkbox"] { width: auto; }
+.delete-link { margin-left: auto; border: none; background: transparent; color: #dc2626; font-size: 0.85rem; cursor: pointer; }
+.delete-link:hover { text-decoration: underline; }
 
 </style>
