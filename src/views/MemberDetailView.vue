@@ -138,15 +138,20 @@
                 </select>
               </div>
               
-              <!-- 가맹점/공장 관리자용 소속 검색 -->
-              <div v-if="member.role !== 'HQ'" class="info-field">
-                <label>{{ member.role === 'FRANCHISE' ? '가맹점명' : '공장명' }}</label>
+              <!-- 소속 정보 검색 -->
+              <div class="info-field">
+                <label>{{ getOrgLabel(member.role) }}</label>
                 <select 
                   v-model="member.orgName" 
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
                 >
-                  <template v-if="member.role === 'FRANCHISE'">
+                  <template v-if="member.role === 'HQ'">
+                    <option v-for="org in hqOptions" :key="org.id" :value="org.name">
+                      {{ org.name }}
+                    </option>
+                  </template>
+                  <template v-else-if="member.role === 'FRANCHISE'">
                     <option v-for="org in franchiseOptions" :key="org.id" :value="org.name">
                       {{ org.name }}
                     </option>
@@ -159,8 +164,8 @@
                 </select>
               </div>
 
-              <div v-if="member.role !== 'HQ'" class="info-field">
-                <label>{{ member.role === 'FRANCHISE' ? '가맹점 코드' : '공장 코드' }}</label>
+              <div class="info-field">
+                <label>{{ getCodeLabel(member.role) }}</label>
                 <input type="text" v-model="member.orgCode" disabled class="input-disabled">
               </div>
             </div>
@@ -200,6 +205,7 @@ const member = ref(null)
 const originalMember = ref(null)
 
 // 사업장 옵션 (백엔드 연동)
+const hqOptions = computed(() => userManagementStore.businessUnits.hq)
 const franchiseOptions = computed(() => userManagementStore.businessUnits.franchise)
 const factoryOptions = computed(() => userManagementStore.businessUnits.factory)
 
@@ -275,16 +281,35 @@ const fetchDetail = async () => {
   }
 }
 
+const getOrgLabel = (role) => {
+  switch (role) {
+    case 'HQ': return '본사명'
+    case 'FRANCHISE': return '가맹점명'
+    case 'FACTORY': return '공장명'
+    default: return '소속명'
+  }
+}
+
+const getCodeLabel = (role) => {
+  switch (role) {
+    case 'HQ': return '본사 코드'
+    case 'FRANCHISE': return '가맹점 코드'
+    case 'FACTORY': return '공장 코드'
+    default: return '코드'
+  }
+}
+
 const updateOrgCodeFromOptions = () => {
-  if (!member.value || member.value.role === 'HQ' || !member.value.businessUnitId) {
+  if (!member.value || !member.value.businessUnitId) {
     member.value.orgCode = '-'
     return
   }
   
-  const options = member.value.role === 'FRANCHISE' ? franchiseOptions.value : factoryOptions.value
+  const options = member.value.role === 'HQ' ? hqOptions.value : 
+                 (member.value.role === 'FRANCHISE' ? franchiseOptions.value : factoryOptions.value)
   const org = options.find(o => o.id === member.value.businessUnitId)
   if (org) {
-    member.value.orgCode = org.code || '-'
+    member.value.orgCode = org.hqCode || org.code || '-'
   }
 }
 
@@ -292,6 +317,7 @@ onMounted(async () => {
   isLoading.value = true
   try {
     await Promise.all([
+      userManagementStore.fetchBusinessUnits('hq'),
       userManagementStore.fetchBusinessUnits('franchise'),
       userManagementStore.fetchBusinessUnits('factory'),
       fetchDetail()
@@ -319,11 +345,12 @@ watch(() => member.value?.role, (newRole, oldRole) => {
 watch(() => member.value?.orgName, (newVal) => {
   if (!member.value || !isEditing.value) return
   
-  const options = member.value.role === 'FRANCHISE' ? franchiseOptions.value : factoryOptions.value
+  const options = member.value.role === 'HQ' ? hqOptions.value : 
+                 (member.value.role === 'FRANCHISE' ? franchiseOptions.value : factoryOptions.value)
   const org = options.find(o => o.name === newVal)
   if (org) {
     member.value.businessUnitId = org.id
-    member.value.orgCode = org.code || ''
+    member.value.orgCode = org.hqCode || org.code || ''
   }
 })
 
