@@ -258,7 +258,6 @@
               <div class="warning-label">누적 경고 횟수</div>
               <div class="warning-value">
                 <span class="count">{{ organization.franchiseDetail.warningCount || 0 }}</span>
-                <span class="total">/ 3</span>
               </div>
             </div>
             <div class="restriction-status">

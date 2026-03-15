@@ -174,21 +174,7 @@
 
         <div class="modal-body fancy-scroll" :class="{ 'editing-mode': isEditingOrg }">
           <div class="org-hero">
-            <div class="org-avatar-big">
-              <img v-if="myOrgInfo.photoUrl" :src="myOrgInfo.photoUrl" alt="조직 사진">
-              <div v-else class="org-placeholder-big">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <path d="M3 9h18"></path>
-                </svg>
-              </div>
-              <button v-if="isEditingOrg" class="avatar-edit-btn small" @click="uploadOrgPhoto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                </svg>
-              </button>
-            </div>
-            <div class="org-hero-text">
+            <div class="org-hero-text no-avatar">
               <h3 class="org-name-title">{{ myOrgInfo.name }}</h3>
               <span class="org-code-pill">{{ myOrgInfo.code }}</span>
             </div>
@@ -206,8 +192,8 @@
                 :disabled="!isEditingOrg" 
                 :class="{ 'input-locked': !isEditingOrg }" 
                 class="premium-input-small"
-                @input="formatPhoneNumber(myOrgInfo, 'phone')"
-                maxlength="11"
+                @input="handleOrgPhoneInput"
+                maxlength="13"
               >
             </div>
             <div class="info-group">
@@ -221,6 +207,14 @@
 
             <!-- 가맹점 전용 -->
             <template v-if="myOrgInfo.type === 'store'">
+              <div class="info-group">
+                <label>대표자명</label>
+                <input v-model="myOrgInfo.representative" disabled class="premium-input-small input-locked">
+              </div>
+              <div class="info-group">
+                <label>지역</label>
+                <input :value="regionLabel" disabled class="premium-input-small input-locked">
+              </div>
               <div class="info-group full-width">
                 <label>운영 요일</label>
                 <div class="fancy-days-chips">
@@ -238,6 +232,25 @@
                 <label>마감 시간</label>
                 <input type="time" v-model="myOrgInfo.closeTime" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small">
               </div>
+              
+              <div v-if="!isEditingOrg" class="info-group">
+                <label>누적 경고 횟수</label>
+                <div class="premium-input-small input-locked warning-text" :class="{ 'critical': myOrgInfo.warningCount >= 3 }">
+                  {{ myOrgInfo.warningCount }}
+                </div>
+              </div>
+              <div v-if="!isEditingOrg" class="info-group">
+                <label>경고 상태</label>
+                <div class="premium-input-small input-locked warning-text" :class="{ 'critical': myOrgInfo.warningCount >= 3 }">
+                  {{ myOrgInfo.warningCount >= 3 ? '반품 제한 중' : '정상' }}
+                </div>
+              </div>
+              <div v-if="!isEditingOrg && myOrgInfo.penaltyEndDate" class="info-group">
+                <label>반품 제한 종료일</label>
+                <div class="premium-input-small input-locked warning-text critical">
+                  {{ new Date(myOrgInfo.penaltyEndDate).toLocaleDateString() }}
+                </div>
+              </div>
             </template>
 
             <!-- 공장 전용 -->
@@ -248,13 +261,51 @@
               </div>
               <div class="info-group">
                 <label>공장 지역</label>
-                <input v-model="myOrgInfo.region" disabled class="premium-input-small input-locked">
+                <input :value="regionLabel" disabled class="premium-input-small input-locked">
               </div>
               <div class="info-group">
                 <label>생산 라인 개수</label>
                 <input type="number" v-model.number="myOrgInfo.lineCount" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small" min="1" max="9">
               </div>
             </template>
+
+            <!-- 가맹점 사진 관리 (가맹점 전용) -->
+            <div v-if="myOrgInfo.type === 'store'" class="info-group full-width">
+              <label>매장 사진 (최대 5장)</label>
+              <div class="org-photo-manage-container">
+                <div class="org-photo-preview-scroll">
+                  <!-- 기존 이미지 -->
+                  <div v-for="img in myOrgInfo.images" :key="img.storedName" class="org-photo-item">
+                    <img :src="img.url" alt="매장 사진" @click="openModal(img.url)" class="clickable-image">
+                    <button v-if="isEditingOrg" @click="removeExistingOrgPhoto(img.storedName)" class="btn-remove-mini">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- 새 이미지 미리보기 -->
+                  <div v-for="(preview, idx) in orgPreviewImageUrls" :key="'new-'+idx" class="org-photo-item new">
+                    <img :src="preview" alt="새 매장 사진" @click="openModal(preview)" class="clickable-image">
+                    <button v-if="isEditingOrg" @click="removeNewOrgPhoto(idx)" class="btn-remove-mini">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- 추가 버튼 -->
+                  <button v-if="isEditingOrg && (myOrgInfo.images.length + orgPhotoFiles.length < 5)" 
+                          @click="uploadOrgPhoto" 
+                          class="btn-add-org-photo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div v-if="isEditingOrg" class="modal-footer-sticky">
@@ -300,6 +351,19 @@
             <button @click="closePasswordModal" class="btn-slate-ghost full">취소</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 이미지 확대 모달 -->
+    <div v-if="modalImageUrl" class="image-modal-overlay" @click="closeModal">
+      <div class="image-modal-content">
+        <button class="btn-close-modal-round" @click="closeModal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <img :src="modalImageUrl" alt="확대 사진" @click.stop>
       </div>
     </div>
 
@@ -349,12 +413,56 @@ const ROLE_TYPE_LABELS = {
   FACTORY: '공장' 
 }
 
+// 지역 라벨 (Backend Region Enum과 매핑)
+const REGION_LABELS = {
+  SEOUL: '서울',
+  GYEONGGI: '경기',
+  INCHEON: '인천',
+  BUSAN: '부산',
+  DAEGU: '대구',
+  DAEJEON: '대전',
+  GWANGJU: '광주',
+  ULSAN: '울산',
+  SEJONG: '세종',
+  GANGWON: '강원',
+  CHUNGBUK: '충북',
+  CHUNGNAM: '충남',
+  JEONBUK: '전북',
+  JEONNAM: '전남',
+  GYEONGBUK: '경북',
+  GYEONGNAM: '경남',
+  JEJU: '제주'
+}
+
 const roleTypeLabel = computed(() => ROLE_TYPE_LABELS[userInfo.role] || '')
 const roleDisplayName = computed(() => {
   return userInfo.roleDetail ? (ROLE_DETAIL_LABELS[userInfo.roleDetail] || userInfo.roleDetail) : '사용자'
 })
+const regionLabel = computed(() => REGION_LABELS[myOrgInfo.region] || myOrgInfo.region)
 
 // 유효성 검사 및 포맷팅
+const handleOrgPhoneInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.startsWith('02')) {
+    if (val.length > 2 && val.length <= 5) {
+      val = val.slice(0, 2) + '-' + val.slice(2);
+    } else if (val.length > 5 && val.length <= 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
+    } else if (val.length > 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    }
+  } else {
+    if (val.length > 3 && val.length <= 7) {
+      val = val.slice(0, 3) + '-' + val.slice(3);
+    } else if (val.length > 7 && val.length <= 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
+    } else if (val.length > 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    }
+  }
+  myOrgInfo.phone = val;
+}
+
 const formatPhoneNumber = (target, key) => {
   target[key] = target[key].replace(/[^0-9]/g, '').substring(0, 11)
 }
@@ -384,21 +492,27 @@ const myOrgInfo = reactive({
   operatingDays: [],
   openTime: '',
   closeTime: '',
-  photoUrl: '',
+  images: [], // List of { storedName, url }
   representative: '',
   region: '',
-  lineCount: 0
+  lineCount: 0,
+  warningCount: 0,
+  penaltyEndDate: null
 })
+
+const orgPhotoFiles = ref([])
+const orgDeleteStoredFileNames = ref([])
+const orgPreviewImageUrls = ref([])
 
 // 요일 정보
 const weekDays = [
-  { value: 'MON', label: '월' },
-  { value: 'TUE', label: '화' },
-  { value: 'WED', label: '수' },
-  { value: 'THU', label: '목' },
-  { value: 'FRI', label: '금' },
-  { value: 'SAT', label: '토' },
-  { value: 'SUN', label: '일' }
+  { value: 'mon', label: '월' },
+  { value: 'tue', label: '화' },
+  { value: 'wed', label: '수' },
+  { value: 'thu', label: '목' },
+  { value: 'fri', label: '금' },
+  { value: 'sat', label: '토' },
+  { value: 'sun', label: '일' }
 ]
 
 // 상태 관리
@@ -406,6 +520,15 @@ const isEditingInfo = ref(false)
 const isEditingOrg = ref(false)
 const showOrgModal = ref(false)
 const showPasswordModal = ref(false)
+const modalImageUrl = ref('')
+
+const openModal = (url) => {
+  modalImageUrl.value = url
+}
+
+const closeModal = () => {
+  modalImageUrl.value = ''
+}
 
 const passwordData = reactive({
   currentPassword: '',
@@ -476,7 +599,9 @@ const fetchWorkplaceInfo = async () => {
         myOrgInfo.operatingDays = data.franchiseDetail.operatingDays ? data.franchiseDetail.operatingDays.split(',') : []
         myOrgInfo.openTime = formatTime(data.franchiseDetail.openTime)
         myOrgInfo.closeTime = formatTime(data.franchiseDetail.closeTime)
-        myOrgInfo.photoUrl = data.franchiseDetail.imageUrl
+        myOrgInfo.images = data.franchiseDetail.images || []
+        myOrgInfo.warningCount = data.franchiseDetail.warningCount || 0
+        myOrgInfo.penaltyEndDate = data.franchiseDetail.penaltyEndDate
       } else if (data.factoryDetail) {
         myOrgInfo.lineCount = data.factoryDetail.productionLineCount || 0
       }
@@ -577,35 +702,30 @@ const startEditOrg = () => {
 // 조직 정보 수정 취소
 const cancelEditOrg = () => {
   Object.assign(myOrgInfo, originalOrgInfo)
+  orgPhotoFiles.value = []
+  orgDeleteStoredFileNames.value = []
+  orgPreviewImageUrls.value = []
   isEditingOrg.value = false
 }
 
 // 조직 정보 저장
 const saveOrgInfo = async () => {
   try {
-    // 사업장 정보는 현재 파일 업로드를 지원하지 않으므로 URL만 처리
-    const getFileName = (url) => {
-      if (!url || url.startsWith('data:')) return null
-      try {
-        const parsed = new URL(url)
-        const path = parsed.pathname
-        return path.substring(path.lastIndexOf('/') + 1)
-      } catch (e) {
-        return url
-      }
-    }
-
     const updateData = {
       phone: myOrgInfo.phone,
       operatingDays: (myOrgInfo.operatingDays || []).join(','),
-      openTime: myOrgInfo.openTime && myOrgInfo.openTime !== '' ? myOrgInfo.openTime + ':00' : null,
-      closeTime: myOrgInfo.closeTime && myOrgInfo.closeTime !== '' ? myOrgInfo.closeTime + ':00' : null,
-      imageUrl: getFileName(myOrgInfo.photoUrl),
+      openTime: myOrgInfo.openTime && myOrgInfo.openTime !== '' ? myOrgInfo.openTime + (myOrgInfo.openTime.length === 5 ? ':00' : '') : null,
+      closeTime: myOrgInfo.closeTime && myOrgInfo.closeTime !== '' ? myOrgInfo.closeTime + (myOrgInfo.closeTime.length === 5 ? ':00' : '') : null,
       productionLineCount: myOrgInfo.type === 'factory' ? parseInt(myOrgInfo.lineCount) : null
     }
-    await authStore.updateMyWorkplaceInfo(updateData)
+    
+    await authStore.updateMyWorkplaceInfo(updateData, orgDeleteStoredFileNames.value, orgPhotoFiles.value)
+    
     alert('사업장 정보가 저장되었습니다.')
     isEditingOrg.value = false
+    orgPhotoFiles.value = []
+    orgDeleteStoredFileNames.value = []
+    orgPreviewImageUrls.value = []
     await fetchWorkplaceInfo()
   } catch (error) {
     const errorMsg = error.response?.data?.message || '사업장 정보 저장에 실패했습니다.'
@@ -614,20 +734,43 @@ const saveOrgInfo = async () => {
   }
 }
 
+// 가맹점 사진 수정 관련 함수
+const removeExistingOrgPhoto = (storedName) => {
+  if (!orgDeleteStoredFileNames.value.includes(storedName)) {
+    orgDeleteStoredFileNames.value.push(storedName)
+  }
+  myOrgInfo.images = myOrgInfo.images.filter(img => img.storedName !== storedName)
+}
+
+const removeNewOrgPhoto = (index) => {
+  orgPhotoFiles.value.splice(index, 1)
+  orgPreviewImageUrls.value.splice(index, 1)
+}
+
 // 사진 업로드 (조직)
 const uploadOrgPhoto = () => {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'
+  input.multiple = true
   input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
+    const files = Array.from(e.target.files)
+    const currentTotal = myOrgInfo.images.length + orgPhotoFiles.value.length
+    
+    let allowedFiles = files
+    if (currentTotal + files.length > 5) {
+      alert('매장 사진은 최대 5장까지 등록 가능합니다.')
+      allowedFiles = files.slice(0, 5 - currentTotal)
+    }
+
+    allowedFiles.forEach(file => {
+      orgPhotoFiles.value.push(file)
       const reader = new FileReader()
       reader.onload = (event) => {
-        myOrgInfo.photoUrl = event.target.result
+        orgPreviewImageUrls.value.push(event.target.result)
       }
       reader.readAsDataURL(file)
-    }
+    })
   }
   input.click()
 }
@@ -1343,6 +1486,155 @@ const changePassword = async () => {
 
 .fancy-day-chip input {
   display: none;
+}
+
+/* 가맹점 사진 관리 스타일 */
+.org-photo-manage-container {
+  background: white;
+  border-radius: 16px;
+  padding: 0.5rem 0;
+}
+
+.org-photo-preview-scroll {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding: 1rem 0.25rem 0.5rem 0.25rem;
+}
+
+.org-photo-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 12px;
+  overflow: visible;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.org-photo-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.org-photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 11px;
+}
+
+.clickable-image {
+  cursor: pointer;
+}
+
+.btn-remove-mini {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 26px;
+  height: 26px;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  z-index: 10;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.btn-remove-mini:hover {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecaca;
+  transform: scale(1.1);
+}
+
+.btn-add-org-photo {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-add-org-photo:hover {
+  border-color: #0f172a;
+  color: #0f172a;
+  background: white;
+}
+
+/* 이미지 확대 모달 */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.image-modal-content img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  object-fit: contain;
+}
+
+.btn-close-modal-round {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-close-modal-round:hover {
+  transform: scale(1.1);
+  background: #f1f5f9;
 }
 
 .modal-footer-sticky {
