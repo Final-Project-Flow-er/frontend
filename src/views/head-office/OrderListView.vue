@@ -21,7 +21,6 @@ const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 const orders = ref([])
 
 onMounted(async () => {
-  try {
     const data = await getOrderList()
     // Group by orderCode
     const map = {}
@@ -48,9 +47,6 @@ onMounted(async () => {
       })
     })
     orders.value = Object.values(map)
-  } catch (e) {
-    alert(e.message)
-  }
 })
 
 const filteredOrders = computed(() => {
