@@ -41,8 +41,17 @@
           </select>
         </div>
 
-        <div class="filter-group flex-grow">
-          <label>검색</label>
+        <div class="filter-group">
+          <label>반품 제한</label>
+          <select v-model="filters.isReturnBlocked">
+            <option :value="null">전체</option>
+            <option :value="true">제한됨</option>
+            <option :value="false">정상</option>
+          </select>
+        </div>
+
+        <div class="filter-group search-group">
+          <label>매장명/코드 검색</label>
           <div class="search-box">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
@@ -50,10 +59,15 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.searchQuery" 
-              placeholder="매장명, 코드 등으로 검색"
+              v-model="filters.keyword" 
+              placeholder="매장명 또는 코드 입력"
             >
           </div>
+        </div>
+
+        <div class="filter-group sub-search-group">
+          <label>대표자/사업자번호</label>
+          <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
         </div>
 
         <button @click="resetFilters" class="btn-reset-filter">
@@ -75,7 +89,7 @@
     </div>
 
     <!-- 가맹점 목록 테이블 -->
-    <div v-if="displayedOrganizations.length > 0" class="org-table-container">
+    <div v-if="organizations.length > 0" class="org-table-container">
       <table class="org-table">
         <thead>
           <tr>
@@ -92,7 +106,7 @@
         </thead>
         <tbody>
           <tr 
-            v-for="org in displayedOrganizations" 
+            v-for="org in organizations" 
             :key="org.id"
             @click="goToDetail(org)"
             class="org-row"
@@ -224,8 +238,10 @@ const router = useRouter()
 const filters = reactive({
   status: 'all',
   region: 'all',
-  searchQuery: '',
-  selectedDays: []
+  keyword: '', // 통합 검색 (이름/코드 중 택 1 혹은 동시 적용)
+  subKeyword: '', // 서브 검색 (대표자/번호)
+  selectedDays: [],
+  isReturnBlocked: null
 })
 
 const weekDays = [
@@ -239,48 +255,29 @@ const weekDays = [
 ]
 
 // API 데이터 및 페이징 상태
-const allOrganizations = ref([])
+const organizations = ref([])
+const totalElements = ref(0)
+const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = ref(20)
 
-// 1. 상태, 지역, 요일, 검색어에 따른 필터링 로직
-const filteredOrganizations = computed(() => {
-  return allOrganizations.value.filter(org => {
-    // 운영 상태 필터
-    if (filters.status !== 'all' && org.status !== filters.status) return false
-    
-    // 지역 필터
-    if (filters.region !== 'all' && org.region !== filters.region) return false
-    
-    // 운영 요일 필터 (선택된 요일 중 하나라도 포함되면 노출)
-    if (filters.selectedDays.length > 0) {
-      const orgDays = (org.operatingDays || '').split(',')
-      const matchesDay = filters.selectedDays.some(day => orgDays.includes(day))
-      if (!matchesDay) return false
-    }
-    
-    // 검색어 필터 (코드, 이름, 대표자명)
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase()
-      const searchTarget = `${org.code} ${org.name} ${org.representativeName}`.toLowerCase()
-      return searchTarget.includes(query)
-    }
-    
-    return true
-  })
+onMounted(async () => {
+  await fetchOrganizations()
 })
 
-// 2. 필터링된 결과물에 대한 전체 페이지 계산
-const totalPages = computed(() => {
-  return Math.ceil(filteredOrganizations.value.length / pageSize.value)
+// 필터 변경 시 자동 조회
+watch(() => [filters.status, filters.region, filters.isReturnBlocked, filters.keyword, filters.subKeyword], () => {
+  debouncedFetch()
 })
 
-// 3. 현재 페이지에 표시할 데이터 슬라이싱
-const displayedOrganizations = computed(() => {
-  const start = currentPage.value * pageSize.value
-  const end = start + pageSize.value
-  return filteredOrganizations.value.slice(start, end)
-})
+let fetchTimeout = null
+const debouncedFetch = () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchOrganizations()
+  }, 300)
+}
 
 onMounted(async () => {
   await fetchOrganizations()
@@ -293,32 +290,49 @@ watch(() => [filters.status, filters.region, filters.selectedDays, filters.searc
 
 const fetchOrganizations = async () => {
   try {
-    // 프론트엔드 필터링을 위해 데이터를 넉넉히 가져옴 (임시)
+    // 팁: DTO의 code와 name에 keyword를 지능적으로 배분 조절
+    // 사용자가 입력한 키워드가 영문+숫자 위주면 code로, 아니면 name으로 시도하거나 둘 다 검색
+    const isCode = /^[A-Z0-9]+$/i.test(filters.keyword)
+    
     const params = {
-      page: 0,
-      size: 1000 
+      page: currentPage.value,
+      size: pageSize.value,
+      status: filters.status === 'all' ? null : filters.status,
+      region: filters.region === 'all' ? null : filters.region,
+      code: isCode ? filters.keyword || null : null,
+      name: !isCode ? filters.keyword || null : null,
+      representativeName: (filters.subKeyword && isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
+      businessNumber: (filters.subKeyword && !isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
+      operatingDays: filters.selectedDays.length > 0 ? filters.selectedDays.join(',') : null,
+      isReturnBlocked: filters.isReturnBlocked
     }
     
     const response = await api.get('/hq/business-units/FRANCHISE', { params })
     if (response.data.success) {
-      allOrganizations.value = response.data.data.content
+      organizations.value = response.data.data.content
+      totalElements.value = response.data.data.totalElements
+      totalPages.value = response.data.data.totalPages
     }
   } catch (error) {
     console.error('가맹점 목록 조회 실패:', error)
   }
 }
 
-const changePage = (page) => {
+const changePage = async (page) => {
   currentPage.value = page
+  await fetchOrganizations()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const resetFilters = () => {
   filters.status = 'all'
   filters.region = 'all'
-  filters.searchQuery = ''
+  filters.keyword = ''
+  filters.subKeyword = ''
   filters.selectedDays = []
+  filters.isReturnBlocked = null
   currentPage.value = 0
+  fetchOrganizations()
 }
 
 const goToDetail = (org) => {
@@ -428,6 +442,35 @@ const getRegionLabel = (region) => {
   display: flex;
   gap: 1.25rem;
   align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.search-group {
+  flex: 3;
+  min-width: 250px;
+}
+
+.sub-search-group {
+  flex: 2;
+  min-width: 150px;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.search-box input {
+  width: 100%;
+  padding-left: 2.5rem;
 }
 
 .filter-row.secondary {
