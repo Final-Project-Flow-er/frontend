@@ -409,6 +409,11 @@ const saveChanges = async () => {
     return;
   }
 
+  if (!member.value.businessUnitId) {
+    alert('소속 사업장을 선택해주세요.');
+    return;
+  }
+
   try {
     const updateData = {
       username: member.value.name,

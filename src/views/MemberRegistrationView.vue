@@ -367,6 +367,11 @@ const handleRegister = async () => {
     alert('연락처는 11자리 숫자로 입력해주세요.')
     return
   }
+
+  if (!formData.businessUnitId) {
+    alert('소속 사업장을 선택해주세요.')
+    return
+  }
   
   isSubmitting.value = true
   
