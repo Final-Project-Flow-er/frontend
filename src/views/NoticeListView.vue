@@ -21,7 +21,7 @@
               type="text" 
               :value="filters.searchQuery" 
               @input="e => filters.searchQuery = e.target.value"
-              placeholder="제목 또는 내용 검색"
+              placeholder="제목으로 검색"
             >
           </div>
         </div>
@@ -207,8 +207,7 @@ const filteredNotices = computed(() => {
   return result.filter(n => {
     const query = filters.searchQuery.toLowerCase()
     const matchesSearch = !query || 
-      (n.title || '').toLowerCase().includes(query) || 
-      (n.content || '').toLowerCase().includes(query)
+      (n.title || '').toLowerCase().includes(query)
     
     const authorQuery = filters.author.toLowerCase()
     const matchesAuthor = !authorQuery || (n.authorName || '').toLowerCase().includes(authorQuery)
