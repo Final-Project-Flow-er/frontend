@@ -193,24 +193,39 @@
             <div class="info-field full-width">
               <label>매장 사진</label>
               <div class="photo-section">
-                <div v-if="organization.franchiseDetail.imageUrl" class="photo-display">
-                  <img :src="organization.franchiseDetail.imageUrl" alt="매장 사진">
-                  <button v-if="isEditing" @click="removePhoto" class="btn-remove-photo">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                <!-- 이미지 목록 -->
+                <div class="photo-preview-container" :class="{ 'is-empty': (!organization.franchiseDetail?.images || organization.franchiseDetail.images.length === 0) && previewImageUrls.length === 0 }">
+                  <div v-for="(img, idx) in organization.franchiseDetail.images" :key="'exist-'+idx" class="photo-preview">
+                    <img :src="img.url" alt="매장 사진" @click="openModal(img.url)" class="clickable-image">
+                    <button type="button" v-if="isEditing" @click="removeExistingPhoto(img.storedName)" class="btn-remove-photo">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- 새로 추가한 이미지 -->
+                  <div v-for="(preview, idx) in previewImageUrls" :key="'new-'+idx" class="photo-preview new">
+                    <img :src="preview" alt="미리보기" @click="openModal(preview)" class="clickable-image">
+                    <button type="button" v-if="isEditing" @click="removeNewPhoto(idx)" class="btn-remove-photo">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- 추가 버튼 -->
+                  <button type="button" v-if="isEditing" @click="uploadPhoto" class="btn-upload-photo-multiple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
+                    <span style="font-size:0.8rem; margin-top:0.4rem; color:#64748b;">사진 추가</span>
                   </button>
                 </div>
-                <button v-else-if="isEditing" @click="uploadPhoto" class="btn-upload-photo">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                    <polyline points="21 15 16 10 5 21"></polyline>
-                  </svg>
-                  사진 업로드
-                </button>
-                <p v-else class="no-photo">등록된 사진이 없습니다</p>
+                
+                <p v-if="!isEditing && (!organization.franchiseDetail?.images || organization.franchiseDetail.images.length === 0)" class="no-photo">등록된 사진이 없습니다</p>
               </div>
             </div>
           </div>
@@ -309,6 +324,19 @@
     <div v-else class="loading">
       <p>조직 정보를 불러오는 중...</p>
     </div>
+
+    <!-- 이미지 확대 모달 -->
+    <div v-if="modalImageUrl" class="image-modal-overlay" @click="closeModal">
+      <div class="image-modal-content">
+        <button class="btn-close-modal" @click="closeModal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <img :src="modalImageUrl" alt="확대 사진" @click.stop>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -325,6 +353,19 @@ const organization = ref(null)
 const originalOrganization = ref(null)
 const isEditing = ref(false)
 const tempOperatingDays = ref([])
+const photoFiles = ref([])
+const deleteStoredFileNames = ref([])
+const previewImageUrls = ref([])
+
+const modalImageUrl = ref('')
+
+const openModal = (url) => {
+  modalImageUrl.value = url
+}
+
+const closeModal = () => {
+  modalImageUrl.value = ''
+}
 
 // 요일 목록
 const weekDays = [
@@ -377,6 +418,8 @@ const loadOrganization = async () => {
       originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
       if (organization.value.franchiseDetail) {
         tempOperatingDays.value = (organization.value.franchiseDetail.operatingDays || '').split(',').filter(d => d)
+        previewImageUrls.value = []
+        photoFiles.value = []
       }
     }
   } catch (error) {
@@ -398,6 +441,9 @@ const startEdit = () => {
 const cancelEdit = () => {
   organization.value = JSON.parse(JSON.stringify(originalOrganization.value))
   isEditing.value = false
+  photoFiles.value = []
+  deleteStoredFileNames.value = []
+  previewImageUrls.value = []
 }
 
 // 변경사항 저장
@@ -428,8 +474,7 @@ const saveChanges = async () => {
           : organization.value.franchiseDetail.openTime,
         closeTime: organization.value.franchiseDetail.closeTime.length === 5 
           ? organization.value.franchiseDetail.closeTime + ':00' 
-          : organization.value.franchiseDetail.closeTime,
-        imageUrl: organization.value.franchiseDetail.imageUrl
+          : organization.value.franchiseDetail.closeTime
       }
     } else if (type === 'FACTORY') {
       payload.factoryUpdate = {
@@ -438,11 +483,33 @@ const saveChanges = async () => {
     }
 
     const response = await api.patch(`/hq/business-units/${type}/${id}`, payload)
+    
     if (response.data.success) {
+      if (type === 'FRANCHISE' && (photoFiles.value.length > 0 || deleteStoredFileNames.value.length > 0)) {
+        const formData = new FormData()
+        photoFiles.value.forEach(file => {
+          formData.append('images', file)
+        })
+        deleteStoredFileNames.value.forEach(name => {
+          formData.append('deleteStoredFileNames', name)
+        })
+        await api.post(`/hq/business-units/franchise/${id}/images`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        await loadOrganization()
+      } else {
+        organization.value = response.data.data
+        originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
+        if (organization.value.franchiseDetail) {
+          previewImageUrls.value = []
+          photoFiles.value = []
+        }
+      }
+
       alert('변경사항이 저장되었습니다.')
-      organization.value = response.data.data
-      originalOrganization.value = JSON.parse(JSON.stringify(organization.value))
       isEditing.value = false
+      photoFiles.value = []
+      deleteStoredFileNames.value = []
     }
   } catch (error) {
     console.error('업데이트 실패:', error)
@@ -497,31 +564,40 @@ const confirmDelete = async () => {
   }
 }
 
-// 사진 업로드
+// 사진 추가
 const uploadPhoto = () => {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'
+  input.multiple = true
   input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
+    const files = Array.from(e.target.files)
+    files.forEach(file => {
+      photoFiles.value.push(file)
       const reader = new FileReader()
       reader.onload = (event) => {
-        if (organization.value.franchiseDetail) {
-          organization.value.franchiseDetail.imageUrl = event.target.result
-        }
+        previewImageUrls.value.push(event.target.result)
       }
       reader.readAsDataURL(file)
-    }
+    })
   }
   input.click()
 }
 
-// 사진 제거
-const removePhoto = () => {
-  if (organization.value.franchiseDetail) {
-    organization.value.franchiseDetail.imageUrl = ''
+// 기존 사진 제거
+const removeExistingPhoto = (storedName) => {
+  if (!deleteStoredFileNames.value.includes(storedName)) {
+    deleteStoredFileNames.value.push(storedName)
   }
+  if (organization.value.franchiseDetail && organization.value.franchiseDetail.images) {
+    organization.value.franchiseDetail.images = organization.value.franchiseDetail.images.filter(img => img.storedName !== storedName)
+  }
+}
+
+// 새 사진 제거
+const removeNewPhoto = (index) => {
+  photoFiles.value.splice(index, 1)
+  previewImageUrls.value.splice(index, 1)
 }
 
 // 목록으로 돌아가기
@@ -624,8 +700,20 @@ const getOrgNameLabel = (type) => {
 <style scoped>
 .org-detail-container {
   padding: 1rem 2rem;
-  max-width: 900px;
+  max-width: 800px;
   margin: 0 auto;
+}
+
+/* 폼 그룹 및 인풋 공통 */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #475569;
 }
 
 /* 헤더 */
@@ -1213,5 +1301,151 @@ const getOrgNameLabel = (type) => {
   .header-actions button {
     flex: 1;
   }
+}
+
+/* 사진 다중 업로드 관련 CSS */
+.photo-preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.photo-preview-container.is-empty {
+  width: 100%;
+  justify-content: center;
+}
+
+.photo-preview {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.photo-preview.new {
+  border-style: solid;
+  border-color: #e2e8f0;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.btn-remove-photo {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  z-index: 2;
+}
+
+.btn-remove-photo:hover {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecaca;
+  transform: scale(1.1);
+}
+
+/* 사진 클릭 시 애니메이션 */
+.clickable-image {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.clickable-image:hover {
+  opacity: 0.8;
+}
+
+/* 사진 확대 모달 */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.image-modal-content img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  object-fit: contain;
+}
+
+.btn-close-modal {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.btn-close-modal:hover {
+  transform: scale(1.1);
+}
+
+.btn-upload-photo-multiple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-upload-photo-multiple:hover {
+  border-color: #0f172a;
+  background: white;
+  color: #0f172a;
 }
 </style>

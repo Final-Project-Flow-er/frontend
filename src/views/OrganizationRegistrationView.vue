@@ -163,24 +163,27 @@
 
           <div class="form-group full-width">
             <label>매장 사진</label>
-            <div class="photo-upload-area">
-              <div v-if="storeData.photoUrl" class="photo-preview">
-                <img :src="storeData.photoUrl" alt="매장 사진">
-                <button @click="removeStorePhoto" class="btn-remove-photo">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+            <div class="photo-upload-container">
+              <div class="photo-preview-container" :class="{ 'is-empty': storeData.photoUrls.length === 0 }">
+                <div v-for="(url, idx) in storeData.photoUrls" :key="idx" class="photo-preview">
+                  <img :src="url" alt="매장 사진">
+                  <button @click="removeStorePhoto(idx)" type="button" class="btn-remove-photo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+                <!-- 0개여도 항상 같은 버튼 모양 사용 -->
+                <button @click="uploadStorePhoto" type="button" class="btn-upload-photo-multiple">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
                   </svg>
+                  <span style="font-size:0.8rem; margin-top:0.4rem; color:#64748b;">사진 추가</span>
                 </button>
               </div>
-              <button v-else @click="uploadStorePhoto" class="btn-upload">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
-                사진 업로드
-              </button>
             </div>
           </div>
         </div>
@@ -388,7 +391,8 @@ const storeData = reactive({
   operatingDays: [],
   openTime: '',
   closeTime: '',
-  photoUrl: ''
+  photoUrls: [],
+  photoFiles: []
 })
 
 // 공장 데이터
@@ -419,22 +423,25 @@ const uploadStorePhoto = () => {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'
+  input.multiple = true
   input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
+    const files = Array.from(e.target.files)
+    files.forEach(file => {
+      storeData.photoFiles.push(file)
       const reader = new FileReader()
       reader.onload = (event) => {
-        storeData.photoUrl = event.target.result
+        storeData.photoUrls.push(event.target.result)
       }
       reader.readAsDataURL(file)
-    }
+    })
   }
   input.click()
 }
 
 // 매장 사진 제거
-const removeStorePhoto = () => {
-  storeData.photoUrl = ''
+const removeStorePhoto = (index) => {
+  storeData.photoUrls.splice(index, 1)
+  storeData.photoFiles.splice(index, 1)
 }
 
 // 가맹점 등록
@@ -498,6 +505,18 @@ const registerStore = async () => {
     const response = await api.post('/hq/business-units/franchise', payload)
 
     if (response.data.success) {
+      const franchiseId = response.data.data.id
+
+      if (storeData.photoFiles.length > 0) {
+        const formData = new FormData()
+        storeData.photoFiles.forEach(file => {
+          formData.append('images', file)
+        })
+        await api.post(`/hq/business-units/franchise/${franchiseId}/images`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+      }
+
       // 결과 데이터 설정 및 모달 표시
       resultData.name = response.data.data.name
       resultData.code = response.data.data.code
@@ -687,7 +706,8 @@ const resetStoreForm = () => {
   storeData.operatingDays = []
   storeData.openTime = ''
   storeData.closeTime = ''
-  storeData.photoUrl = ''
+  storeData.photoUrls = []
+  storeData.photoFiles = []
 }
 
 // 공장 폼 초기화
@@ -902,24 +922,40 @@ const resetFactoryForm = () => {
 }
 
 /* 사진 업로드 */
-.photo-upload-area {
+.photo-upload-container {
   min-height: 100px;
   display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+}
+
+.photo-preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
   align-items: center;
+}
+
+.photo-preview-container.is-empty {
+  width: 100%;
   justify-content: center;
 }
 
 .photo-preview {
   position: relative;
-  width: 100%;
-  max-width: 200px;
+  width: 140px;
+  height: 140px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .photo-preview img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
   border-radius: 8px;
-  border: 2px solid #e2e8f0;
 }
 
 .btn-remove-photo {
@@ -939,6 +975,7 @@ const resetFactoryForm = () => {
   transition: all 0.2s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 0;
+  z-index: 2;
 }
 
 .btn-remove-photo:hover {
@@ -948,12 +985,35 @@ const resetFactoryForm = () => {
   transform: scale(1.1);
 }
 
-.btn-upload {
+.btn-upload-photo-multiple {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-upload-photo-multiple:hover {
+  border-color: #0f172a;
+  background: white;
+  color: #0f172a;
+}
+
+.btn-upload {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 2rem;
   background: #f8fafc;
   border: 2px dashed #cbd5e1;
   border-radius: 8px;
@@ -1080,4 +1140,5 @@ const resetFactoryForm = () => {
   transition: all 0.2s;
 }
 .btn-confirm:hover { background: #1e293b; }
+
 </style>
