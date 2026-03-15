@@ -9,6 +9,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         currentPage: 0,
         userLogs: [],
         businessUnits: {
+            hq: [],
             franchise: [],
             factory: []
         }

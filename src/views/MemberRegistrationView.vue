@@ -106,6 +106,31 @@
                 <input type="date" v-model="formData.birthdate" required>
               </div>
 
+              <!-- 본사 전용 -->
+              <template v-if="selectedRole === 'HQ'">
+                <div class="form-group">
+                  <label>본사 소속 <span class="required">*</span></label>
+                  <div class="search-select-group">
+                    <input 
+                      type="text" 
+                      v-model="formData.orgName" 
+                      placeholder="본사를 검색하여 선택하세요" 
+                      readonly 
+                      @click="openUnitModal"
+                      required
+                    >
+                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      검색
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>본사 코드</label>
+                  <input type="text" v-model="formData.orgCode" placeholder="자동 입력됨" disabled class="input-disabled">
+                </div>
+              </template>
+
               <!-- 가맹점 전용 -->
               <template v-if="selectedRole === 'FRANCHISE'">
                 <div class="form-group">
@@ -205,8 +230,8 @@
     <!-- 사업장 선택 모달 -->
     <BusinessUnitSelectionModal 
       :is-open="isUnitModalOpen"
-      :title="selectedRole === 'FRANCHISE' ? '가맹점' : '공장'"
-      :units="selectedRole === 'FRANCHISE' ? franchiseOptions : factoryOptions"
+      :title="selectedRole === 'HQ' ? '본사' : (selectedRole === 'FRANCHISE' ? '가맹점' : '공장')"
+      :units="selectedRole === 'HQ' ? hqOptions : (selectedRole === 'FRANCHISE' ? franchiseOptions : factoryOptions)"
       @close="isUnitModalOpen = false"
       @select="handleUnitSelect"
     />
@@ -273,6 +298,7 @@ const resultData = reactive({
 })
 
 // 사업장 옵션 (백엔드 연동)
+const hqOptions = computed(() => userManagementStore.businessUnits.hq)
 const franchiseOptions = computed(() => userManagementStore.businessUnits.franchise)
 const factoryOptions = computed(() => userManagementStore.businessUnits.factory)
 
@@ -290,6 +316,7 @@ const handleUnitSelect = (unit) => {
 
 onMounted(async () => {
   await Promise.all([
+    userManagementStore.fetchBusinessUnits('hq'),
     userManagementStore.fetchBusinessUnits('franchise'),
     userManagementStore.fetchBusinessUnits('factory')
   ])
