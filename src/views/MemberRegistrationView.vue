@@ -110,12 +110,20 @@
               <template v-if="selectedRole === 'FRANCHISE'">
                 <div class="form-group">
                   <label>가맹점명 <span class="required">*</span></label>
-                  <select v-model="formData.orgName" required>
-                    <option value="" disabled>가맹점을 선택하세요</option>
-                    <option v-for="org in franchiseOptions" :key="org.code" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </select>
+                  <div class="search-select-group">
+                    <input 
+                      type="text" 
+                      v-model="formData.orgName" 
+                      placeholder="가맹점을 검색하여 선택하세요" 
+                      readonly 
+                      @click="openUnitModal"
+                      required
+                    >
+                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      검색
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>가맹점 코드</label>
@@ -127,12 +135,20 @@
               <template v-if="selectedRole === 'FACTORY'">
                 <div class="form-group">
                   <label>공장 이름 <span class="required">*</span></label>
-                  <select v-model="formData.orgName" required>
-                    <option value="" disabled>공장을 선택하세요</option>
-                    <option v-for="org in factoryOptions" :key="org.code" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </select>
+                  <div class="search-select-group">
+                    <input 
+                      type="text" 
+                      v-model="formData.orgName" 
+                      placeholder="공장을 검색하여 선택하세요" 
+                      readonly 
+                      @click="openUnitModal"
+                      required
+                    >
+                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      검색
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>공장 코드</label>
@@ -185,12 +201,22 @@
         </div>
       </div>
     </div>
+
+    <!-- 사업장 선택 모달 -->
+    <BusinessUnitSelectionModal 
+      :is-open="isUnitModalOpen"
+      :title="selectedRole === 'FRANCHISE' ? '가맹점' : '공장'"
+      :units="selectedRole === 'FRANCHISE' ? franchiseOptions : factoryOptions"
+      @close="isUnitModalOpen = false"
+      @select="handleUnitSelect"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed, onMounted } from 'vue'
 import { useUserManagementStore } from '../stores/userManagement'
+import BusinessUnitSelectionModal from './BusinessUnitSelectionModal.vue'
 
 const userManagementStore = useUserManagementStore()
 
@@ -250,28 +276,23 @@ const resultData = reactive({
 const franchiseOptions = computed(() => userManagementStore.businessUnits.franchise)
 const factoryOptions = computed(() => userManagementStore.businessUnits.factory)
 
+const isUnitModalOpen = ref(false)
+
+const openUnitModal = () => {
+  isUnitModalOpen.value = true
+}
+
+const handleUnitSelect = (unit) => {
+  formData.orgName = unit.name
+  formData.orgCode = unit.businessNumber || unit.code || ''
+  formData.businessUnitId = unit.id
+}
+
 onMounted(async () => {
   await Promise.all([
     userManagementStore.fetchBusinessUnits('franchise'),
     userManagementStore.fetchBusinessUnits('factory')
   ])
-})
-
-// 조직 선택 시 ID 및 코드 저장
-watch(() => formData.orgName, (newVal) => {
-  if (selectedRole.value === 'FRANCHISE') {
-    const org = franchiseOptions.value.find(o => o.name === newVal)
-    if (org) {
-      formData.businessUnitId = org.id // BusinessUnitSummaryResponse에 id가 있다고 가정
-      formData.orgCode = org.businessNumber || '' // 혹은 별도 코드 필드
-    }
-  } else if (selectedRole.value === 'FACTORY') {
-    const org = factoryOptions.value.find(o => o.name === newVal)
-    if (org) {
-      formData.businessUnitId = org.id
-      formData.orgCode = org.businessNumber || ''
-    }
-  }
 })
 
 // 권한 타입 변경 시 초기화
@@ -489,6 +510,18 @@ const closeModal = () => {
   height: 42px;
   box-sizing: border-box;
 }
+
+.search-select-group { display: flex; gap: 0.5rem; }
+.search-select-group input { flex: 1; cursor: pointer; background: #f8fafc; }
+
+.btn-search-trigger {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0 1rem; background: #0f172a; border: none;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  color: white; cursor: pointer; transition: all 0.2s;
+}
+.btn-search-trigger:hover { background: #1e293b; transform: translateY(-1px); }
+
 .form-group input:focus,
 .form-group select:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1); }
 
