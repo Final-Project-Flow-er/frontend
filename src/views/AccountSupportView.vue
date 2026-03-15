@@ -54,7 +54,7 @@ const requestReset = async () => {
     const message = await authStore.resetPassword(userId.value, email.value)
     alert(message)
   } catch (error) {
-    alert('비밀번호 재설정 요청 중 오류가 발생했습니다. 입력 정보를 확인해주세요.')
+    alert('아이디와 이메일이 일치하지 않습니다. 입력 정보를 확인해주세요.')
   }
 }
 </script>
