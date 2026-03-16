@@ -562,7 +562,9 @@ const registerStore = async () => {
     }
   } catch (error) {
     console.error('가맹점 등록 실패:', error)
-    alert(error.response?.data?.message || '가맹점 등록 중 오류가 발생했습니다.')
+    const serverMessage = error.response?.data?.message
+    // 서버에서 에러 메시지가 내려오면 그대로 사용, 없으면 사업자 번호 중복 가능성 안내
+    alert(serverMessage || '등록에 실패했습니다.\n사업자 등록 번호가 이미 등록되어 있는지 확인해 주세요.')
   }
 }
 
@@ -622,7 +624,8 @@ const registerFactory = async () => {
     }
   } catch (error) {
     console.error('공장 등록 실패:', error)
-    alert(error.response?.data?.message || '공장 등록 중 오류가 발생했습니다.')
+    const serverMessage = error.response?.data?.message
+    alert(serverMessage || '등록에 실패했습니다.\n사업자 등록 번호가 이미 등록되어 있는지 확인해 주세요.')
   }
 }
 
