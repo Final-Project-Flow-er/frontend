@@ -231,7 +231,7 @@ const getRegionLabel = (region) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 3.5rem;
+  margin-bottom: 2rem;
 }
 
 .header-left {
@@ -242,17 +242,16 @@ const getRegionLabel = (region) => {
 
 
 .title-group h1 {
-  font-size: 2.25rem;
-  font-weight: 900;
+  font-size: 1.5rem;
+  font-weight: 600;
   color: #0f172a;
   margin: 0;
-  letter-spacing: -1px;
 }
 
 .subtitle {
   color: #64748b;
   font-size: 1rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 /* Header Buttons */
