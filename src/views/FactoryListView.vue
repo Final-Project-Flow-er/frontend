@@ -41,8 +41,8 @@
           </select>
         </div>
 
-        <div class="filter-group flex-grow">
-          <label>검색</label>
+        <div class="filter-group search-group">
+          <label>공장명/코드 검색</label>
           <div class="search-box">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
@@ -50,10 +50,15 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.searchQuery" 
-              placeholder="공장명, 코드 등으로 검색"
+              v-model="filters.keyword" 
+              placeholder="공장명 또는 코드 입력"
             >
           </div>
+        </div>
+
+        <div class="filter-group sub-search-group">
+          <label>대표자/사업자번호</label>
+          <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
         </div>
 
         <button @click="resetFilters" class="btn-reset-filter">
@@ -63,7 +68,7 @@
     </div>
 
     <!-- 공장 목록 테이블 -->
-    <div v-if="displayedOrganizations.length > 0" class="org-table-container">
+    <div v-if="organizations.length > 0" class="org-table-container">
       <table class="org-table">
         <thead>
           <tr>
@@ -78,7 +83,7 @@
         </thead>
         <tbody>
           <tr 
-            v-for="org in displayedOrganizations" 
+            v-for="org in organizations" 
             :key="org.id"
             @click="goToDetail(org)"
             class="org-row"
@@ -196,45 +201,34 @@ const router = useRouter()
 const filters = reactive({
   status: 'all',
   region: 'all',
-  searchQuery: '',
+  keyword: '',
+  subKeyword: ''
 })
 
 // API 데이터 및 페이징 상태
-const allOrganizations = ref([])
+const organizations = ref([])
+const totalElements = ref(0)
+const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = ref(20)
 
-// 1. 상태, 지역, 검색어에 따른 필터링 로직
-const filteredOrganizations = computed(() => {
-  return allOrganizations.value.filter(org => {
-    // 운영 상태 필터
-    if (filters.status !== 'all' && org.status !== filters.status) return false
-    
-    // 지역 필터
-    if (filters.region !== 'all' && org.region !== filters.region) return false
-    
-    // 검색어 필터 (코드, 이름, 대표자명)
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase()
-      const searchTarget = `${org.code} ${org.name} ${org.representativeName}`.toLowerCase()
-      return searchTarget.includes(query)
-    }
-    
-    return true
-  })
+onMounted(async () => {
+  await fetchOrganizations()
 })
 
-// 2. 전체 페이지 계산
-const totalPages = computed(() => {
-  return Math.ceil(filteredOrganizations.value.length / pageSize.value)
+// 필터 변경 시 자동 조회
+watch(() => [filters.status, filters.region, filters.keyword, filters.subKeyword], () => {
+  debouncedFetch()
 })
 
-// 3. 현재 페이지 데이터 슬라이싱
-const displayedOrganizations = computed(() => {
-  const start = currentPage.value * pageSize.value
-  const end = start + pageSize.value
-  return filteredOrganizations.value.slice(start, end)
-})
+let fetchTimeout = null
+const debouncedFetch = () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchOrganizations()
+  }, 300)
+}
 
 onMounted(async () => {
   await fetchOrganizations()
@@ -247,14 +241,24 @@ watch(() => [filters.status, filters.region, filters.searchQuery], () => {
 
 const fetchOrganizations = async () => {
   try {
+    const isCode = /^[A-Z0-9]+$/i.test(filters.keyword)
+
     const params = {
-      page: 0,
-      size: 1000
+      page: currentPage.value,
+      size: pageSize.value,
+      status: filters.status === 'all' ? null : filters.status,
+      region: filters.region === 'all' ? null : filters.region,
+      code: isCode ? filters.keyword || null : null,
+      name: !isCode ? filters.keyword || null : null,
+      representativeName: (filters.subKeyword && isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
+      businessNumber: (filters.subKeyword && !isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null
     }
     
     const response = await api.get('/hq/business-units/FACTORY', { params })
     if (response.data.success) {
-      allOrganizations.value = response.data.data.content
+      organizations.value = response.data.data.content
+      totalElements.value = response.data.data.totalElements
+      totalPages.value = response.data.data.totalPages
     }
   } catch (error) {
     console.error('공장 목록 조회 실패:', error)
@@ -269,8 +273,10 @@ const changePage = (page) => {
 const resetFilters = () => {
   filters.status = 'all'
   filters.region = 'all'
-  filters.searchQuery = ''
+  filters.keyword = ''
+  filters.subKeyword = ''
   currentPage.value = 0
+  fetchOrganizations()
 }
 
 const goToDetail = (org) => {
@@ -380,6 +386,35 @@ const getRegionLabel = (region) => {
   display: flex;
   gap: 1.25rem;
   align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.search-group {
+  flex: 3;
+  min-width: 250px;
+}
+
+.sub-search-group {
+  flex: 2;
+  min-width: 150px;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.search-box input {
+  width: 100%;
+  padding-left: 2.5rem;
 }
 
 .filter-group {

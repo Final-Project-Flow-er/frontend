@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '@/components/common/Modal.vue'
 import { getAvailableVehicles, getUnassignedOrders, assignVehicle as assignVehicleAPI } from '@/api/internalTransport.js'
+import { updateOrderShippingPending } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
@@ -14,10 +15,9 @@ onMounted(async () => {
     const data = await getAvailableVehicles()
     vehicles.value = (data || []).map(v => ({
       vehicleId: v.vehicleId,
-      company: '',
-      driver: '',
-      phone: '',
-      type: '',
+      company: v.transportName,
+      driver: v.driverName,
+      phone: v.driverPhoneNumber,
       number: v.vehicleNumber,
       maxWeight: v.maxLoad || 0,
       currentWeight: v.currentLoad || 0
@@ -33,9 +33,7 @@ onMounted(async () => {
       orderCode: o.orderCode,
       franchise: o.franchiseName,
       address: o.address,
-      product: '',
       recipient: o.representativeName,
-      contact: '',
       orderDate: o.orderCreatedAt ? o.orderCreatedAt.split('T')[0] : '',
       arrivalDate: o.deliveryDate ? o.deliveryDate.split('T')[0] : '',
       weight: o.weight || 0
@@ -47,7 +45,6 @@ onMounted(async () => {
 
 const vehicleFilter = ref({
   company: '',
-  type: '',
   maxWeight: '',
   number: ''
 })
@@ -56,14 +53,15 @@ const orderFilter = ref({
   search: ''
 })
 
-const companies = ['우리통상', '대한물류', '에이원']
-const vehicleTypes = ['1톤 탑차', '2.5톤 트럭', '5톤 트럭']
+const companies = computed(() => {
+  const companySet = new Set(vehicles.value.map(v => v.company).filter(Boolean))
+  return Array.from(companySet).sort()
+})
 const weightOptions = [1000, 2500, 5000]
 
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
     return (!vehicleFilter.value.company || v.company === vehicleFilter.value.company) &&
-           (!vehicleFilter.value.type || v.type === vehicleFilter.value.type) &&
            (!vehicleFilter.value.maxWeight || v.maxWeight >= parseInt(vehicleFilter.value.maxWeight)) &&
            (!vehicleFilter.value.number || v.number.includes(vehicleFilter.value.number))
   })
@@ -142,9 +140,14 @@ const assignVehicle = () => {
 
       const payload = {
         vehicleId: selectedVehicle.value.vehicleId,
-        orderIds: orderIds
+        selectedIds: orderIds
       }
       await assignVehicleAPI(payload)
+      
+      // 차량 배정 후 발주 상태를 배송 대기로 업데이트
+      const shippingPendingPayload = Array.from(selectedOrderCodes.value).map(code => ({ orderCode: code }))
+      await updateOrderShippingPending(shippingPendingPayload)
+
       openModal('알림', '배정이 완료되었습니다.', null, false)
       
       const vehicleIdx = vehicles.value.findIndex(v => v.number === selectedVehicle.value.number)
@@ -213,14 +216,7 @@ const goBack = () => router.back()
               </select>
             </div>
             <div class="filter-group">
-              <label>차량 종류</label>
-              <select v-model="vehicleFilter.type">
-                <option value="">전체</option>
-                <option v-for="t in vehicleTypes" :key="t" :value="t">{{ t }}</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>최대 적재량(≥)</label>
+              <label>적재 가능 중량(≥)</label>
               <select v-model="vehicleFilter.maxWeight">
                 <option value="">전체</option>
                 <option v-for="w in weightOptions" :key="w" :value="w">{{ w.toLocaleString() }}kg</option>
@@ -242,7 +238,6 @@ const goBack = () => router.back()
                   <th>운송 업체</th>
                   <th>운전자</th>
                   <th>운전자 번호</th>
-                  <th>차종</th>
                   <th>차량 번호</th>
                   <th>중량(적재/최대)</th>
                 </tr>
@@ -258,7 +253,6 @@ const goBack = () => router.back()
                   <td>{{ v.company }}</td>
                   <td>{{ v.driver }}</td>
                   <td>{{ v.phone }}</td>
-                  <td>{{ v.type }}</td>
                   <td class="code-cell">{{ v.number }}</td>
                   <td class="text-right weight-cell">
                     <span :class="{ 'overload': v.currentWeight >= v.maxWeight }">{{ v.currentWeight.toLocaleString() }}</span>
@@ -267,7 +261,7 @@ const goBack = () => router.back()
                   </td>
                 </tr>
                 <tr v-if="filteredVehicles.length === 0">
-                  <td colspan="6" class="empty-state">조건에 맞는 차량이 없습니다.</td>
+                  <td colspan="5" class="empty-state">조건에 맞는 차량이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -298,7 +292,6 @@ const goBack = () => router.back()
                   <th>가맹점</th>
                   <th>주소</th>
                   <th>수령인</th>
-                  <th>연락처</th>
                   <th>중량</th>
                   <th>발주일</th>
                   <th>도착일</th>
@@ -318,13 +311,12 @@ const goBack = () => router.back()
                   <td>{{ o.franchise }}</td>
                   <td class="address-cell" :title="o.address">{{ o.address }}</td>
                   <td>{{ o.recipient }}</td>
-                  <td>{{ o.contact }}</td>
                   <td class="text-right">{{ o.weight.toLocaleString() }}kg</td>
                   <td>{{ o.orderDate }}</td>
                   <td>{{ o.arrivalDate }}</td>
                 </tr>
                 <tr v-if="filteredOrders.length === 0">
-                   <td colspan="10" class="empty-state">미배정 발주 내역이 없습니다.</td>
+                   <td colspan="8" class="empty-state">미배정 발주 내역이 없습니다.</td>
                 </tr>
               </tbody>
             </table>

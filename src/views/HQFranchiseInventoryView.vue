@@ -277,7 +277,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '@/api/index'
 
 const router = useRouter()
 
@@ -289,7 +289,7 @@ const stores = ref([])
 
 const fetchStores = async () => {
     try {
-        const res = await axios.get('/api/v1/hq/inventory/franchises')
+        const res = await api.get('/hq/inventory/franchises')
         const data = res.data.data || {}
         stores.value = Object.entries(data).map(([id, name]) => ({
             id: Number(id),
@@ -344,7 +344,7 @@ const fetchFranchiseInventory = async (franchiseId) => {
         currentStep.value = 1
         selectedProduct.value = null
         
-        const res = await axios.get(`/api/v1/hq/inventory/franchises/${franchiseId}`)
+        const res = await api.get(`/hq/inventory/franchises/${franchiseId}`)
         products.value = (res.data.data || []).map(p => ({
             productId: p.productId,
             productCode: p.productCode,
@@ -364,7 +364,7 @@ const fetchFranchiseInventory = async (franchiseId) => {
 
 const fetchFranchiseAlerts = async (franchiseId) => {
     try {
-        const res = await axios.get(`/api/v1/hq/inventory/franchises/${franchiseId}/alerts`)
+        const res = await api.get(`/hq/inventory/franchises/${franchiseId}/alerts`)
         const data = res.data.data || {}
         expiringItems.value = (data.expirationAlerts || []).map(e => ({
             productName: e.productName,
@@ -433,16 +433,18 @@ const itemTotalPages = ref(0)
 
 const fetchBatches = async (productId) => {
   try {
-    const res = await axios.get(`/api/v1/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`, {
+    const res = await api.get(`/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`, {
       params: { page: batchPage.value, size: batchSize.value }
     })
     const pageData = res.data.data || {}
-    sortedBatches.value = (pageData.content || []).map(b => ({
-      productionDate: b.manufactureDate,
-      total: b.totalQuantity,
-      available: b.availableQuantity,
-      pending: b.returnPending
-    }))
+    sortedBatches.value = (pageData.content || [])
+      .map(b => ({
+        productionDate: b.manufactureDate,
+        total: b.totalQuantity,
+        available: b.availableQuantity,
+        pending: b.returnPending
+      }))
+      .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
     batchTotalPages.value = pageData.totalPages || 0
   } catch (e) {
     console.error('batch fetch failed:', e)
@@ -466,7 +468,7 @@ const fetchItems = async () => {
     if (step3Filter.value.shippingDate) params.shippedAt = step3Filter.value.shippingDate
     if (step3Filter.value.inboundDate) params.receivedAt = step3Filter.value.inboundDate
 
-    const res = await axios.get('/api/v1/hq/inventory/franchises/items', { params })
+    const res = await api.get('/hq/inventory/franchises/items', { params })
     const pageData = res.data.data || {}
     granularItems.value = (pageData.content || []).map(i => {
       const rawStatus = i.status || ''
@@ -669,6 +671,57 @@ const goToDetail = (code) => {
 }
 .data-table-card::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
 }
 
 </style>

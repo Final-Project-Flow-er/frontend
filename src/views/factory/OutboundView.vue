@@ -328,7 +328,21 @@ const approveOutbound = () => {
   }
 
   const performApprove = async () => {
+    // 승인 대상인 발주 코드(orderCode) 미리 수집
+    const approvedOrderCodes = []
+    Object.keys(allBoxDetails.value).forEach(boxCode => {
+      const itemsInBox = allBoxDetails.value[boxCode] || []
+      const isBoxSelected = itemsInBox.some(item => selectedItemIds.value.has(item.id))
+      if (isBoxSelected) {
+        const box = outboundBoxes.value.find(b => b.boxCode === boxCode)
+        if (box && !approvedOrderCodes.includes(box.orderCode)) {
+          approvedOrderCodes.push(box.orderCode)
+        }
+      }
+    })
+
     try {
+      // 1. 기존 출고 승인 API 호출 (재고 상태 변경)
       const response = await fetch('/api/v1/outbounds/confirms', {
         method: 'PATCH',
         headers: {
@@ -344,7 +358,39 @@ const approveOutbound = () => {
       try { result = await response.json() } catch(e) {}
 
       if (response.ok && result?.success) {
-        // Remove approved items and boxes
+        // 2. 배송 상태 변경 API 호출 (Internal Transport: PENDING -> IN_TRANSIT)
+        if (approvedOrderCodes.length > 0) {
+          try {
+            await fetch('/api/v1/transport/internal/updated-deliver-status', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              },
+              body: JSON.stringify({ orderCodes: approvedOrderCodes })
+            })
+            console.log('[운송 시스템] 배송 상태 변경 완료:', approvedOrderCodes)
+          } catch (e) {
+            console.error('[운송 시스템] 배송 상태 변경 실패:', e)
+          }
+
+          // 3. 외부 운송 모듈 스케줄링 API 호출 (External Transport: 10초 뒤 배송 완료 예약)
+          try {
+            await fetch('/api/v1/external/transport/schedule', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              },
+              body: JSON.stringify({ orderCodes: approvedOrderCodes })
+            })
+            console.log('[외부 운송 시스템] 배송 완료 예약 완료:', approvedOrderCodes)
+          } catch (e) {
+            console.error('[외부 운송 시스템] 배송 완료 예약 실패:', e)
+          }
+        }
+
+        // Remove approved items and boxes from UI
         selectedBoxIds.value.forEach(boxCode => {
           outboundBoxes.value = outboundBoxes.value.filter(b => b.boxCode !== boxCode)
           delete allBoxDetails.value[boxCode]

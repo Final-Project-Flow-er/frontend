@@ -59,8 +59,8 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>담당자 이름</label>
-                <input type="text" v-model="companyData.manager" placeholder="담당자 성함">
+                <label>담당자 이름 <span class="required">*</span></label>
+                <input type="text" v-model="companyData.manager" placeholder="담당자 성함을 입력하세요" required>
               </div>
               <div class="form-group">
                 <label>주력 운송 지역 <span class="required">*</span></label>
@@ -163,10 +163,20 @@
               </div>
               <div class="form-group">
                 <label>소속 업체 <span class="required">*</span></label>
-                <select v-model="vehicleData.transportId" required>
-                  <option value="">업체를 선택하세요</option>
-                  <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.companyName }}</option>
-                </select>
+                <div class="search-select-group">
+                  <input 
+                    type="text" 
+                    :value="selectedCompanyName" 
+                    placeholder="업체를 검색하여 선택하세요" 
+                    readonly 
+                    @click="isTransportModalOpen = true"
+                    required
+                  >
+                  <button type="button" @click="isTransportModalOpen = true" class="btn-search-trigger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    검색
+                  </button>
+                </div>
               </div>
               <div class="form-group">
                 <label>차량 종류 <span class="required">*</span></label>
@@ -221,12 +231,21 @@
         </div>
       </div>
     </div>
+
+    <!-- 업체 선택 모달 -->
+    <TransportSelectionModal 
+      :is-open="isTransportModalOpen"
+      :companies="activeCompanies"
+      @close="isTransportModalOpen = false"
+      @select="handleTransportSelect"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import TransportSelectionModal from './TransportSelectionModal.vue'
 import api from '@/api/index'
 
 const router = useRouter()
@@ -236,15 +255,34 @@ const dateError = ref('')
 const companies = ref([])
 
 onMounted(async () => {
+  await fetchCompanies()
+})
+
+const fetchCompanies = async () => {
   try {
     const res = await api.get('/transport/vendors?size=1000')
     if (res.data.success) {
-      companies.value = res.data.data.content
+      // content가 있는 경우와 없는 경우 모두 대응
+      const rawData = res.data.data
+      companies.value = rawData?.content || (Array.isArray(rawData) ? rawData : [])
     }
   } catch (err) {
     console.error(err)
   }
+}
+
+// 활성 업체만 필터링
+const activeCompanies = computed(() => {
+  return companies.value.filter(c => c.status === 'ACTIVE' || !c.status || c.status === 'active')
 })
+
+const isTransportModalOpen = ref(false)
+const selectedCompanyName = ref('')
+
+const handleTransportSelect = (company) => {
+  vehicleData.transportId = company.id
+  selectedCompanyName.value = company.companyName
+}
 
 const companyData = reactive({
   companyName: '',
@@ -323,6 +361,8 @@ const handleDriverPhoneInput = (e) => {
 
 // 주소 검색 (Daum Postcode)
 const openPostcode = () => {
+  const width = 500
+  const height = 600
   new window.daum.Postcode({
     oncomplete: (data) => {
       let fullAddress = data.address
@@ -344,7 +384,10 @@ const openPostcode = () => {
       const mapped = sidoMap[data.sido] || Object.entries(sidoMap).find(([k]) => data.sido.includes(k))?.[1]
       if (mapped) companyData.usableRegion = mapped
     }
-  }).open()
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  })
 }
 
 // 날짜 유효성 검사
@@ -378,12 +421,19 @@ const resetForm = (type) => {
     vehicleData.maxLoad = ''
     vehicleData.driverName = ''
     vehicleData.driverPhone = ''
+    selectedCompanyName.value = ''
   }
 }
 
 const registerCompany = async () => {
-  if (!companyData.companyName || !companyData.officePhone || !companyData.address || !companyData.usableRegion) {
-    alert('필수 정보를 모두 입력해주세요.')
+  if (!companyData.companyName?.trim() || 
+      !companyData.officePhone?.trim() || 
+      !companyData.address?.trim() || 
+      !companyData.manager?.trim() ||
+      !companyData.usableRegion ||
+      companyData.ownedVehicles === null ||
+      companyData.unitPrice === null) {
+    alert('모든 필수 정보를 입력해주세요.')
     return
   }
   if (!companyData.contractStartDate || !companyData.contractEndDate) {
@@ -412,8 +462,13 @@ const registerCompany = async () => {
 }
 
 const registerVehicle = async () => {
-  if (!vehicleData.vehicleNumber || !vehicleData.driverName || !vehicleData.transportId) {
-    alert('필수 정보를 모두 입력해주세요.')
+  if (!vehicleData.vehicleNumber?.trim() || 
+      !vehicleData.driverName?.trim() || 
+      !vehicleData.driverPhone?.trim() ||
+      !vehicleData.transportId ||
+      !vehicleData.vehicleType ||
+      !vehicleData.maxLoad) {
+    alert('모든 필수 정보를 입력해주세요.')
     return
   }
   try {
@@ -521,6 +576,17 @@ const registerVehicle = async () => {
   transition: all 0.2s;
 }
 .btn-address-search:hover { background: #e2e8f0; }
+
+.search-select-group { display: flex; gap: 0.5rem; }
+.search-select-group input { flex: 1; cursor: pointer; background: #f8fafc; }
+
+.btn-search-trigger {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0 1rem; background: #0f172a; border: none;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  color: white; cursor: pointer; transition: all 0.2s;
+}
+.btn-search-trigger:hover { background: #1e293b; transform: translateY(-1px); }
 
 .field-hint {
   font-size: 0.78rem;

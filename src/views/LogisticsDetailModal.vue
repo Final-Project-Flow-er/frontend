@@ -111,8 +111,8 @@
               </div>
             </div>
             <div class="form-group">
-              <label>담당자 이름</label>
-              <input type="text" v-model="formData.manager">
+              <label>담당자 이름 <span class="required">*</span></label>
+              <input type="text" v-model="formData.manager" required>
             </div>
             <div class="form-group">
               <label>주력 운송 지역 <span class="required">*</span></label>
@@ -321,6 +321,8 @@ const handleVehicleNumberInput = (e) => {
 }
 
 const openPostcode = () => {
+  const width = 500
+  const height = 600
   new window.daum.Postcode({
     oncomplete: (data) => {
       formData.value.address = data.address
@@ -334,7 +336,10 @@ const openPostcode = () => {
       const mapped = sidoMap[data.sido] || Object.entries(sidoMap).find(([k]) => data.sido.includes(k))?.[1]
       if (mapped) formData.value.usableRegion = mapped
     }
-  }).open()
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  })
 }
 
 const validateDates = () => {
@@ -347,6 +352,32 @@ const validateDates = () => {
 }
 
 const save = () => {
+  if (props.type === 'company') {
+    if (!formData.value.companyName?.trim() || 
+        !formData.value.officePhone?.trim() || 
+        !formData.value.address?.trim() || 
+        !formData.value.manager?.trim() ||
+        !formData.value.usableRegion ||
+        formData.value.ownedVehicles === null ||
+        formData.value.unitPrice === null ||
+        !formData.value.contractStartDate ||
+        !formData.value.contractEndDate) {
+      alert('모든 필수 정보를 입력해주세요.')
+      return
+    }
+  } else {
+    if (!formData.value.vehicleNumber?.trim() || 
+        !formData.value.driverName?.trim() || 
+        !formData.value.driverPhone?.trim() ||
+        !formData.value.vehicleType ||
+        !formData.value.maxLoad ||
+        !formData.value.status ||
+        !formData.value.dispatchable) {
+      alert('모든 필수 정보를 입력해주세요.')
+      return
+    }
+  }
+
   emit('save', { type: props.type, data: formData.value })
   isEditMode.value = false
 }

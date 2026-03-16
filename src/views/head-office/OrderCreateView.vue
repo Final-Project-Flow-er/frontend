@@ -60,17 +60,26 @@ onMounted(async () => {
 })
 
 // Order Info
+const getRegularDeadline = () => {
+  const now = new Date()
+  const target = new Date(now.getFullYear(), now.getMonth() + 2, 1)
+  const y = target.getFullYear()
+  const m = String(target.getMonth() + 1).padStart(2, '0')
+  const d = '01'
+  return `${y}-${m}-${d}`
+}
+
 const orderInfo = ref({
   managerName: '',
   managerPhone: '',
   requirements: '',
   type: '정기',
-  deadline: ''
+  deadline: getRegularDeadline()
 })
 
 const handleTypeChange = (type) => {
   orderInfo.value.type = type
-  orderInfo.value.deadline = ''
+  orderInfo.value.deadline = type === '정기' ? getRegularDeadline() : ''
 }
 
 const getStatusClass = (s) => ({
@@ -99,7 +108,7 @@ const createOrder = async () => {
       description: orderInfo.value.requirements,
       isRegular: orderInfo.value.type === '정기',
       manufactureDate: orderInfo.value.deadline + 'T00:00:00',
-      items: selectedItems.map(s => ({ productId: s.id, quantity: s.inputQty }))
+      items: selectedItems.map(s => ({ productCode: s.code, quantity: s.inputQty }))
     })
     alert('발주가 성공적으로 생성되었습니다.')
     router.push({ name: 'head-office-order-list' })

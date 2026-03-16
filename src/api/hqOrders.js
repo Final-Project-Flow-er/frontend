@@ -22,3 +22,14 @@ export const updateOrder = (orderCode, data) => request(`${BASE}/${orderCode}`, 
 })
 export const getRequestedOrders = (isPending) =>
   request(`${BASE}/requested?isPending=${isPending}`)
+export const cancelFranchiseOrder = (data) => request(`${BASE}/cancellation`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data),
+})
+
+export const updateOrderShippingPending = (data) => request(`${BASE}/shipping-pending`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data),
+})

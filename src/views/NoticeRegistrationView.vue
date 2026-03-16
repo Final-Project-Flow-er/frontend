@@ -76,37 +76,11 @@
         </div>
 
         <div class="attachment-section">
-          <label>이미 게시된 파일</label>
-          <!-- 기존 이미지 미리보기 -->
-          <div v-if="existingImages.length > 0" class="image-preview-grid existing">
-            <div v-for="file in existingImages" :key="file.storedName" class="preview-item">
-              <img :src="file.url" alt="미리보기" />
-              <button type="button" @click="removeExistingFile(file.storedName, 'image')" class="btn-remove-preview">×</button>
-              <div class="existing-tag">기존</div>
-            </div>
-          </div>
-
-          <!-- 기존 일반 파일 목록 -->
-          <ul v-if="existingAttachments.length > 0" class="file-list existing">
-            <li v-for="file in existingAttachments" :key="file.storedName" class="file-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-              <span class="file-name">{{ file.originName }}</span>
-              <button type="button" @click="removeExistingFile(file.storedName, 'attachment')" class="btn-remove-individual">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 6 6 18"></path>
-                  <path d="m6 6 12 12"></path>
-                </svg>
-              </button>
-            </li>
-          </ul>
-
-          <label style="margin-top: 2rem;">새로 추가할 파일</label>
+          <label>첨부 파일</label>
+          
           <div 
             class="file-upload-box" 
-            :class="{ 'has-file': files.length > 0, 'is-dragover': isDragOver }"
+            :class="{ 'has-file': files.length > 0 || existingImages.length > 0 || existingAttachments.length > 0, 'is-dragover': isDragOver }"
             @dragover.prevent="onDragOver"
             @dragleave.prevent="onDragLeave"
             @drop.prevent="onDrop"
@@ -126,26 +100,47 @@
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
               <div class="upload-text">
-                <span class="main-text">{{ files.length === 0 ? '파일을 선택하거나 여기로 드래그하세요' : `${files.length}개의 파일 선택됨` }}</span>
+                <span class="main-text">{{ (files.length === 0 && existingImages.length === 0 && existingAttachments.length === 0) ? '파일을 선택하거나 여기로 드래그하세요' : `${files.length + existingImages.length + existingAttachments.length}개의 파일` }}</span>
                 <span class="sub-text">이미지, PDF, 문서 등 (최대 10MB)</span>
               </div>
             </label>
-            <button v-if="files.length > 0" type="button" @click.stop="clearFiles" class="btn-clear-all">
+            <button v-if="files.length > 0 || existingImages.length > 0 || existingAttachments.length > 0" type="button" @click.stop="clearAllFiles" class="btn-clear-all">
               전체 삭제
             </button>
           </div>
-          
-          <!-- 이미지 미리보기 -->
-          <div v-if="imagePreviews.length > 0" class="image-preview-grid">
-            <div v-for="(preview, index) in imagePreviews" :key="index" class="preview-item">
+
+          <!-- 통합 이미지 미리보기 (기존 + 새 파일) -->
+          <div v-if="existingImages.length > 0 || imagePreviews.length > 0" class="image-preview-grid">
+            <!-- 기존 이미지 -->
+            <div v-for="file in existingImages" :key="file.storedName" class="preview-item">
+              <img :src="file.url" alt="미리보기" />
+              <button type="button" @click="removeExistingFile(file.storedName, 'image')" class="btn-remove-preview">×</button>
+            </div>
+            <!-- 새 이미지 -->
+            <div v-for="(preview, index) in imagePreviews" :key="'new-img-' + index" class="preview-item">
               <img :src="preview.url" alt="미리보기" />
               <button type="button" @click="removeFile(preview.originalIndex)" class="btn-remove-preview">×</button>
             </div>
           </div>
 
-          <!-- 일반 파일 목록 -->
-          <ul v-if="nonImageFiles.length > 0" class="file-list">
-            <li v-for="(file, index) in nonImageFiles" :key="index" class="file-item">
+          <!-- 통합 일반 파일 목록 (기존 + 새 파일) -->
+          <ul v-if="existingAttachments.length > 0 || nonImageFiles.length > 0" class="file-list">
+            <!-- 기존 파일 -->
+            <li v-for="file in existingAttachments" :key="file.storedName" class="file-item existing">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span class="file-name">{{ file.originName }}</span>
+              <button type="button" @click="removeExistingFile(file.storedName, 'attachment')" class="btn-remove-individual">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </li>
+            <!-- 새 파일 -->
+            <li v-for="(file, index) in nonImageFiles" :key="'new-file-' + index" class="file-item">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -284,6 +279,17 @@ const removeFile = (index) => {
 }
 
 const clearFiles = () => {
+  files.value = []
+  updatePreviews()
+}
+
+const clearAllFiles = () => {
+  // 기존 파일 모두 삭제 목록에 추가
+  existingImages.value.forEach(f => deleteStoredFileNames.value.push(f.storedName))
+  existingAttachments.value.forEach(f => deleteStoredFileNames.value.push(f.storedName))
+  
+  existingImages.value = []
+  existingAttachments.value = []
   files.value = []
   updatePreviews()
 }
@@ -774,8 +780,13 @@ textarea:focus {
   margin-bottom: 0.5rem;
 }
 
-.file-list.existing {
-  margin-top: 0.5rem;
-  margin-bottom: 1.5rem;
+.badge-existing {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.5rem;
 }
 </style>
