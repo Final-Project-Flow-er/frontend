@@ -282,10 +282,10 @@ const handleLogin = async () => {
   background: #0f172a;
   color: white;
   border: none;
-  padding: 1.1rem;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 0.9rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
   margin-top: 1rem;

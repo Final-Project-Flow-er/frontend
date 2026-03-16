@@ -16,7 +16,7 @@
               <input type="text" v-model="userId" placeholder="아이디를 입력하세요" class="support-input" />
               <input type="email" v-model="email" placeholder="chain-g@email.com" class="support-input" />
             </div>
-            <button @click="requestReset" class="action-btn-large">안내 메일 발송</button>
+            <button @click="requestReset" class="action-btn-large">메일 발송</button>
           </div>
         </div>
 
