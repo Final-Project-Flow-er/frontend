@@ -60,17 +60,26 @@ onMounted(async () => {
 })
 
 // Order Info
+const getRegularDeadline = () => {
+  const now = new Date()
+  const target = new Date(now.getFullYear(), now.getMonth() + 2, 1)
+  const y = target.getFullYear()
+  const m = String(target.getMonth() + 1).padStart(2, '0')
+  const d = '01'
+  return `${y}-${m}-${d}`
+}
+
 const orderInfo = ref({
   managerName: '',
   managerPhone: '',
   requirements: '',
   type: '정기',
-  deadline: ''
+  deadline: getRegularDeadline()
 })
 
 const handleTypeChange = (type) => {
   orderInfo.value.type = type
-  orderInfo.value.deadline = ''
+  orderInfo.value.deadline = type === '정기' ? getRegularDeadline() : ''
 }
 
 const getStatusClass = (s) => ({
