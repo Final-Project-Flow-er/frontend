@@ -470,6 +470,16 @@ const saveChanges = async () => {
   const id = organization.value.id
 
   try {
+    // 공통 필수 정보 검증
+    if (!organization.value.name?.trim() || 
+        !organization.value.address?.trim() || 
+        !organization.value.phone?.trim() || 
+        !organization.value.representativeName?.trim() ||
+        !organization.value.region) {
+      alert('모든 필수 정보를 입력해주세요.')
+      return
+    }
+
     const payload = {
       name: organization.value.name,
       address: organization.value.address,
@@ -479,6 +489,16 @@ const saveChanges = async () => {
     }
 
     if (type === 'FRANCHISE') {
+      // 가맹점 필수 정보 검증
+      if (tempOperatingDays.value.length === 0) {
+        alert('운영 요일을 최소 하루 이상 선택해주세요.')
+        return
+      }
+      if (!organization.value.franchiseDetail.openTime || !organization.value.franchiseDetail.closeTime) {
+        alert('운영 시간을 모두 입력해주세요.')
+        return
+      }
+
       // 시간 유효성 검사
       if (organization.value.franchiseDetail.openTime >= organization.value.franchiseDetail.closeTime) {
         alert('운영 시작 시간은 종료 시간보다 이전이어야 합니다.');
@@ -495,6 +515,11 @@ const saveChanges = async () => {
           : organization.value.franchiseDetail.closeTime
       }
     } else if (type === 'FACTORY') {
+      if (!organization.value.factoryDetail.productionLineCount || organization.value.factoryDetail.productionLineCount < 1) {
+        alert('생산 라인 개수는 1개 이상이어야 합니다.')
+        return
+      }
+
       payload.factoryUpdate = {
         productionLineCount: organization.value.factoryDetail.productionLineCount
       }

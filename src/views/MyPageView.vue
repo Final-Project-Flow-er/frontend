@@ -95,7 +95,7 @@
                 v-model="userInfo.phone" 
                 class="premium-input"
                 @input="formatPhoneNumber(userInfo, 'phone')"
-                maxlength="11"
+                maxlength="13"
               >
               <div v-else class="value-box">{{ userInfo.phone }}</div>
             </div>
@@ -464,7 +464,13 @@ const handleOrgPhoneInput = (e) => {
 }
 
 const formatPhoneNumber = (target, key) => {
-  target[key] = target[key].replace(/[^0-9]/g, '').substring(0, 11)
+  let val = target[key].replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7, 11);
+  }
+  target[key] = val;
 }
 
 const isEmailValid = computed(() => {
@@ -552,6 +558,7 @@ const fetchMyInfo = async () => {
       userInfo.name = data.username
       userInfo.email = data.email
       userInfo.phone = data.phone
+      if (userInfo.phone) formatPhoneNumber(userInfo, 'phone')
       userInfo.birthdate = data.birthDate
       userInfo.role = data.role
       userInfo.roleDetail = data.position
@@ -641,8 +648,16 @@ const cancelEditInfo = () => {
 
 // 정보 저장
 const saveUserInfo = async () => {
+  if (!userInfo.email?.trim() || !userInfo.phone?.trim()) {
+    alert('모든 필수 정보를 입력해주세요.')
+    return
+  }
   if (!isEmailValid.value) {
     alert('올바른 이메일 형식을 입력해주세요.')
+    return
+  }
+  if (userInfo.phone.replace(/[^0-9]/g, '').length !== 11) {
+    alert('연락처는 11자리 숫자로 입력해주세요.')
     return
   }
   try {
@@ -710,6 +725,34 @@ const cancelEditOrg = () => {
 
 // 조직 정보 저장
 const saveOrgInfo = async () => {
+  if (!myOrgInfo.phone?.trim()) {
+    alert('연락처를 입력해주세요.')
+    return
+  }
+
+  if (myOrgInfo.phone.replace(/[^0-9]/g, '').length < 9) {
+    alert('올바른 연락처 형식이 아닙니다.')
+    return
+  }
+
+  if (myOrgInfo.type === 'store') {
+    if (!myOrgInfo.operatingDays || myOrgInfo.operatingDays.length === 0) {
+      alert('운영 요일을 최소 하루 이상 선택해주세요.')
+      return
+    }
+    if (!myOrgInfo.openTime || !myOrgInfo.closeTime) {
+      alert('운영 시간을 모두 입력해주세요.')
+      return
+    }
+  }
+
+  if (myOrgInfo.type === 'factory') {
+    if (!myOrgInfo.lineCount || myOrgInfo.lineCount < 1) {
+      alert('생산 라인 개수는 1개 이상이어야 합니다.')
+      return
+    }
+  }
+
   try {
     const updateData = {
       phone: myOrgInfo.phone,
