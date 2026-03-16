@@ -38,23 +38,15 @@ import LogisticsListView from '../views/LogisticsListView.vue'
 import OrderReceptionDetailView from "@/views/head-office/OrderReceptionDetailView.vue";
 import ReturnRequestReceptionList from "@/views/head-office/ReturnRequestReceptionList.vue";
 import HeadOfficeLogisticsLogView from "@/views/head-office/LogisticsLogView.vue";
+import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
             path: '/',
-            redirect: () => {
-                const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true'
-                if (!isLoggedIn) return '/login'
-
-                const userRole = sessionStorage.getItem('userRole')
-                if (userRole === 'admin' || userRole === 'headOffice') return '/registration'
-                if (userRole === 'factory') return '/factory/inbound'
-                if (userRole === 'franchise') return '/store/inventory'
-
-                return '/login'
-            }
+            name: 'Home',
+            component: HomeView
         },
         // --- Franchise Routes ---
         {
