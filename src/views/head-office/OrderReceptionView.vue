@@ -13,12 +13,19 @@ const centralStock = ref({})
 // 2. Orders (실제 API 로드)
 const orders = ref([])
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchOrders = async () => {
   try {
-    const data = await getRequestedOrders(true)
+    const pageData = await getRequestedOrders(true, { page: currentPage.value, size: pageSize.value })
+    const data = pageData?.content || []
+    totalPages.value = pageData?.totalPages || 0
     // 평탄화된 응답을 orderCode 기준으로 그룹화
     const orderMap = {}
-    ;(data || []).forEach(item => {
+    data.forEach(item => {
       if (!orderMap[item.orderCode]) {
         orderMap[item.orderCode] = {
           id: item.orderCode,
@@ -41,10 +48,27 @@ onMounted(async () => {
     })
     orders.value = Object.values(orderMap)
   } catch (e) {
-    // 대기 발주가 없으면 빈 목록으로 처리
     orders.value = []
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchOrders()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchOrders())
 
 // 3. Filter
 const filter = ref({
@@ -332,6 +356,21 @@ const goToDetail = (row) => {
         </tr>
         </tbody>
       </table>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
+      </div>
     </div>
   </div>
 </template>
@@ -382,4 +421,12 @@ button:hover { opacity: 0.9; }
 .status-warning { background: #fef3c7; color: #92400e; }
 .status-danger { background: #fee2e2; color: #991b1b; }
 .status-primary { background: #dbeafe; color: #1e40af; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1f2937; transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1f2937; transition: all 0.2s; }
+.page-num-btn:hover { border-color: #2563eb; color: #2563eb; }
+.page-num-btn.active { background: #1f2937; color: white; border-color: #1f2937; }
 </style>

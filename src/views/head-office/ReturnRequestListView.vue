@@ -10,10 +10,17 @@ const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
 const returns = ref([])
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchReturns = async () => {
   try {
-    const data = await getReturnList(true)
-    returns.value = (data || []).map(item => ({
+    const pageData = await getReturnList(true, { page: currentPage.value, size: pageSize.value })
+    const data = pageData?.content || []
+    totalPages.value = pageData?.totalPages || 0
+    returns.value = data.map(item => ({
       id: item.returnCode,
       franchiseCode: item.franchiseCode,
       requestDate: formatDate(item.requestedDate),
@@ -32,7 +39,25 @@ onMounted(async () => {
   } catch (e) {
     alert(e.message)
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchReturns()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchReturns())
 
 const filter = ref({
   franchiseCode: '',
@@ -261,6 +286,21 @@ const toggleSelectAll = (e) => {
         </tr>
         </tbody>
       </table>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
+      </div>
     </div>
   </div>
 </template>
@@ -320,4 +360,12 @@ const toggleSelectAll = (e) => {
 .status-default { background: #f3f4f6; color: #4b5563; }
 
 .empty-cell { text-align: center; padding: 3rem; color: var(--text-light); }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 </style>
