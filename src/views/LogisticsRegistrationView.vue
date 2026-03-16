@@ -59,8 +59,8 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>담당자 이름</label>
-                <input type="text" v-model="companyData.manager" placeholder="담당자 성함">
+                <label>담당자 이름 <span class="required">*</span></label>
+                <input type="text" v-model="companyData.manager" placeholder="담당자 성함을 입력하세요" required>
               </div>
               <div class="form-group">
                 <label>주력 운송 지역 <span class="required">*</span></label>
@@ -426,8 +426,14 @@ const resetForm = (type) => {
 }
 
 const registerCompany = async () => {
-  if (!companyData.companyName || !companyData.officePhone || !companyData.address || !companyData.usableRegion) {
-    alert('필수 정보를 모두 입력해주세요.')
+  if (!companyData.companyName?.trim() || 
+      !companyData.officePhone?.trim() || 
+      !companyData.address?.trim() || 
+      !companyData.manager?.trim() ||
+      !companyData.usableRegion ||
+      companyData.ownedVehicles === null ||
+      companyData.unitPrice === null) {
+    alert('모든 필수 정보를 입력해주세요.')
     return
   }
   if (!companyData.contractStartDate || !companyData.contractEndDate) {
@@ -456,8 +462,13 @@ const registerCompany = async () => {
 }
 
 const registerVehicle = async () => {
-  if (!vehicleData.vehicleNumber || !vehicleData.driverName || !vehicleData.transportId) {
-    alert('필수 정보를 모두 입력해주세요.')
+  if (!vehicleData.vehicleNumber?.trim() || 
+      !vehicleData.driverName?.trim() || 
+      !vehicleData.driverPhone?.trim() ||
+      !vehicleData.transportId ||
+      !vehicleData.vehicleType ||
+      !vehicleData.maxLoad) {
+    alert('모든 필수 정보를 입력해주세요.')
     return
   }
   try {

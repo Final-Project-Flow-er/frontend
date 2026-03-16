@@ -119,11 +119,7 @@ export const useAuthStore = defineStore('auth', {
                     formData.append('profileImage', profileImage)
                 }
 
-                const response = await api.patch('/users/me', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
-                })
+                const response = await api.post('/users/me', formData)
                 if (response.data.success) {
                     this.userName = response.data.data.username
                     this.userPhoto = response.data.data.profileImageUrl
@@ -162,9 +158,20 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        async updateMyWorkplaceInfo(info) {
+        async updateMyWorkplaceInfo(info, deleteFiles = [], newImages = []) {
             try {
-                const response = await api.patch('/users/me/workplace', info)
+                const formData = new FormData()
+                formData.append('request', new Blob([JSON.stringify(info)], { type: 'application/json' }))
+
+                if (deleteFiles && deleteFiles.length > 0) {
+                    deleteFiles.forEach(name => formData.append('deleteFiles', name))
+                }
+
+                if (newImages && newImages.length > 0) {
+                    newImages.forEach(file => formData.append('newImages', file))
+                }
+
+                const response = await api.post('/users/me/workplace', formData)
                 if (response.data.success) {
                     return response.data.data
                 }

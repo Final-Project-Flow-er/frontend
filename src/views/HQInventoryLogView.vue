@@ -18,6 +18,7 @@
         <label>반품/발주 코드</label>
         <input type="text" v-model="filter.orderCode" placeholder="코드 입력" />
       </div>
+      <div class="filter-hint-row">기본 조회는 최근 6개월 데이터입니다. 이전 데이터는 조회 기간을 설정해 확인하세요.</div>
     </div>
 
     <!-- Toggle Selector -->
@@ -240,6 +241,16 @@ const changePage = (page) => {
     fetchLogs()
 }
 
+const toApiDate = (dateString) => {
+    if (!dateString) return null
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return null
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
 const toggleRow = async (id) => {
   const index = expandedRows.value.indexOf(id)
   if (index === -1) {
@@ -250,7 +261,10 @@ const toggleRow = async (id) => {
         if (!boxCodesMap.value[id]) {
             loadingBoxCodes.value[id] = true
             try {
-                const res = await api.get('/hq/log/boxes', { params: { transactionCode: log.orderCode } })
+                const params = { transactionCode: log.orderCode }
+                const date = toApiDate(log.arrivalTime)
+                if (date) params.date = date
+                const res = await api.get('/hq/log/boxes', { params })
                 if (res.data && res.data.success) {
                     boxCodesMap.value[id] = res.data.data
                 } else {
@@ -374,6 +388,7 @@ const getChangeClass = (qty) => {
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 .filter-group input, .filter-group select { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
 .date-inputs { display: flex; gap: 0.5rem; align-items: center; }
+.filter-hint-row { flex-basis: 100%; margin-top: -0.25rem; font-size: 0.78rem; color: #6b7280; }
 .search-btn {
   background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; margin-left: auto;
 }
