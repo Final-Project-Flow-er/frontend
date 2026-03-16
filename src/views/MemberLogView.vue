@@ -211,7 +211,7 @@ const filteredLogs = computed(() => {
 }
 
 .filter-section {
-  background: #f8fafc;
+  background: #ffffff;
   padding: 1.25rem 1.5rem;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
@@ -234,7 +234,7 @@ const filteredLogs = computed(() => {
 .filter-group label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #475569;
+  color: #64748b;
 }
 
 .date-range {
@@ -245,7 +245,8 @@ const filteredLogs = computed(() => {
 }
 
 .filter-input, .filter-select {
-  padding: 0.6rem 0.8rem;
+  height: 42px;
+  padding: 0.6rem 0.85rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.9rem;
@@ -272,9 +273,10 @@ const filteredLogs = computed(() => {
 
 .search-box input {
   width: 100%;
-  padding: 0.65rem 1rem 0.65rem 2.75rem;
+  height: 42px;
+  padding: 0.6rem 0.85rem 0.6rem 2.5rem;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
   transition: all 0.2s;
@@ -289,7 +291,8 @@ const filteredLogs = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.25rem;
+  height: 42px;
+  padding: 0.6rem 1rem;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;

@@ -70,7 +70,7 @@
           <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
         </div>
 
-        <button @click="resetFilters" class="btn-reset-filter">
+        <button @click="resetFilters" class="btn-reset-unified">
           초기화
         </button>
       </div>
@@ -416,7 +416,7 @@ const getRegionLabel = (region) => {
 
 .org-list-header h1 {
   font-size: 1.5rem;
-  font-weight: 500;
+  font-weight: 700;
   color: #0f172a;
   margin-bottom: 0.5rem;
 }

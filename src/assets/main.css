@@ -30,6 +30,19 @@ body {
   box-sizing: border-box;
 }
 
+/* 전역: 모든 폰트를 Pretendard로 통일 */
+*,
+*::before,
+*::after {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* 브랜드 로고(CHAIN-G)는 바코드 폰트 유지 */
+.logo-barcode,
+.logo-barcode-mini {
+  font-family: 'Libre Barcode 39 Text', system-ui !important;
+}
+
 /* 전역: 모든 테이블 셀 한 줄 출력 */
 th,
 td {
@@ -41,4 +54,168 @@ td {
 .table-container,
 .data-table-scroll-wrapper {
   overflow-x: auto;
+}
+
+/* 전역: 테이블 UI 통일 (/hq/inventory/logs/hq 기준) */
+.table-container,
+.data-table-card,
+.table-wrapper,
+.member-table-container,
+.org-table-container {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-container table,
+table.data-table,
+table.logistics-table,
+table.log-table,
+table.member-table,
+table.org-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.table-container table thead th,
+table.data-table thead th,
+table.logistics-table thead th,
+table.log-table thead th,
+table.member-table thead th,
+table.org-table thead th {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  text-align: center !important;
+  padding: 0.82rem 0.55rem !important;
+  height: 48px !important;
+  line-height: 1.2 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+.table-container table tbody td,
+table.data-table tbody td,
+table.logistics-table tbody td,
+table.log-table tbody td,
+table.member-table tbody td,
+table.org-table tbody td {
+  color: #0f172a !important;
+  font-size: 0.85rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  text-align: center !important;
+  padding: 0.82rem 0.55rem !important;
+  height: 48px !important;
+  line-height: 1.2 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+.table-container table tbody tr:hover,
+table.data-table tbody tr:hover,
+table.logistics-table tbody tr:hover,
+table.log-table tbody tr:hover,
+table.member-table tbody tr:hover,
+table.org-table tbody tr:hover {
+  background: #f8fafc !important;
+}
+
+/* 코드 타입별 가독성 색상 */
+.table-container td.code-order,
+.data-table-card td.code-order,
+.table-wrapper td.code-order,
+.member-table-container td.code-order,
+.org-table-container td.code-order {
+  color: #1d4ed8 !important;
+  font-weight: 600 !important;
+}
+
+.table-container td.code-return,
+.data-table-card td.code-return,
+.table-wrapper td.code-return,
+.member-table-container td.code-return,
+.org-table-container td.code-return {
+  color: #c2410c !important;
+  font-weight: 600 !important;
+}
+
+.table-container td.code-tracking,
+.data-table-card td.code-tracking,
+.table-wrapper td.code-tracking,
+.member-table-container td.code-tracking,
+.org-table-container td.code-tracking {
+  color: #6d28d9 !important;
+  font-weight: 600 !important;
+}
+
+/* 공통 초기화 버튼 */
+/* 초기화 버튼 전역 통일 (기준: /admin/logistics) */
+.btn-reset,
+.btn-reset-filter,
+.btn-reset-filters,
+.reset-btn,
+.btn-reset-unified {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  height: 42px !important;
+  padding: 0.6rem 1rem !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.btn-reset:hover,
+.btn-reset-filter:hover,
+.btn-reset-filters:hover,
+.reset-btn:hover,
+.btn-reset-unified:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.filter-section .btn-reset-unified,
+.filter-bar .btn-reset-unified {
+  margin-left: auto;
+}
+
+/* 기존 초기화 버튼도 동일 톤으로 통일 */
+.filter-section .btn-reset,
+.filter-section .btn-reset-filter,
+.filter-section .btn-reset-filters,
+.filter-section .reset-btn,
+.filter-bar .btn-reset,
+.filter-bar .btn-reset-filter,
+.filter-bar .btn-reset-filters,
+.filter-bar .reset-btn {
+  height: 42px !important;
+  padding: 0.6rem 1rem !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+}
+
+/* 좌상단 페이지 타이틀 공통 굵기 통일 */
+.header-row h2,
+.header-left h1,
+.member-list-header h1,
+.org-list-header h1,
+.registration-header h1 {
+  font-weight: 700 !important;
+  color: #0f172a !important;
 }

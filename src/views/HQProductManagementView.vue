@@ -37,7 +37,7 @@
           <option value="03">3~4인분</option>
         </select>
       </div>
-
+      <button type="button" class="btn-reset-unified" @click="resetFilters">초기화</button>
     </div>
 
     <!-- Product Card Grid -->
@@ -306,6 +306,15 @@ const filter = ref({
   status: '',
   servingSize: ''
 })
+
+const resetFilters = () => {
+    filter.value = {
+        productCode: '',
+        name: '',
+        status: '',
+        servingSize: ''
+    }
+}
 
 const showModal = ref(false)
 const showTypeModal = ref(false)

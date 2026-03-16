@@ -45,6 +45,7 @@
               <option value="DANGER">위험</option>
             </select>
           </div>
+          <button type="button" class="btn-reset-unified" @click="resetFilters">초기화</button>
         </div>
 
         <!-- Safety Stock Alert Section (Collapsible) -->
@@ -327,6 +328,14 @@ const filter = ref({
   productName: '',
   status: ''
 })
+
+const resetFilters = () => {
+  filter.value = {
+    productCode: '',
+    productName: '',
+    status: ''
+  }
+}
 
 const step3Filter = ref({
   serialCode: '',

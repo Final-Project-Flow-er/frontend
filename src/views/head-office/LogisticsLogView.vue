@@ -99,7 +99,7 @@ const getStatusClass = (status) => {
         <table class="data-table">
           <thead>
             <tr>
-              <th>로그 시각</th>
+              <th>일시</th>
               <th>배송 상태</th>
               <th>운송장 번호</th>
               <th>운송 업체</th>
@@ -111,11 +111,11 @@ const getStatusClass = (status) => {
           </thead>
           <tbody>
             <tr v-for="log in filteredLogs" :key="log.id">
-              <td class="time-cell">{{ log.time.split(' ')[1] }} <span class="date-sub">{{ log.time.split(' ')[0] }}</span></td>
+              <td class="time-cell">{{ log.time }}</td>
               <td>
                 <span class="status-badge" :class="getStatusClass(log.status)">{{ log.status }}</span>
               </td>
-              <td class="code-cell">{{ log.trackingNumber }}</td>
+              <td class="code-cell code-tracking">{{ log.trackingNumber }}</td>
               <td>{{ log.company }}</td>
               <td>{{ log.vehicleType }}</td>
               <td class="code-cell">{{ log.vehicleNumber }}</td>
@@ -254,17 +254,10 @@ const getStatusClass = (status) => {
   border-bottom: 1px solid #f1f5f9;
   font-size: 0.9rem;
   color: #334155;
+  font-weight: 400;
 }
 
 .time-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-}
-
-.date-sub {
-  display: block;
-  font-size: 0.75rem;
-  color: #94a3b8;
   font-weight: 400;
 }
 
@@ -280,13 +273,17 @@ const getStatusClass = (status) => {
 .status-completed { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
 
 .code-cell {
-  font-family: monospace;
   color: #64748b;
-  font-weight: 600;
+  font-weight: 400;
+}
+
+.code-cell.code-tracking {
+  color: #7c3aed !important;
+  font-weight: 700 !important;
 }
 
 .name-cell {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .empty-state {

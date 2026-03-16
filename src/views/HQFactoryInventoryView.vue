@@ -25,6 +25,7 @@
             <option value="DANGER">위험</option>
             </select>
         </div>
+        <button type="button" class="btn-reset-unified" @click="resetFilters">초기화</button>
         </div>
 
         <!-- Safety Stock Alert Section -->
@@ -274,7 +275,7 @@
         </div>
 
         <div class="popup-actions" style="justify-content: space-between; display: flex; width: 100%;">
-          <button class="warning" @click="resetSettings" :disabled="!foundProduct" style="background-color:#f0ad4e; color:white; border:none; border-radius:4px; padding:0.5rem 1rem;">초기화</button>
+          <button class="btn-reset-unified" @click="resetSettings" :disabled="!foundProduct">초기화</button>
           <div>
             <button @click="closeSettingsPopup" style="margin-right: 0.5rem;">닫기</button>
             <button class="primary" @click="saveSettings" :disabled="!foundProduct">저장</button>
@@ -304,6 +305,14 @@ const filter = ref({
   productName: '',
   status: ''
 })
+
+const resetFilters = () => {
+  filter.value = {
+    productCode: '',
+    productName: '',
+    status: ''
+  }
+}
 
 const step3Filter = ref({
   serialCode: '',

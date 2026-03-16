@@ -705,6 +705,7 @@ const confirmHardDelete = async (type, item) => {
 }
 
 .filter-select {
+  height: 42px;
   padding: 0.6rem 1rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
@@ -723,11 +724,12 @@ const confirmHardDelete = async (type, item) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.25rem;
+  height: 42px;
+  padding: 0.6rem 1rem;
   background: white;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
@@ -755,9 +757,10 @@ const confirmHardDelete = async (type, item) => {
 
 .search-box input {
   width: 100%;
-  padding: 0.65rem 1rem 0.65rem 2.75rem;
+  height: 42px;
+  padding: 0.6rem 0.85rem 0.6rem 2.5rem;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
   transition: all 0.2s;
@@ -790,6 +793,7 @@ const confirmHardDelete = async (type, item) => {
   width: 80px;
   border: none;
   padding: 0.6rem 0;
+  height: 40px;
   font-size: 0.9rem;
   outline: none;
 }

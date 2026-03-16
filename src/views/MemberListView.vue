@@ -51,7 +51,7 @@
           >
         </div>
 
-        <button @click="resetFilters" class="btn-reset-filter">
+        <button @click="resetFilters" class="btn-reset-unified">
           초기화
         </button>
       </div>
@@ -361,17 +361,19 @@ const goToDetail = (member) => {
 
 .filter-group label {
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #475569;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .filter-group select,
 .filter-group input {
+  height: 42px;
   padding: 0.6rem 0.85rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
+  background: white;
 }
 
 .filter-group select:focus,
@@ -394,6 +396,7 @@ const goToDetail = (member) => {
 
 .search-box input {
   width: 100%;
+  height: 42px;
   padding-left: 2.5rem;
 }
 
@@ -407,12 +410,13 @@ const goToDetail = (member) => {
 
 .btn-reset-filter {
   margin-left: auto;
-  padding: 0.6rem 1.25rem;
+  height: 42px;
+  padding: 0.6rem 1rem;
   background: white;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #64748b;
   cursor: pointer;
 }

@@ -39,6 +39,7 @@
             <label>{{ isDisposalView ? '박스 코드' : '코드 검색' }}</label>
             <input type="text" v-model="filter.orderCode" :placeholder="isDisposalView ? '박스 코드 입력' : '코드 입력'" />
         </div>
+        <button type="button" class="btn-reset-unified" @click="resetFilters">초기화</button>
         <div class="filter-hint-row">기본 조회는 최근 6개월 데이터입니다. 이전 데이터는 조회 기간을 설정해 확인하세요.</div>
       </div>
  
@@ -92,7 +93,7 @@
                 <template v-for="log in filteredLogs" :key="log.id">
                   <tr class="clickable-row" @click="toggleRow(log.id)">
                       <td>{{ formatDate(log.arrivalTime) }}</td>
-                      <td v-if="!isDisposalView" class="code-cell">{{ log.orderCode }}</td>
+                      <td v-if="!isDisposalView" :class="['code-cell', getCodeTypeClass()]">{{ log.orderCode }}</td>
                       <td class="name-cell">{{ log.name }}</td>
                       <td>
                         <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
@@ -198,6 +199,17 @@ const filter = ref({
     orderCode: '',
     logType: ''
 })
+
+const resetFilters = () => {
+    filter.value = {
+        startDate: '',
+        endDate: '',
+        productName: '',
+        orderCode: '',
+        logType: ''
+    }
+    currentPage.value = 0
+}
 const activeLogType = ref('LOGISTICS') 
 
 const filteredLogs = computed(() => {
@@ -371,6 +383,11 @@ const getCodeLabel = () => {
     if (activeLogType.value === 'RETURN_IN') return '반품 코드'
     if (activeLogType.value === 'RETURN_OUT') return '발주 코드'
     return '발주 코드'
+}
+
+const getCodeTypeClass = () => {
+    if (activeLogType.value === 'RETURN_IN') return 'code-return'
+    return 'code-order'
 }
  
 const formatDate = (dateString) => {

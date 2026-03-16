@@ -257,7 +257,7 @@ const toggleSelectAll = (e) => {
 
           <td class="code-cell">{{ item.franchiseCode }}</td>
           <td>{{ item.requestDate }}</td>
-          <td class="code-cell">{{ item.returnCode }}</td>
+          <td class="code-cell code-return">{{ item.returnCode }}</td>
           <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
           <td>{{ item.productCode }}</td>
           <td>{{ item.reason }}</td>

@@ -168,7 +168,7 @@ const goToEdit = (item) => {
             @click="goToDetail(row)" 
             :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
           >
-            <td class="sku-cell">{{ row.orderCode }}</td>
+            <td class="sku-cell code-order">{{ row.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
             <td class="sku-cell small">{{ row.product.productCode }}</td>
             <td>{{ row.product.quantity }}</td>
