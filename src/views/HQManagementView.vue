@@ -509,7 +509,11 @@ const getRegionLabel = (region) => {
 }
 
 .map-container {
+  height: 400px;
   margin-top: 0.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
 }
 
 .no-map-placeholder {

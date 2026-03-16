@@ -1157,6 +1157,15 @@ const getOrgNameLabel = (type) => {
 .address-input-group {
   display: flex;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.map-container {
+  height: 300px;
+  margin-top: 0.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
 }
 
 .address-input-group input {
