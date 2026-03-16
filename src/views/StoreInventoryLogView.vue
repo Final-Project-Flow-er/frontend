@@ -219,8 +219,7 @@ const toggleRow = async (id) => {
 const fetchLogs = async () => {
     loading.value = true
     try {
-        const franchiseId = 1 
-        const endpoint = `/franchise/log/inventory/${franchiseId}`
+        const endpoint = `/franchise/log/inventory`
             
         const params = {
            page: currentPage.value,
@@ -318,7 +317,8 @@ watch(filter, () => {
 
 const getCodeLabel = () => {
     if (activeLogType.value === 'DISPOSAL') return '박스 코드'
-    if (activeLogType.value.includes('RETURN')) return '반품 코드'
+    if (activeLogType.value === 'RETURN_IN') return '반품 코드'
+    if (activeLogType.value === 'RETURN_OUT') return '발주 코드'
     return '발주 코드'
 }
 

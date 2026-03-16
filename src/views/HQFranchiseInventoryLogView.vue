@@ -368,7 +368,8 @@ const selectStore = (store) => {
  
 const getCodeLabel = () => {
     if (activeLogType.value === 'DISPOSAL') return '박스 코드'
-    if (activeLogType.value.includes('RETURN')) return '반품 코드'
+    if (activeLogType.value === 'RETURN_IN') return '반품 코드'
+    if (activeLogType.value === 'RETURN_OUT') return '발주 코드'
     return '발주 코드'
 }
  
