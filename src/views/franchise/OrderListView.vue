@@ -68,11 +68,34 @@ const rawOrders = ref([])
 const loading = ref(false)
 const error = ref(null)
 
+// 페이지네이션 상태 — 발주
+const orderPage = ref(0)
+const orderSize = ref(20)
+const orderTotalPages = ref(0)
+
+// 페이지네이션 상태 — 반품
+const returnPage = ref(0)
+const returnSize = ref(20)
+const returnTotalPages = ref(0)
+
+// 슬라이딩 윈도우 페이지 번호 계산 (최대 5개 표시, 현재 페이지 중앙)
+const visiblePages = (current, total, maxVisible = 5) => {
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
+}
+const orderVisiblePages = computed(() => visiblePages(orderPage.value, orderTotalPages.value))
+const returnVisiblePages = computed(() => visiblePages(returnPage.value, returnTotalPages.value))
+
 const fetchOrders = async () => {
   loading.value = true
   error.value = null
   try {
-    rawOrders.value = (await getOrderList()) || []
+    const pageData = (await getOrderList({ page: orderPage.value, size: orderSize.value })) || {}
+    rawOrders.value = pageData.content || []
+    orderTotalPages.value = pageData.totalPages || 0
   } catch (e) {
     console.error('발주 조회 실패:', e)
     error.value = e.message || '발주 데이터를 불러오지 못했습니다.'
@@ -85,13 +108,25 @@ const fetchReturns = async () => {
   loading.value = true
   error.value = null
   try {
-    rawReturns.value = (await getReturnList()) || []
+    const pageData = (await getReturnList({ page: returnPage.value, size: returnSize.value })) || {}
+    rawReturns.value = pageData.content || []
+    returnTotalPages.value = pageData.totalPages || 0
   } catch (e) {
     console.error('반품 조회 실패:', e)
     error.value = e.message || '반품 데이터를 불러오지 못했습니다.'
   } finally {
     loading.value = false
   }
+}
+
+const changeOrderPage = async (page) => {
+  orderPage.value = page
+  await fetchOrders()
+}
+
+const changeReturnPage = async (page) => {
+  returnPage.value = page
+  await fetchReturns()
 }
 
 // 탭 전환 시 해당 API 호출
@@ -347,6 +382,21 @@ const goToDetail = (item) => {
         </tbody>
       </table>
 
+      <!-- 발주 페이지네이션 -->
+      <div class="pagination" v-if="viewMode === 'order' && orderTotalPages > 1">
+        <button class="page-nav-btn" :disabled="orderPage === 0" @click="changeOrderPage(orderPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in orderVisiblePages"
+            :key="p"
+            @click="changeOrderPage(p)"
+            :class="{ active: orderPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="orderPage === orderTotalPages - 1" @click="changeOrderPage(orderPage + 1)">다음</button>
+      </div>
+
       <!-- 2. 반품 테이블 -->
       <table v-else class="data-table">
         <thead>
@@ -388,6 +438,21 @@ const goToDetail = (item) => {
         </tr>
         </tbody>
       </table>
+
+      <!-- 반품 페이지네이션 -->
+      <div class="pagination" v-if="viewMode === 'return' && returnTotalPages > 1">
+        <button class="page-nav-btn" :disabled="returnPage === 0" @click="changeReturnPage(returnPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in returnVisiblePages"
+            :key="p"
+            @click="changeReturnPage(p)"
+            :class="{ active: returnPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="returnPage === returnTotalPages - 1" @click="changeReturnPage(returnPage + 1)">다음</button>
+      </div>
     </div>
   </div>
 </template>
@@ -484,6 +549,14 @@ const goToDetail = (item) => {
 
 .status-message { text-align: center; padding: 1rem; font-size: 0.95rem; color: var(--text-light); }
 .error-message { color: #991b1b; background: #fee2e2; border-radius: 8px; border: 1px solid #fecaca; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 
 :root {
   --primary: #4f46e5;
