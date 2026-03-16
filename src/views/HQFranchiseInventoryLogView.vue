@@ -39,6 +39,7 @@
             <label>{{ isDisposalView ? '박스 코드' : '코드 검색' }}</label>
             <input type="text" v-model="filter.orderCode" :placeholder="isDisposalView ? '박스 코드 입력' : '코드 입력'" />
         </div>
+        <div class="filter-hint-row">기본 조회는 최근 6개월 데이터입니다. 이전 데이터는 조회 기간을 설정해 확인하세요.</div>
       </div>
  
         <!-- Toggle Selector -->
@@ -487,6 +488,7 @@ const getChangeClass = (qty) => {
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 .filter-group input, .filter-group select { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
 .date-inputs { display: flex; gap: 0.5rem; align-items: center; }
+.filter-hint-row { flex-basis: 100%; margin-top: -0.25rem; font-size: 0.78rem; color: #6b7280; }
 .search-btn {
   background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; margin-left: auto;
 }
