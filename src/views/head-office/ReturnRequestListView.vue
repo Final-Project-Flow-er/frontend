@@ -94,7 +94,6 @@ const filteredReturns = computed(() => {
         (!filter.value.productIdCode || item.productIdCode.includes(filter.value.productIdCode)) &&
         (!filter.value.reason || item.reason.includes(filter.value.reason)) &&
         (!filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)) &&
-        (!filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)) &&
         (!filter.value.productCode || item.productCode.includes(filter.value.productCode)) &&
         (!filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)) &&
         (!filter.value.returnCode || item.returnCode.includes(filter.value.returnCode)) &&
@@ -209,10 +208,6 @@ const toggleSelectAll = (e) => {
           <input type="text" v-model="filter.recipientName" />
         </div>
         <div class="filter-group">
-          <label>수령인 전화번호</label>
-          <input type="text" v-model="filter.recipientPhone" />
-        </div>
-        <div class="filter-group">
           <label>제품 코드</label>
           <input type="text" v-model="filter.productCode" />
         </div>
@@ -253,7 +248,6 @@ const toggleSelectAll = (e) => {
           <th>수량</th>
           <th>반품 금액</th>
           <th>수령인</th>
-          <th>연락처</th>
           <th>박스 코드</th>
         </tr>
         </thead>

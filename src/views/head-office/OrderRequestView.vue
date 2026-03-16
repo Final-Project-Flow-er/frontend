@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getRequestedOrders, cancelFranchiseOrder } from '@/api/hqOrders.js'
+
+const router = useRouter()
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
@@ -157,6 +160,11 @@ const toggleSelectAll = (event) => {
   }
 }
 
+const goToDetail = (order) => {
+  if (isSelectionMode.value) return
+  router.push({ name: 'franchise-order-detail', params: { id: order.orderCode } })
+}
+
 const getStatusClass = (s) => ({
   PENDING: 'status-warning',
   ACCEPTED: 'status-info',
@@ -236,7 +244,9 @@ const getStatusClass = (s) => ({
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filteredOrders" :key="order.orderCode" :class="{ 'selected-row': selectedCodes.includes(order.orderCode) }">
+          <tr v-for="order in filteredOrders" :key="order.orderCode"
+              @click="goToDetail(order)"
+              :class="['clickable-row', { 'selected-row': selectedCodes.includes(order.orderCode) }]">
             <td v-if="isSelectionMode">
               <input type="checkbox" :value="order.orderCode" v-model="selectedCodes" :disabled="!isCancellable(order.status)" />
             </td>
@@ -333,6 +343,8 @@ const getStatusClass = (s) => ({
 .status-primary { background: #e0e7ff; color: #3730a3; }
 .status-danger { background: #fee2e2; color: #991b1b; }
 
+.clickable-row { cursor: pointer; transition: background 0.2s; }
+.clickable-row:hover { background-color: #f8fafc; }
 .selected-row { background-color: #f0f7ff; }
 .empty-cell { text-align: center; padding: 3rem; color: var(--text-light); }
 

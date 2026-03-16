@@ -69,9 +69,8 @@ const submitSale = () => {
 .table-scroll-container { overflow-x: auto; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; }
 
 .data-table { width: 100%; border-collapse: collapse; min-width: 900px; }
-.data-table th, .data-table td { white-space: nowrap; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); }
-.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; }
-.data-table td { font-size: 0.85rem; }
+.data-table th { text-align: center; padding: 0.75rem 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; vertical-align: middle; text-align: center;}
 
 .code-cell { color: var(--text-light); }
 .name-cell { color: var(--text-dark); }
@@ -87,6 +86,8 @@ const submitSale = () => {
 }
 .total-label { font-size: 1.1rem; font-weight: 700; color: var(--text-dark); }
 .total-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+
+.text-right { text-align: center; }
 
 .actions { display: flex; justify-content: flex-end; gap: 1rem; }
 .cancel-btn { background: white; border: 1px solid var(--border-color); padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; }

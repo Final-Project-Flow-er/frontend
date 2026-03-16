@@ -9,8 +9,7 @@ const filter = ref({
   salesCode: '',
   date: '',
   productCode: '',
-  productName: '',
-  quantity: ''
+  productName: ''
 })
 
 const sales = ref([])
@@ -66,9 +65,8 @@ const filteredSales = computed(() => {
     const matchDate = !filter.value.date || formattedDate.startsWith(filter.value.date)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
-    const matchQuantity = !filter.value.quantity || item.quantity.toString() === filter.value.quantity
 
-    return matchSalesCode && matchDate && matchProductCode && matchProductName && matchQuantity
+    return matchSalesCode && matchDate && matchProductCode && matchProductName
   })
 })
 
@@ -103,10 +101,6 @@ const goToSalesDetail = (salesCode) => {
       <div class="filter-group grow-2">
         <label>제품 이름</label>
         <input type="text" v-model="filter.productName" placeholder="Product Name..." />
-      </div>
-      <div class="filter-group narrow">
-        <label>수량</label>
-        <input type="number" v-model="filter.quantity" placeholder="0" />
       </div>
     </div>
 
@@ -184,8 +178,8 @@ const goToSalesDetail = (salesCode) => {
 .table-scroll-container { overflow-x: auto; width: 100%; border-radius: 8px; }
 .data-table { width: 100%; border-collapse: collapse; min-width: 1000px; }
 .data-table th, .data-table td { white-space: nowrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; }
-.data-table td { font-size: 0.85rem; }
+.data-table th { text-align: center; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; }
+.data-table td { font-size: 0.85rem; text-align: center; }
 
 /* [변경] code-cell 스타일 삭제, sku-cell이 판매 코드에도 적용됨 */
 .sku-cell { color: var(--primary); font-weight: 600; } /* 제품 코드 & 판매 코드 파란색 */

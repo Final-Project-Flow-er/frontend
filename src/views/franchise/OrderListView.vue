@@ -263,18 +263,6 @@ const goToDetail = (item) => {
       >+ 반품 요청</router-link>
     </div>
 
-    <!-- Summary Section -->
-    <section class="summary-section">
-      <div class="summary-card">
-        <span class="s-label">금일 {{ viewMode === 'order' ? '발주' : '반품' }} 건수</span>
-        <p class="s-value">1건</p>
-      </div>
-      <div class="summary-card">
-        <span class="s-label">{{ viewMode === 'order' ? '배송 준비중' : '처리 대기중' }}</span>
-        <p class="s-value">1건</p>
-      </div>
-    </section>
-
     <!-- Filter Section -->
     <div class="filter-section">
       <!-- [공통] 발주 코드 -->
@@ -504,11 +492,6 @@ const goToDetail = (item) => {
 .view-mode-control input { display: none; }
 
 /* 기타 섹션 스타일 (기존 유지) */
-.summary-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-.summary-card { background: white; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); }
-.s-label { font-size: 0.9rem; color: var(--text-light); }
-.s-value { font-size: 1.75rem; font-weight: 700; margin: 0.5rem 0; }
-
 .filter-section {
   background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);
   margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
@@ -526,13 +509,13 @@ const goToDetail = (item) => {
   overflow-x: auto;
 }
 .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-.data-table th { text-align: left; padding: 0.75rem 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; vertical-align: middle; }
+.data-table th { text-align: center; padding: 0.75rem 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; vertical-align: middle; text-align: center; }
 
 .sku-cell { color: var(--primary); font-weight: 600; }
 .sku-cell.small { font-size: 0.9rem; }
 .name-cell { font-weight: 500; }
-.text-right { text-align: right; }
+.text-right { text-align: center; }
 .font-bold-slate { font-weight: 600; color: #334155; }
 .order-total-header { border-left: 1px dashed #e2e8f0; color: var(--text-dark); font-weight: 600; }
 .total-cell-bold { font-weight: 700; color: var(--text-dark); border-left: 1px dashed #e2e8f0; }

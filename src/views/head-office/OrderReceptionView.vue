@@ -73,7 +73,10 @@ onMounted(() => fetchOrders())
 // 3. Filter
 const filter = ref({
   orderCode: '',
-  productCode: ''
+  franchiseCode: '',
+  recipientName: '',
+  productCode: '',
+  status: ''
 })
 
 // 4. Selection
@@ -105,9 +108,11 @@ const flattenedRows = computed(() => {
 // Core Logic 2: Filtering
 const filteredRows = computed(() => {
   return flattenedRows.value.filter(row => {
-    const matchOrder = !filter.value.orderCode || row.orderCode.includes(filter.value.orderCode)
-    const matchProduct = !filter.value.productCode || row.productCode.includes(filter.value.productCode)
-    return matchOrder && matchProduct
+    return (!filter.value.orderCode || row.orderCode.includes(filter.value.orderCode)) &&
+        (!filter.value.franchiseCode || row.franchiseCode.includes(filter.value.franchiseCode)) &&
+        (!filter.value.recipientName || row.recipientName.includes(filter.value.recipientName)) &&
+        (!filter.value.productCode || row.productCode.includes(filter.value.productCode)) &&
+        (!filter.value.status || row.status === filter.value.status)
   })
 })
 
@@ -230,6 +235,17 @@ const toggleSelectAll = (e) => {
     selectedRowKeys.value = []
   }
 }
+const toggleOrderGroup = (row, e) => {
+  const sameOrderKeys = filteredRows.value
+    .filter(r => r.orderCode === row.orderCode && r.status === 'PENDING')
+    .map(r => r.rowKey)
+  if (e.target.checked) {
+    const merged = new Set([...selectedRowKeys.value, ...sameOrderKeys])
+    selectedRowKeys.value = [...merged]
+  } else {
+    selectedRowKeys.value = selectedRowKeys.value.filter(k => !sameOrderKeys.includes(k))
+  }
+}
 const ORDER_STATUS_LABEL = {
   PENDING: '대기',
   ACCEPTED: '접수',
@@ -287,8 +303,23 @@ const goToDetail = (row) => {
           <input type="text" v-model="filter.orderCode" placeholder="검색..." />
         </div>
         <div class="filter-group">
+          <label>가맹점</label>
+          <input type="text" v-model="filter.franchiseCode" placeholder="SE01" />
+        </div>
+        <div class="filter-group">
+          <label>수령인</label>
+          <input type="text" v-model="filter.recipientName" placeholder="검색..." />
+        </div>
+        <div class="filter-group">
           <label>제품 코드</label>
           <input type="text" v-model="filter.productCode" placeholder="검색..." />
+        </div>
+        <div class="filter-group">
+          <label>제품 상태</label>
+          <select v-model="filter.status">
+            <option value="">전체</option>
+            <option v-for="(label, key) in ORDER_STATUS_LABEL" :key="key" :value="key">{{ label }}</option>
+          </select>
         </div>
       </div>
     </div>
@@ -320,8 +351,8 @@ const goToDetail = (row) => {
 
           <td v-if="selectionMode" @click.stop>
             <input type="checkbox"
-                   :value="row.rowKey"
-                   v-model="selectedRowKeys"
+                   :checked="selectedRowKeys.includes(row.rowKey)"
+                   @change="toggleOrderGroup(row, $event)"
                    :disabled="row.status !== 'PENDING'" />
           </td>
 
@@ -391,7 +422,8 @@ button:hover { opacity: 0.9; }
 
 /* Filter */
 .filter-section { background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 1rem; }
-.filter-grid { display: flex; gap: 1rem; }
+.filter-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+.filter-group select { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; }
 .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .filter-group input { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; }
 
