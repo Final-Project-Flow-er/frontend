@@ -26,7 +26,7 @@ import MyPageView from '../views/MyPageView.vue'
 import StoreFactoryRegistrationView from '../views/OrganizationRegistrationView.vue'
 import FranchiseListView from '../views/FranchiseListView.vue'
 import FactoryListView from '../views/FactoryListView.vue'
-import HeadOfficeManagementView from '../views/HeadOfficeManagementView.vue'
+import HQManagementView from '../views/HQManagementView.vue'
 import OrganizationDetailView from '../views/OrganizationDetailView.vue'
 import MemberListView from '../views/MemberListView.vue'
 import MemberDetailView from '../views/MemberDetailView.vue'
@@ -144,7 +144,7 @@ const router = createRouter({
         {
             path: '/admin/head-office/management',
             name: 'head-office-management',
-            component: HeadOfficeManagementView
+            component: HQManagementView
         },
         {
             path: '/organization/:type/:id',

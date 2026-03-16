@@ -42,8 +42,146 @@
       </div>
 
       <div class="card-body">
-        <!-- 기본 정보 -->
-        <section class="info-section">
+        <!-- 본사 전용 프리미엄 뷰 -->
+        <div v-if="organization.unitType === 'HQ' || organization.unitType === 'headOffice'" class="hq-luxury-view">
+          <div class="hq-profile-card">
+            <div class="profile-main">
+              <div class="hq-logo-circle">
+                <span class="logo-text">C-G</span>
+              </div>
+              <div class="hq-title-group">
+                <div class="hq-subtitle">Global Operations Center</div>
+                <h2 class="hq-main-name">{{ organization.name }}</h2>
+                <div class="hq-meta-pills">
+                  <span class="meta-pill">HQ</span>
+                  <span class="meta-pill-outline">{{ organization.region }} REGION</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="hq-stats-row">
+              <div class="hq-stat-item">
+                <div class="stat-label">상태</div>
+                <div class="stat-value active">운영중</div>
+              </div>
+              <div class="hq-stat-divider"></div>
+              <div class="hq-stat-item">
+                <div class="stat-label">사업자 구분</div>
+                <div class="stat-value">법인 사업자</div>
+              </div>
+              <div class="hq-stat-divider"></div>
+              <div class="hq-stat-item">
+                <div class="stat-label">소속 국적</div>
+                <div class="stat-value">대한민국</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hq-detail-grid">
+            <!-- 기업 정보 -->
+            <div class="hq-info-card">
+              <div class="hq-card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                기업 프로필
+              </div>
+              <div class="hq-card-body">
+                <div class="hq-field">
+                  <label>본사 명칭</label>
+                  <input type="text" v-model="organization.name" :disabled="!isEditing" :class="{ 'editing': isEditing }">
+                </div>
+                <div class="hq-field">
+                  <label>시스템 식별 코드</label>
+                  <div class="hq-read-only">{{ organization.code }}</div>
+                </div>
+                <div class="hq-field">
+                  <label>대표이사</label>
+                  <input type="text" v-model="organization.representativeName" :disabled="!isEditing" :class="{ 'editing': isEditing }">
+                </div>
+              </div>
+            </div>
+
+            <!-- 연락처 및 위치 -->
+            <div class="hq-info-card">
+              <div class="hq-card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                연락처 및 위치
+              </div>
+              <div class="hq-card-body">
+                <div class="hq-field">
+                  <label>대표 전화</label>
+                  <input type="tel" v-model="organization.phone" :disabled="!isEditing" :class="{ 'editing': isEditing }" @input="handlePhoneInput">
+                </div>
+                <div class="hq-field">
+                  <label>소속 지역</label>
+                  <select v-model="organization.region" :disabled="!isEditing" :class="{ 'editing': isEditing }">
+                    <option value="SEOUL">서울특별시</option>
+                    <option value="GYEONGGI">경기도</option>
+                    <option value="INCHEON">인천광역시</option>
+                    <option value="BUSAN">부산광역시</option>
+                    <option value="DAEGU">대구광역시</option>
+                    <option value="DAEJEON">대전광역시</option>
+                    <option value="GWANGJU">광주광역시</option>
+                    <option value="ULSAN">울산광역시</option>
+                    <option value="SEJONG">세종특별자치시</option>
+                    <option value="GANGWON">강원도</option>
+                    <option value="CHUNGBUK">충청북도</option>
+                    <option value="CHUNGNAM">충청남도</option>
+                    <option value="JEONBUK">전라북도</option>
+                    <option value="JEONNAM">전라남도</option>
+                    <option value="GYEONGBUK">경상북도</option>
+                    <option value="GYEONGNAM">경상남도</option>
+                    <option value="JEJU">제주특별자치도</option>
+                  </select>
+                </div>
+                <div class="hq-field full">
+                  <label>본사 소재지</label>
+                  <div class="hq-address-group">
+                    <input type="text" v-model="organization.address" :disabled="!isEditing" :class="{ 'editing': isEditing }" readonly @click="isEditing && openPostcode()">
+                    <button v-if="isEditing" @click="openPostcode" class="hq-search-btn">주소 검색</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 법인 정보 -->
+            <div class="hq-info-card full">
+              <div class="hq-card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                법적 고지 정보
+              </div>
+              <div class="hq-card-body horizontal">
+                <div class="hq-field">
+                  <label>사업자 등록 번호</label>
+                  <div class="hq-read-only special">{{ organization.businessNumber }}</div>
+                </div>
+                <div class="hq-field">
+                  <label>설립 목적</label>
+                  <div class="hq-read-only">공급망 관리 및 유통 인프라 총괄</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 지도 영역 -->
+            <div class="hq-map-section full">
+              <div class="hq-card-title">본사 위치 지도</div>
+              <div class="hq-map-canvas">
+                <iframe
+                  v-if="organization.address"
+                  width="100%"
+                  height="100%"
+                  frameborder="0"
+                  style="border:0;"
+                  :src="`https://maps.google.com/maps?q=${encodeURIComponent(organization.address)}&z=15&output=embed`"
+                  allowfullscreen>
+                </iframe>
+                <div v-else class="no-map-placeholder">주소를 등록하시면 지도가 표시됩니다.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 가맹점/공급처 기존 정보 (HQ가 아닐 때만) -->
+        <section v-if="organization.unitType !== 'HQ' && organization.unitType !== 'headOffice'" class="info-section">
           <h2>기본 정보</h2>
           <div class="info-grid">
             <div class="info-field">
@@ -149,6 +287,7 @@
             </div>
           </div>
         </section>
+
 
         <!-- 가맹점 추가 정보 -->
         <section v-if="organization.unitType === 'FRANCHISE'" class="info-section">
@@ -736,7 +875,8 @@ const openPostcode = () => {
     }
   }).open({
     left: (window.screen.width / 2) - (width / 2),
-    top: (window.screen.height / 2) - (height / 2)
+    top: (window.screen.height / 2) - (height / 2),
+    popupTitle: '주소 검색'
   });
 }
 
@@ -807,12 +947,15 @@ const getOrgNameLabel = (type) => {
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 .btn-edit:hover, .btn-save:hover {
   background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
 }
 
 .btn-deactivate {
@@ -1321,10 +1464,15 @@ const getOrgNameLabel = (type) => {
   color: #0f172a;
 }
 
-.no-photo {
+.no-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #f8fafc;
   color: #94a3b8;
   font-size: 0.9rem;
-  margin: 0;
+  font-weight: 500;
 }
 
 /* 로딩 */
@@ -1410,14 +1558,243 @@ const getOrgNameLabel = (type) => {
   font-weight: 500;
 }
 
-/* 지도 표시 컨테이너 */
-.map-container {
-  margin-top: 1rem;
-  border-radius: 8px;
-  overflow: hidden;
-  height: 300px;
+/* HQ 프리미엄 뷰 스타일 */
+.hq-luxury-view {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-bottom: 2rem;
+}
+
+.hq-profile-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2.5rem;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+}
+
+.profile-main {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.hq-logo-circle {
+  width: 100px;
+  height: 100px;
+  background: #0f172a;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.5rem;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
+}
+
+.hq-title-group {
+  flex: 1;
+}
+
+.hq-subtitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.hq-main-name {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.75rem 0;
+  letter-spacing: -0.5px;
+}
+
+.hq-meta-pills {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.meta-pill {
+  padding: 0.25rem 0.75rem;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.meta-pill-outline {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.hq-stats-row {
+  display: flex;
+  align-items: center;
+  padding-top: 2rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.hq-stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 0.4rem;
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.stat-value.active {
+  color: #10b981;
+}
+
+.hq-stat-divider {
+  width: 1px;
+  height: 24px;
+  background: #f1f5f9;
+}
+
+.hq-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.hq-info-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.75rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.hq-info-card.full {
+  grid-column: 1 / -1;
+}
+
+.hq-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.hq-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hq-card-body.horizontal {
+  flex-direction: row;
+  gap: 3rem;
+}
+
+.hq-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.hq-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.hq-field input, .hq-field select {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1e293b;
+  width: 100%;
+}
+
+.hq-field input.editing, .hq-field select.editing {
+  border-bottom: 2px solid #3b82f6;
+  padding-bottom: 0.25rem;
+  background: #f8fafc;
+}
+
+.hq-read-only {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.hq-read-only.special {
+  color: #0f172a;
+  letter-spacing: 0.5px;
+}
+
+.hq-address-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.hq-search-btn {
+  padding: 0.4rem 0.8rem;
+  background: #eff6ff;
+  color: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hq-map-section {
+  grid-column: 1 / -1;
+  background: white;
+  border-radius: 16px;
+  padding: 1.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.hq-map-canvas {
+  height: 340px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .hq-detail-grid { grid-template-columns: 1fr; }
+  .profile-main { flex-direction: column; text-align: center; }
+  .hq-stats-row { flex-wrap: wrap; gap: 1rem; }
+  .hq-stat-item { flex: 1 1 40%; }
+  .hq-stat-divider { display: none; }
 }
 
 .photo-preview {
