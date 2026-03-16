@@ -300,6 +300,16 @@ const changePage = (page) => {
     fetchLogs()
 }
  
+const toApiDate = (dateString) => {
+    if (!dateString) return null
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return null
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
 const toggleRow = async (id) => {
   const index = expandedRows.value.indexOf(id)
   if (index === -1) {
@@ -309,7 +319,10 @@ const toggleRow = async (id) => {
         if (!boxCodesMap.value[id]) {
             loadingBoxCodes.value[id] = true
             try {
-                const res = await api.get('/hq/log/boxes', { params: { transactionCode: log.orderCode } })
+                const params = { transactionCode: log.orderCode }
+                const date = toApiDate(log.arrivalTime)
+                if (date) params.date = date
+                const res = await api.get('/hq/log/boxes', { params })
                 if (res.data && res.data.success) {
                     boxCodesMap.value[id] = res.data.data
                 } else {
