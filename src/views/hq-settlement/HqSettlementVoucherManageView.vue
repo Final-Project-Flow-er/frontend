@@ -13,6 +13,7 @@ const form = ref({
   amount: '',
   isDeduction: false,
   date: new Date().toISOString().split('T')[0],
+  settlementMonth: new Date().toISOString().substring(0, 7), // ⭐️ 추가: 현재 월을 기본값으로
 })
 
 const typeOptions = [
@@ -67,13 +68,18 @@ const submitVoucher = async () => {
           occurredAt: form.value.date + 'T00:00:00',
           amount: Number(form.value.amount),
           isMinus: form.value.isDeduction,
-          reason: form.value.description
+          reason: form.value.description,
+          settlementMonth: form.value.settlementMonth // ⭐️ 추가: 정산 반영월 전송
       })
       
       alert('조정 전표가 등록되었습니다.')
       
       // 초기화 및 리프레시
-      form.value = { storeId: '', type: 'ADJUST', description: '', amount: '', isDeduction: false, date: new Date().toISOString().split('T')[0] }
+      form.value = { 
+        storeId: '', type: 'ADJUST', description: '', amount: '', isDeduction: false, 
+        date: new Date().toISOString().split('T')[0],
+        settlementMonth: new Date().toISOString().substring(0, 7)
+      }
       fetchData()
   } catch (err) {
       alert('전표 등록에 실패했습니다: ' + err.message)
@@ -118,6 +124,10 @@ const submitVoucher = async () => {
           <input type="date" v-model="form.date" class="form-input" />
         </div>
         <div class="form-group">
+          <label>반영 정산월 <span class="required">*</span></label>
+          <input type="month" v-model="form.settlementMonth" class="form-input" />
+        </div>
+        <div class="form-group">
           <label>금액 (원) <span class="required">*</span></label>
           <input type="number" v-model="form.amount" class="form-input" placeholder="0" />
         </div>
@@ -154,7 +164,7 @@ const submitVoucher = async () => {
       </div>
       <table class="data-table">
         <thead>
-          <tr><th>전표번호</th><th>가맹점</th><th>유형</th><th>내역</th><th class="text-right">금액</th><th>발생일</th><th>등록자</th></tr>
+          <tr><th>전표번호</th><th>가맹점</th><th>유형</th><th>내역</th><th class="text-right">금액</th><th>발생일</th><th>정산월</th><th>등록자</th></tr>
         </thead>
         <tbody>
           <tr v-if="isLoading">
@@ -172,7 +182,8 @@ const submitVoucher = async () => {
               {{ v.amount < 0 ? '−' : '+' }}₩ {{ fmt(v.amount) }}
             </td>
             <td class="time-cell">{{ v.occurredAt }}</td>
-            <td>관리자</td>
+            <td class="month-cell">{{ v.settlementMonth }}</td>
+            <td> 관리자 </td>
           </tr>
         </tbody>
       </table>
@@ -220,6 +231,7 @@ const submitVoucher = async () => {
 .fw600 { font-weight: 600; }
 .time-cell { color: var(--text-light); font-size: 0.85rem; }
 .type-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; color: #475569; }
+.month-cell { font-family: monospace; font-weight: 600; color: var(--primary); }
 .negative { color: #ef4444; font-weight: 700; }
 .positive { color: #3b82f6; font-weight: 700; }
 </style>
