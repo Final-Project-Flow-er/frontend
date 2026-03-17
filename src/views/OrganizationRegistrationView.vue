@@ -36,24 +36,13 @@
         <h2>가맹점 정보</h2>
         
         <div class="form-grid">
-          <div class="form-group">
+          <div class="form-group full-width">
             <label>가맹점명 <span class="required">*</span></label>
             <input
                 type="text"
                 v-model="storeData.name"
                 placeholder="가맹점명을 입력하세요"
                 required
-            >
-          </div>
-
-          <div class="form-group">
-            <label>가맹점 코드</label>
-            <input 
-              type="text" 
-              :value="generatedStoreCode" 
-              disabled 
-              class="input-disabled"
-              placeholder="자동 생성됩니다"
             >
           </div>
 
@@ -88,7 +77,7 @@
               type="tel" 
               v-model="storeData.phone" 
               @input="handlePhoneInput($event, 'store')"
-              placeholder="02-1234-5678"
+              placeholder="전화번호를 입력하세요"
               maxlength="13"
               required
             >
@@ -99,7 +88,7 @@
             <input 
               type="text" 
               v-model="storeData.representativeName" 
-              placeholder="점주님 성함을 입력하세요"
+              placeholder="대표자명을 입력하세요"
               required
             >
           </div>
@@ -110,7 +99,7 @@
               type="text" 
               v-model="storeData.businessNumber" 
               @input="handleBizNumInput($event, 'store')"
-              placeholder="000-00-00000"
+              placeholder="사업자 등록 번호를 입력하세요"
               maxlength="12"
               required
             >
@@ -220,24 +209,13 @@
         <h2>공장 정보</h2>
         
         <div class="form-grid">
-          <div class="form-group">
+          <div class="form-group full-width">
             <label>공장명 <span class="required">*</span></label>
             <input 
               type="text" 
               v-model="factoryData.name" 
               placeholder="공장명을 입력하세요"
               required
-            >
-          </div>
-
-          <div class="form-group">
-            <label>공장 코드</label>
-            <input 
-              type="text" 
-              :value="generatedFactoryCode" 
-              disabled 
-              class="input-disabled"
-              placeholder="자동 생성됩니다"
             >
           </div>
 
@@ -272,7 +250,7 @@
               type="tel" 
               v-model="factoryData.phone" 
               @input="handlePhoneInput($event, 'factory')"
-              placeholder="02-1234-5678"
+              placeholder="전화번호를 입력하세요"
               maxlength="13"
               required
             >
@@ -283,7 +261,7 @@
             <input 
               type="text" 
               v-model="factoryData.representativeName" 
-              placeholder="대표자 성함을 입력하세요"
+              placeholder="대표자명을 입력하세요"
               required
             >
           </div>
@@ -294,7 +272,7 @@
               type="text" 
               v-model="factoryData.businessNumber" 
               @input="handleBizNumInput($event, 'factory')"
-              placeholder="000-00-00000"
+              placeholder="사업자 등록 번호를 입력하세요"
               maxlength="12"
               required
             >
