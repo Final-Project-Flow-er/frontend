@@ -32,6 +32,11 @@ const handleLogin = async () => {
     isLoading.value = false
   }
 }
+
+const autoFill = (id, pw) => {
+  loginData.id = id
+  loginData.pw = pw
+}
 </script>
 
 <template>
@@ -46,6 +51,33 @@ const handleLogin = async () => {
           <div class="text-area">
             <p>CONNECT GOOD, VALUE CHAIN</p>
             <p>상품의 가치를 신뢰로 잇는 스마트 SCM</p>
+          </div>
+
+          <div class="brand-test-accounts">
+            <div class="test-divider-box">
+              <span class="divider-line"></span>
+              <span class="test-guide-text">테스트 계정 가이드</span>
+              <span class="divider-line"></span>
+            </div>
+            
+            <div class="test-list">
+              <div class="test-item" @click="autoFill('hq202603001', 'Qwer1234!')">
+                <span class="label">본사:</span>
+                <span class="id">hq202603001</span>
+              </div>
+              <div class="test-item" @click="autoFill('fr202603001', 'Qwer1234!')">
+                <span class="label">가맹점:</span>
+                <span class="id">fr202603001</span>
+              </div>
+              <div class="test-item" @click="autoFill('fa202603001', 'Qwer1234!')">
+                <span class="label">공장:</span>
+                <span class="id">fa202603001</span>
+              </div>
+            </div>
+
+            <div class="test-footer">
+              <p>공통 PW: <span class="pw-text">Qwer1234!</span></p>
+            </div>
           </div>
         </div>
         <!-- Decorative Background Element -->
@@ -70,7 +102,7 @@ const handleLogin = async () => {
             </div>
 
             <div class="input-container">
-              <label>비밀번호</label>
+              <label>비밀번호</label> 
               <div class="input-field">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 <input type="password" v-model="loginData.pw" placeholder="비밀번호를 입력하세요" required>
@@ -89,8 +121,6 @@ const handleLogin = async () => {
             </div>
           </form>
         </div>
-        
-        <!-- Footer Info Removed -->
       </div>
     </div>
   </div>
@@ -108,6 +138,7 @@ const handleLogin = async () => {
   justify-content: center;
   font-family: 'Outfit', sans-serif;
   overflow: hidden;
+  position: relative;
 }
 
 .login-wrapper {
@@ -119,6 +150,7 @@ const handleLogin = async () => {
   box-shadow: 0 40px 100px -20px rgba(15, 23, 42, 0.15);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 1);
+  z-index: 2;
 }
 
 /* Left Brand Panel */
@@ -137,6 +169,9 @@ const handleLogin = async () => {
 .brand-content {
   position: relative;
   z-index: 2;
+  width: 100%;
+  max-width: 320px;
+  transform: translateY(3rem);
 }
 
 .logo-area {
@@ -161,14 +196,7 @@ const handleLogin = async () => {
 
 .text-area {
   text-align: center;
-}
-
-.text-area h2 {
-  font-size: 2.25rem;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-bottom: 1.25rem;
-  letter-spacing: -0.025em;
+  margin-bottom: 2.5rem;
 }
 
 .text-area p {
@@ -178,6 +206,86 @@ const handleLogin = async () => {
   line-height: 1.6;
   max-width: 320px;
   margin: 0 auto;
+}
+
+/* Beautifully Centered Branding Test Accounts (Under Branding Text) */
+.brand-test-accounts {
+  margin-top: 4rem;
+  width: 100%;
+}
+
+.test-divider-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  opacity: 0.5;
+}
+
+.divider-line {
+  flex: 0 1 80px;
+  height: 1px;
+  background: white;
+}
+
+.test-guide-text {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.test-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.test-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  padding: 0.1rem 0;
+  transition: all 0.2s ease;
+}
+
+.test-item:hover .id {
+  color: #3b82f6;
+  opacity: 1;
+}
+
+.label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+}
+
+.id {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+.test-footer {
+  text-align: center;
+}
+
+.test-footer p {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+.pw-text {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 700;
 }
 
 .bg-pattern {
@@ -350,7 +458,7 @@ const handleLogin = async () => {
   .brand-panel { padding: 3rem 2rem; }
   .form-panel { padding: 3rem 2rem; }
   .logo-barcode { font-size: 64px; }
-  .text-area h2 { font-size: 1.75rem; }
   .text-area p { font-size: 1rem; }
+  .test-accounts-info { display: none; }
 }
 </style>
