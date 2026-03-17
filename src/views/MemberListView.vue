@@ -2,7 +2,6 @@
   <div class="member-list-container">
     <div class="member-list-header">
       <h1>회원 조회</h1>
-      <p class="subtitle">등록된 전체 회원을 조회하고 관리합니다</p>
     </div>
 
     <!-- 필터 및 검색 -->

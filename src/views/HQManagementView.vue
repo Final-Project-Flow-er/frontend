@@ -5,7 +5,6 @@
       <div class="header-left">
         <div class="title-group">
           <h1>본사 정보 관리</h1>
-          <p class="subtitle">CHAIN-G 시스템의 핵심 운영 인프라 및 법적 정보를 총괄합니다</p>
         </div>
       </div>
       <div class="header-actions">

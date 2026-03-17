@@ -2,7 +2,6 @@
   <div class="registration-container">
     <div class="registration-header">
       <h1>회원 등록</h1>
-      <p class="subtitle">새로운 회원을 시스템에 등록합니다</p>
     </div>
 
     <!-- 권한(본사/가맹점/공장) 선택 버튼 -->

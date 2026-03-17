@@ -2,7 +2,6 @@
   <div class="registration-container">
     <div class="registration-header">
       <h1>사업장 등록</h1>
-      <p class="subtitle">새로운 가맹점 또는 공장을 등록하세요</p>
     </div>
 
     <!-- 타입 선택 -->

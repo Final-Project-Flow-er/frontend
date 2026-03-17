@@ -2,7 +2,6 @@
   <div class="logistics-registration-container">
     <div class="registration-header">
       <h1>업체 및 차량 등록</h1>
-      <p class="subtitle">새로운 물류 파트너 및 배송 차량을 시스템에 등록합니다</p>
     </div>
 
     <!-- 등록 타입 선택 -->
