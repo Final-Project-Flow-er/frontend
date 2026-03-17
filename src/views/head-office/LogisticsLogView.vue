@@ -240,9 +240,10 @@ const getStatusClass = (status) => {
   position: sticky;
   top: 0;
   background: #f8fafc;
-  padding: 0.85rem;
-  text-align: left;
-  font-size: 0.8rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  text-align: center;
+  font-size: 0.9rem !important;
   font-weight: 600;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
@@ -250,9 +251,12 @@ const getStatusClass = (status) => {
 }
 
 .data-table td {
-  padding: 0.85rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.9rem;
+  font-size: 0.95rem !important;
+  line-height: 1.35 !important;
+  text-align: center;
   color: #334155;
   font-weight: 400;
 }
@@ -278,8 +282,8 @@ const getStatusClass = (status) => {
 }
 
 .code-cell.code-tracking {
-  color: #7c3aed !important;
-  font-weight: 700 !important;
+  color: inherit;
+  font-weight: 400;
 }
 
 .name-cell {

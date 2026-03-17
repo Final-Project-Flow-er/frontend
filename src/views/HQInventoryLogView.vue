@@ -18,7 +18,13 @@
         <label>반품/발주 코드</label>
         <input type="text" v-model="filter.orderCode" placeholder="코드 입력" />
       </div>
-      <button type="button" class="btn-reset-unified" @click="resetFilters">초기화</button>
+      <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+        초기화
+      </button>
       <div class="filter-hint-row">기본 조회는 최근 6개월 데이터입니다. 이전 데이터는 조회 기간을 설정해 확인하세요.</div>
     </div>
 
@@ -46,7 +52,7 @@
       <table>
         <thead>
           <tr v-if="activeLogType === 'RETURN_IN'">
-            <th>날짜</th>
+            <th>일시</th>
             <th>반품 코드</th>
             <th>제품 명</th>
             <th>유형</th>
@@ -55,7 +61,7 @@
             <th>변경수량 (개)</th>
           </tr>
           <tr v-else-if="activeLogType === 'RETURN_OUT'">
-            <th>날짜</th>
+            <th>일시</th>
             <th>발주 코드</th>
             <th>제품 명</th>
             <th>유형</th>
@@ -64,7 +70,7 @@
             <th>변경수량 (개)</th>
           </tr>
           <tr v-else>
-            <th>날짜</th>
+            <th>일시</th>
             <th>제품 명</th>
             <th>유형</th>
             <th>수량 (박스)</th>
@@ -409,6 +415,7 @@ const getChangeClass = (qty) => {
 .search-btn {
   background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; margin-left: auto;
 }
+.filter-section .btn-reset-filters { margin-left: auto; }
 
 /* Table Styles */
 .table-container {
@@ -417,12 +424,12 @@ const getChangeClass = (qty) => {
   width: 100%;
 }
 table { width: 100%; border-collapse: collapse; text-align: center; }
-th { background: #f8fafc; padding: 0.75rem 0.5rem; font-weight: 600; color: #64748b; font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; text-align: center; }
-td { padding: 0.75rem 0.5rem; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.85rem; vertical-align: middle; white-space: nowrap; text-align: center; }
+th { background: #f8fafc; padding: 1.05rem 0.8rem !important; height: 58px !important; font-weight: 600; color: #64748b; font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; text-align: center; }
+td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; white-space: nowrap; text-align: center; }
 tr:last-child td { border-bottom: none; }
 tr:hover { background: #f8fafc; }
 
-.code-cell { font-family: monospace; color: #475569; font-size: 0.75rem; letter-spacing: -0.02em; }
+.code-cell { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; color: #475569; font-size: 0.95rem !important; letter-spacing: 0; }
 .name-cell { font-weight: 600; color: var(--text-dark); white-space: nowrap; min-width: 150px; }
 .number-cell { font-variant-numeric: tabular-nums; }
 

@@ -327,16 +327,22 @@ const filteredLogs = computed(() => {
 .log-table th {
   background: #f8fafc;
   color: #475569;
-  padding: 1.1rem 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 500;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   text-align: center;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .log-table td {
-  padding: 1.1rem 0.75rem;
-  font-size: 0.9rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
+  vertical-align: middle !important;
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
   text-align: center;

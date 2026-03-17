@@ -150,7 +150,7 @@ const goBack = () => router.back()
             </thead>
             <tbody>
               <tr v-for="(item, index) in detailData.items" :key="index">
-                <td class="code-cell">{{ item.productCode }}</td>
+                <td class="sku-cell">{{ item.productCode }}</td>
                 <td>{{ item.productName }}</td>
                 <td class="text-right">{{ item.quantity }}개</td>
                 <td class="text-right">{{ formatPrice(item.unitPrice) }}원</td>

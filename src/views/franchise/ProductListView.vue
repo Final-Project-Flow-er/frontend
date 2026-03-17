@@ -108,7 +108,7 @@ const goToSalesDetail = (salesCode) => {
             <td colspan="7" class="text-center loading-row">판매 내역이 없습니다.</td>
           </tr>
           <tr v-else v-for="(item, index) in filteredSales" :key="index" class="clickable-row" @click="goToSalesDetail(item.salesCode)">
-            <td class="sku-cell">{{ item.salesCode }}</td>
+            <td class="sales-code">{{ item.salesCode }}</td>
             <td>{{ formatSalesDate(item.salesDate) }}</td>
             <td class="sku-cell">{{ item.productCode }}</td>
             <td class="name-cell">{{ item.productName }}</td>
@@ -142,12 +142,12 @@ const goToSalesDetail = (salesCode) => {
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); }
 .table-scroll-container { overflow-x: auto; width: 100%; border-radius: 8px; }
 .data-table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-.data-table th, .data-table td { white-space: nowrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; }
-.data-table td { font-size: 0.85rem; }
+.data-table th, .data-table td { white-space: nowrap; padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+.data-table td { font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; }
 
-/* [변경] code-cell 스타일 삭제, sku-cell이 판매 코드에도 적용됨 */
-.sku-cell { color: var(--primary); font-weight: 600; } /* 제품 코드 & 판매 코드 파란색 */
+.sales-code { color: #6d28d9 !important; font-weight: 600 !important; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 
 .name-cell { color: var(--text-dark); max-width: 300px; white-space: normal; }
 .total-cell { font-weight: 700; color: var(--text-dark); }

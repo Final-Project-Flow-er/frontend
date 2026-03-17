@@ -170,7 +170,7 @@ const handleModalClose = () => {
                     <input type="checkbox" :checked="selectedItemIds.has(item.id)" @change="toggleSelectItem(item.id)" />
                   </td>
                   <td class="code-cell">{{ item.id }}</td>
-                  <td>{{ item.productCode }}</td>
+                  <td class="sku-cell">{{ item.productCode }}</td>
                   <td class="name-cell">{{ item.name }}</td>
                   <td>{{ item.productionDate }}</td>
                 </tr>

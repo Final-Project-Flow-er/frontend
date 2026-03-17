@@ -259,7 +259,7 @@ const toggleSelectAll = (e) => {
           <td>{{ item.requestDate }}</td>
           <td class="code-cell code-return">{{ item.returnCode }}</td>
           <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
-          <td>{{ item.productCode }}</td>
+          <td class="sku-cell">{{ item.productCode }}</td>
           <td>{{ item.reason }}</td>
           <td>{{ formatNumber(item.quantity) }}</td>
           <td>{{ formatNumber(item.amount) }}</td>

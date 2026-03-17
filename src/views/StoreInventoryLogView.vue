@@ -69,14 +69,14 @@
         <table>
           <thead>
             <tr v-if="isDisposalView">
-              <th>날짜</th>
+              <th>일시</th>
               <th>제품 명</th>
               <th>유형</th>
               <th>수량 (박스)</th>
               <th>변경수량 (개)</th>
             </tr>
             <tr v-else>
-              <th>날짜</th>
+              <th>일시</th>
               <th>{{ getCodeLabel() }}</th>
               <th>제품 명</th>
               <th>유형</th>
