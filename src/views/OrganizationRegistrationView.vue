@@ -35,7 +35,7 @@
         <h2>가맹점 정보</h2>
         
         <div class="form-grid">
-          <div class="form-group full-width">
+          <div class="form-group">
             <label>가맹점명 <span class="required">*</span></label>
             <input
                 type="text"
@@ -215,7 +215,7 @@
         <h2>공장 정보</h2>
         
         <div class="form-grid">
-          <div class="form-group full-width">
+          <div class="form-group">
             <label>공장명 <span class="required">*</span></label>
             <input 
               type="text" 
