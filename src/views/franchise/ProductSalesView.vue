@@ -88,6 +88,8 @@ const submitSale = () => {
 .total-label { font-size: 1.1rem; font-weight: 700; color: var(--text-dark); }
 .total-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
 
+.text-right { text-align: center; }
+
 .actions { display: flex; justify-content: flex-end; gap: 1rem; }
 .cancel-btn { background: white; border: 1px solid var(--border-color); padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; }
 .submit-btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; }

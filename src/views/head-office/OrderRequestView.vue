@@ -1,15 +1,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getRequestedOrders, cancelFranchiseOrder } from '@/api/hqOrders.js'
+
+const router = useRouter()
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
 const orders = ref([])
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchOrders = async () => {
   try {
-    const data = await getRequestedOrders(false)
-    orders.value = (data || []).map(item => ({
+    const pageData = (await getRequestedOrders(false, { page: currentPage.value, size: pageSize.value })) || {}
+    orders.value = (pageData.content || []).map(item => ({
       orderCode: item.orderCode,
       status: item.status,
       franchiseCode: item.franchiseCode,
@@ -18,10 +26,29 @@ onMounted(async () => {
       quantity: item.quantity,
       deliveryDate: formatDate(item.deliveryDate),
     }))
+    totalPages.value = pageData.totalPages || 0
   } catch (e) {
     orders.value = []
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchOrders()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchOrders())
 
 const filter = ref({
   orderCode: '',
@@ -133,6 +160,11 @@ const toggleSelectAll = (event) => {
   }
 }
 
+const goToDetail = (order) => {
+  if (isSelectionMode.value) return
+  router.push({ name: 'franchise-order-detail', params: { id: order.orderCode } })
+}
+
 const getStatusClass = (s) => ({
   PENDING: 'status-warning',
   ACCEPTED: 'status-info',
@@ -212,7 +244,9 @@ const getStatusClass = (s) => ({
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filteredOrders" :key="order.orderCode" :class="{ 'selected-row': selectedCodes.includes(order.orderCode) }">
+          <tr v-for="order in filteredOrders" :key="order.orderCode"
+              @click="goToDetail(order)"
+              :class="['clickable-row', { 'selected-row': selectedCodes.includes(order.orderCode) }]">
             <td v-if="isSelectionMode">
               <input type="checkbox" :value="order.orderCode" v-model="selectedCodes" :disabled="!isCancellable(order.status)" />
             </td>
@@ -229,6 +263,21 @@ const getStatusClass = (s) => ({
           </tr>
         </tbody>
       </table>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
+      </div>
     </div>
 
     <!-- Cancellation Modal -->
@@ -294,6 +343,8 @@ const getStatusClass = (s) => ({
 .status-primary { background: #e0e7ff; color: #3730a3; }
 .status-danger { background: #fee2e2; color: #991b1b; }
 
+.clickable-row { cursor: pointer; transition: background 0.2s; }
+.clickable-row:hover { background-color: #f8fafc; }
 .selected-row { background-color: #f0f7ff; }
 .empty-cell { text-align: center; padding: 3rem; color: var(--text-light); }
 
@@ -322,4 +373,12 @@ input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .secondary-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
 .danger-btn { background: #ef4444; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 </style>

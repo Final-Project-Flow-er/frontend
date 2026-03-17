@@ -2,7 +2,8 @@ import { request } from './http.js'
 
 const BASE = '/api/v1/franchise/returns'
 
-export const getReturnList = () => request(BASE)
+export const getReturnList = ({ page = 0, size = 20 } = {}) =>
+  request(`${BASE}?page=${page}&size=${size}`)
 export const getReturnDetail = (returnCode) => request(`${BASE}/${returnCode}`)
 export const getReturnTargets = () => request(`${BASE}/target`)
 export const getReturnTargetInfo = (orderCode) => request(`${BASE}/${orderCode}/target-info`)

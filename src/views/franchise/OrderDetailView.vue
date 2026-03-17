@@ -153,7 +153,7 @@ const goToEdit = () => {
           <span>총 금액</span>
         </div>
         <div v-for="(product, index) in orderItem.products" :key="index" class="product-list-item">
-          <span>{{ product.productCode }}</span>
+          <span class="sku-cell">{{ product.productCode }}</span>
           <span>{{ product.productName }}</span>
           <span>{{ product.quantity }}개</span>
           <span>{{ formatPrice(product.amount) }}</span>
@@ -221,16 +221,17 @@ const goToEdit = () => {
 .product-list-table {
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: auto;
   margin-top: 1.5rem;
 }
 
 .product-list-header, .product-list-item {
   display: grid;
-  grid-template-columns: 2fr 3fr 1fr 2fr 2fr; /* Adjust column widths as needed */
+  grid-template-columns: repeat(5, 1fr);
   padding: 0.8rem 1.5rem;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .product-list-header {
@@ -238,31 +239,41 @@ const goToEdit = () => {
   font-weight: 600;
   color: var(--text-light);
   font-size: 0.9rem;
+  text-align: center;
 }
 
 .product-list-item {
   font-size: 0.9rem;
   color: var(--text-dark);
+  text-align: center;
 }
+
+.product-list-item .sku-cell { color: var(--primary); font-weight: 600; }
 
 .product-list-item:last-child {
   border-bottom: none;
 }
 
 .product-list-total {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 0.8rem 1.5rem;
   align-items: center;
-  padding: 1rem 1.5rem;
   background: #f8fafc;
   font-weight: 700;
   font-size: 1rem;
-  gap: 1rem;
+  text-align: center;
+}
+
+.product-list-total label {
+  grid-column: 1 / 5;
+  text-align: right;
+  padding-right: 1rem;
 }
 
 .product-list-total .total-price {
   color: var(--primary);
-  font-size: 1.2rem !important;
+  font-size: 1.1rem;
 }
 
 .cancel-reason-box {
