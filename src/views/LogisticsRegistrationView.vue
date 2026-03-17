@@ -56,6 +56,12 @@
                   >
                   <button type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>
                 </div>
+                <input 
+                  type="text" 
+                  v-model="companyData.detailAddress" 
+                  placeholder="상세 주소를 입력하세요" 
+                  class="detail-address-input"
+                >
               </div>
               <div class="form-group">
                 <label>담당자 이름 <span class="required">*</span></label>
@@ -287,6 +293,7 @@ const companyData = reactive({
   companyName: '',
   officePhone: '',
   address: '',
+  detailAddress: '',
   manager: '',
   usableRegion: '',
   ownedVehicles: null,
@@ -406,6 +413,7 @@ const resetForm = (type) => {
     companyData.companyName = ''
     companyData.officePhone = ''
     companyData.address = ''
+    companyData.detailAddress = ''
     companyData.manager = ''
     companyData.usableRegion = ''
     companyData.ownedVehicles = null
@@ -448,7 +456,11 @@ const registerCompany = async () => {
     return
   }
   try {
-    const res = await api.post('/transport/vendors', companyData)
+    const payload = {
+      ...companyData,
+      address: companyData.detailAddress ? `${companyData.address} ${companyData.detailAddress}` : companyData.address
+    }
+    const res = await api.post('/transport/vendors', payload)
     if (res.data.success) {
       alert('업체 등록이 완료되었습니다.')
       router.push('/admin/logistics')
@@ -559,7 +571,7 @@ const registerVehicle = async () => {
 .form-group input:focus,
 .form-group select:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1); }
 
-.address-input-group { display: flex; gap: 0.5rem; }
+.address-input-group { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; }
 .address-input-group input { flex: 1; cursor: pointer; }
 
 .btn-address-search {
@@ -575,6 +587,10 @@ const registerVehicle = async () => {
   transition: all 0.2s;
 }
 .btn-address-search:hover { background: #e2e8f0; }
+
+.detail-address-input {
+  margin-top: -0.25rem;
+}
 
 .search-select-group { display: flex; gap: 0.5rem; }
 .search-select-group input { flex: 1; cursor: pointer; background: #f8fafc; }

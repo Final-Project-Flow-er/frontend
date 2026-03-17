@@ -139,6 +139,13 @@
                     <input type="text" v-model="organization.address" :disabled="!isEditing" :class="{ 'editing': isEditing }" readonly @click="isEditing && openPostcode()">
                     <button v-if="isEditing" @click="openPostcode" class="hq-search-btn">주소 검색</button>
                   </div>
+                  <input 
+                    v-if="isEditing"
+                    type="text" 
+                    v-model="organization.detailAddress" 
+                    placeholder="상세 주소를 입력하세요" 
+                    class="detail-address-input-hq"
+                  >
                 </div>
               </div>
             </div>
@@ -218,6 +225,13 @@
                 >
                 <button v-if="isEditing" type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>
               </div>
+              <input 
+                v-if="isEditing"
+                type="text" 
+                v-model="organization.detailAddress" 
+                placeholder="상세 주소를 입력하세요" 
+                class="detail-address-input-org"
+              >
               <div v-if="organization.address" class="map-container">
                 <iframe
                   width="100%"
@@ -579,6 +593,8 @@ const loadOrganization = async () => {
         previewImageUrls.value = []
         photoFiles.value = []
       }
+      // Initialize detailAddress
+      organization.value.detailAddress = ''
     }
   } catch (error) {
     console.error('조직 정보 로딩 실패:', error)
@@ -622,7 +638,7 @@ const saveChanges = async () => {
 
     const payload = {
       name: organization.value.name,
-      address: organization.value.address,
+      address: organization.value.detailAddress ? `${organization.value.address} ${organization.value.detailAddress}` : organization.value.address,
       phone: organization.value.phone,
       representativeName: organization.value.representativeName,
       region: organization.value.region,
@@ -1945,5 +1961,17 @@ const getOrgNameLabel = (type) => {
   border-color: #0f172a;
   background: white;
   color: #0f172a;
+}
+
+.hq-address-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.detail-address-input-hq,
+.detail-address-input-org {
+  width: 100% !important;
+  margin-top: 0;
 }
 </style>

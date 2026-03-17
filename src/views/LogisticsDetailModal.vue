@@ -106,9 +106,16 @@
             <div class="form-group full-width">
               <label>사업장 주소 <span class="required">*</span></label>
               <div class="address-input-group">
-                <input type="text" v-model="formData.address" required readonly>
-                <button type="button" @click="openPostcode" class="btn-address">주소 검색</button>
+                <input type="text" v-model="formData.address" required readonly @click="isEditMode && openPostcode()">
+                <button v-if="isEditMode" type="button" @click="openPostcode" class="btn-address">주소 검색</button>
               </div>
+              <input 
+                v-if="isEditMode"
+                type="text" 
+                v-model="formData.detailAddress" 
+                placeholder="상세 주소를 입력하세요" 
+                class="detail-address-input"
+              >
             </div>
             <div class="form-group">
               <label>담당자 이름 <span class="required">*</span></label>
@@ -253,7 +260,7 @@ watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     isEditMode.value = false // 열릴 때는 항상 조회 모드
     if (props.data) {
-      formData.value = { ...props.data }
+      formData.value = { ...props.data, detailAddress: '' }
     }
   }
 })
@@ -378,7 +385,12 @@ const save = () => {
     }
   }
 
-  emit('save', { type: props.type, data: formData.value })
+  const finalData = { ...formData.value }
+  if (props.type === 'company' && formData.value.detailAddress) {
+    finalData.address = `${formData.value.address} ${formData.value.detailAddress}`
+  }
+
+  emit('save', { type: props.type, data: finalData })
   isEditMode.value = false
 }
 
@@ -513,6 +525,11 @@ const confirmDelete = () => {
   white-space: nowrap; transition: all 0.2s;
 }
 .btn-address:hover { background: #e2e8f0; }
+
+.detail-address-input {
+  width: 100%;
+  margin-top: -0.25rem;
+}
 
 .modal-footer {
   padding: 1.5rem 2rem; border-top: 1px solid #f1f5f9;

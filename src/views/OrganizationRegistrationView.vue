@@ -57,6 +57,12 @@
               >
               <button type="button" @click="openPostcode('store')" class="btn-address-search">주소 검색</button>
             </div>
+            <input 
+              type="text" 
+              v-model="storeData.detailAddress" 
+              placeholder="상세 주소를 입력하세요" 
+              class="detail-address-input"
+            >
             <!-- 지도 표시 -->
             <div v-if="storeData.address" class="map-container">
               <iframe
@@ -231,6 +237,12 @@
               >
               <button type="button" @click="openPostcode('factory')" class="btn-address-search">주소 검색</button>
             </div>
+            <input 
+              type="text" 
+              v-model="factoryData.detailAddress" 
+              placeholder="상세 주소를 입력하세요" 
+              class="detail-address-input"
+            >
             <!-- 지도 표시 -->
             <div v-if="factoryData.address" class="map-container">
               <iframe
@@ -392,6 +404,7 @@ const weekDays = [
 const storeData = reactive({
   name: '',
   address: '',
+  detailAddress: '',
   phone: '',
   representativeName: '',
   businessNumber: '',
@@ -408,6 +421,7 @@ const storeData = reactive({
 const factoryData = reactive({
   name: '',
   address: '',
+  detailAddress: '',
   phone: '',
   representativeName: '',
   businessNumber: '',
@@ -505,7 +519,7 @@ const registerStore = async () => {
   try {
     const payload = {
       name: storeData.name,
-      address: storeData.address,
+      address: storeData.detailAddress ? `${storeData.address} ${storeData.detailAddress}` : storeData.address,
       phone: storeData.phone,
       representativeName: storeData.representativeName,
       businessNumber: storeData.businessNumber,
@@ -582,7 +596,7 @@ const registerFactory = async () => {
   try {
     const payload = {
       name: factoryData.name,
-      address: factoryData.address,
+      address: factoryData.detailAddress ? `${factoryData.address} ${factoryData.detailAddress}` : factoryData.address,
       phone: factoryData.phone,
       representativeName: factoryData.representativeName,
       businessNumber: factoryData.businessNumber,
@@ -718,6 +732,7 @@ const updateRegionByAddress = (sido, type) => {
 const resetStoreForm = () => {
   storeData.name = ''
   storeData.address = ''
+  storeData.detailAddress = ''
   storeData.phone = ''
   storeData.representativeName = ''
   storeData.businessNumber = ''
@@ -733,6 +748,7 @@ const resetStoreForm = () => {
 const resetFactoryForm = () => {
   factoryData.name = ''
   factoryData.address = ''
+  factoryData.detailAddress = ''
   factoryData.phone = ''
   factoryData.representativeName = ''
   factoryData.businessNumber = ''
@@ -1202,4 +1218,14 @@ const resetFactoryForm = () => {
 }
 .btn-confirm:hover { background: #1e293b; }
 
+.address-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.detail-address-input {
+  width: 100% !important;
+  margin-top: 0;
+}
 </style>

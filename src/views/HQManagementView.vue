@@ -76,6 +76,13 @@
                 <input type="text" v-model="hqData.address" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" readonly @click="isEditing && openPostcode()">
                 <button v-if="isEditing" @click="openPostcode" class="btn-search-addr">주소 검색</button>
               </div>
+              <input 
+                v-if="isEditing" 
+                type="text" 
+                v-model="hqData.detailAddress" 
+                placeholder="상세 주소를 입력하세요" 
+                class="detail-address-input-hq"
+              >
             </div>
           </div>
         </div>
@@ -140,6 +147,7 @@ const fetchHqInfo = async () => {
     const response = await api.get('/hq/business-units/HQ/1')
     if (response.data.success) {
       hqData.value = response.data.data
+      hqData.value.detailAddress = ''
     }
   } catch (error) {
     console.error('본사 정보 조회 실패:', error)
@@ -194,7 +202,7 @@ const saveChanges = async () => {
   try {
     const payload = {
       name: hqData.value.name,
-      address: hqData.value.address,
+      address: hqData.value.detailAddress ? `${hqData.value.address} ${hqData.value.detailAddress}` : hqData.value.address,
       phone: hqData.value.phone,
       representativeName: hqData.value.representativeName,
     }
@@ -492,6 +500,11 @@ const getRegionLabel = (region) => {
   display: flex;
   gap: 1rem;
   align-items: center;
+  margin-bottom: 0.1rem;
+}
+
+.detail-address-input-hq {
+  margin-top: -0.3rem;
 }
 
 .btn-search-addr {
