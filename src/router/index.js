@@ -395,11 +395,6 @@ const router = createRouter({
             component: () => import('../views/HQFranchiseInventoryView.vue')
         },
         {
-            path: '/hq/inventory/logs/hq',
-            name: 'hq-log-hq',
-            component: () => import('../views/HQInventoryLogView.vue')
-        },
-        {
             path: '/hq/inventory/logs/franchise',
             name: 'hq-log-franchise',
             component: () => import('../views/HQFranchiseInventoryLogView.vue')
