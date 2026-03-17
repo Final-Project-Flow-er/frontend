@@ -356,7 +356,7 @@ const goToDetail = (item) => {
             @click="goToDetail(item)"
             class="clickable-row"
         >
-          <td class="sku-cell">{{ item.orderCode }}</td>
+          <td class="sku-cell code-order">{{ item.orderCode }}</td>
           <td><span :class="['status-tag', getStatusClass(item.orderStatus)]">{{ toOrderStatusLabel(item.orderStatus) }}</span></td>
           <td class="sku-cell small">{{ item.productCode }}</td>
           <td class="text-right">{{ formatNumber(item.unitPrice) }}</td>
@@ -509,10 +509,10 @@ const goToDetail = (item) => {
   overflow-x: auto;
 }
 .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-.data-table th { text-align: center; padding: 0.75rem 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; vertical-align: middle; text-align: center; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; white-space: nowrap; vertical-align: middle; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .sku-cell.small { font-size: 0.9rem; }
 .name-cell { font-weight: 500; }
 .text-right { text-align: center; }

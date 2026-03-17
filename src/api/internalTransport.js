@@ -10,6 +10,8 @@ export const assignVehicle = (data) => request(`${BASE}/assignments`, {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(data)
 })
+export const getTransportLogList = () => request(`${BASE}/transport-logs`)
+
 
 export const assignReturns = (data) => request(`${BASE}/returns/assignments`, {
   method: 'POST',

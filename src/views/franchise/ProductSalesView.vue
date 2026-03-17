@@ -38,7 +38,7 @@ const submitSale = () => {
           </thead>
           <tbody>
             <tr v-for="(item, index) in salesItems" :key="index">
-              <td class="code-cell">{{ item.productCode }}</td>
+              <td class="sku-cell">{{ item.productCode }}</td>
               <td class="name-cell">{{ item.productName }}</td>
               <td>{{ item.quantity }}</td>
               <td>{{ formatPrice(item.unitPrice) }}</td>
@@ -69,8 +69,9 @@ const submitSale = () => {
 .table-scroll-container { overflow-x: auto; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; }
 
 .data-table { width: 100%; border-collapse: collapse; min-width: 900px; }
-.data-table th { text-align: center; padding: 0.75rem 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; vertical-align: middle; text-align: center;}
+.data-table th, .data-table td { white-space: nowrap; padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); }
+.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+.data-table td { font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; }
 
 .code-cell { color: var(--text-light); }
 .name-cell { color: var(--text-dark); }

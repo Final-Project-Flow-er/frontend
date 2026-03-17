@@ -49,6 +49,7 @@ const fetchOrders = async () => {
     orders.value = Object.values(orderMap)
   } catch (e) {
     orders.value = []
+    centralStock.value = {}
   }
 }
 
@@ -356,7 +357,7 @@ const goToDetail = (row) => {
                    :disabled="row.status !== 'PENDING'" />
           </td>
 
-          <td class="sku-cell">{{ row.orderCode }}</td>
+          <td class="sku-cell code-order">{{ row.orderCode }}</td>
           <td>{{ row.franchiseCode }}</td>
           <td>{{ row.recipientName }}</td>
 
@@ -430,8 +431,8 @@ button:hover { opacity: 0.9; }
 /* Table */
 .data-table-card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.data-table th { background: #f9fafb; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; color: #1f2937; vertical-align: middle; }
+.data-table th { background: #f9fafb; padding: 1.05rem 0.8rem !important; height: 58px !important; text-align: left; font-weight: 600; color: #4b5563; font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid #e5e7eb; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid #e5e7eb; color: #1f2937; font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
 .data-table tr:hover { background-color: #f9fafb; }
 
 .selected-row { background-color: #f0fdf4 !important; }
@@ -442,13 +443,17 @@ button:hover { opacity: 0.9; }
   color: #2563eb !important; /* 파란색 강제 적용 */
 }
 
+.sku-cell.code-order {
+  color: #0f766e !important;
+}
+
 .text-right { text-align: right; }
 .text-muted { color: #9ca3af; }
 .low-stock { color: #dc2626; font-weight: bold; }
 .empty-cell { text-align: center; padding: 2rem; color: #9ca3af; }
 
 /* Tags */
-.status-tag { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+.status-tag { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }
 .status-danger { background: #fee2e2; color: #991b1b; }

@@ -377,17 +377,22 @@ const toggleSelectAll = (event) => {
 .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
 .data-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   background: #f8fafc;
   color: var(--text-light);
-  font-size: 0.8rem;
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 .data-table td {
-  padding: 0.75rem 1rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.85rem;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -396,7 +401,7 @@ const toggleSelectAll = (event) => {
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .order-code-text { font-weight: 600; color: var(--text-dark); }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { color: var(--text-dark); max-width: 300px; white-space: normal; }
 .font-bold-slate { font-weight: 600; color: #334155; }
 
