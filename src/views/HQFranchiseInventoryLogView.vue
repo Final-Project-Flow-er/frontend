@@ -39,6 +39,13 @@
             <label>{{ isDisposalView ? '박스 코드' : '코드 검색' }}</label>
             <input type="text" v-model="filter.orderCode" :placeholder="isDisposalView ? '박스 코드 입력' : '코드 입력'" />
         </div>
+        <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          초기화
+        </button>
         <div class="filter-hint-row">기본 조회는 최근 6개월 데이터입니다. 이전 데이터는 조회 기간을 설정해 확인하세요.</div>
       </div>
  
@@ -71,14 +78,14 @@
             <table>
                 <thead>
                 <tr v-if="isDisposalView">
-                    <th>날짜</th>
+                    <th>일시</th>
                     <th>제품 명</th>
                     <th>유형</th>
                     <th>수량 (박스)</th>
                     <th>변경수량 (개)</th>
                 </tr>
                 <tr v-else>
-                    <th>날짜</th>
+                    <th>일시</th>
                     <th>{{ getCodeLabel() }}</th>
                     <th>제품 명</th>
                     <th>유형</th>
@@ -92,7 +99,7 @@
                 <template v-for="log in filteredLogs" :key="log.id">
                   <tr class="clickable-row" @click="toggleRow(log.id)">
                       <td>{{ formatDate(log.arrivalTime) }}</td>
-                      <td v-if="!isDisposalView" class="code-cell">{{ log.orderCode }}</td>
+                      <td v-if="!isDisposalView" :class="['code-cell', getCodeTypeClass()]">{{ log.orderCode }}</td>
                       <td class="name-cell">{{ log.name }}</td>
                       <td>
                         <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
@@ -198,6 +205,17 @@ const filter = ref({
     orderCode: '',
     logType: ''
 })
+
+const resetFilters = () => {
+    filter.value = {
+        startDate: '',
+        endDate: '',
+        productName: '',
+        orderCode: '',
+        logType: ''
+    }
+    currentPage.value = 0
+}
 const activeLogType = ref('LOGISTICS') 
 
 const filteredLogs = computed(() => {
@@ -372,6 +390,11 @@ const getCodeLabel = () => {
     if (activeLogType.value === 'RETURN_OUT') return '발주 코드'
     return '발주 코드'
 }
+
+const getCodeTypeClass = () => {
+    if (activeLogType.value === 'RETURN_IN') return 'code-return'
+    return 'code-order'
+}
  
 const formatDate = (dateString) => {
     if (!dateString) return '-'
@@ -493,6 +516,7 @@ const getChangeClass = (qty) => {
 .search-btn {
   background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; margin-left: auto;
 }
+.filter-section .btn-reset-filters { margin-left: auto; }
 
 /* Table Styles */
 .table-container {
@@ -500,12 +524,12 @@ const getChangeClass = (qty) => {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 table { width: 100%; border-collapse: collapse; text-align: center; }
-th { background: #f8fafc; padding: 1rem; font-weight: 600; color: #64748b; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; text-align: center; }
-td { padding: 1rem; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.95rem; vertical-align: middle; text-align: center; }
+th { background: #f8fafc; padding: 1.05rem 0.8rem !important; height: 58px !important; font-weight: 600; color: #64748b; font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; text-align: center; }
+td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid #f1f5f9; color: var(--text-dark); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; text-align: center; }
 tr:last-child td { border-bottom: none; }
 tr:hover { background: #f8fafc; }
 
-.code-cell { font-family: monospace; color: #475569; font-size: 0.9rem; }
+.code-cell { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; color: #475569; font-size: 0.95rem !important; }
 .name-cell { font-weight: 600; color: var(--text-dark); }
 .number-cell { font-variant-numeric: tabular-nums; }
 

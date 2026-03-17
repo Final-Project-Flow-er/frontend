@@ -187,7 +187,7 @@ const cancelSale = async () => {
 .info-item span { font-size: 1rem; color: var(--text-dark); }
 .sales-code-value { color: var(--primary); font-weight: 600; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 
 /* 상품 목록 테이블 */
 .product-list-table {

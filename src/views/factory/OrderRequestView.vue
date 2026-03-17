@@ -241,10 +241,10 @@ const getStatusClass = (s) => ({
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; vertical-align: middle; white-space: nowrap; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; white-space: nowrap; }
 
-.sku-cell { font-weight: 600; color: var(--primary); }
+.sku-cell { font-weight: 600; color: #1d4ed8; }
 .num-cell { text-align: right; font-family: 'JetBrains Mono', monospace; }
 .highlight-num { font-weight: 700; color: var(--text-dark); }
 

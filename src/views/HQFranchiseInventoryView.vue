@@ -45,6 +45,13 @@
               <option value="DANGER">위험</option>
             </select>
           </div>
+          <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+            초기화
+          </button>
         </div>
 
         <!-- Safety Stock Alert Section (Collapsible) -->
@@ -328,6 +335,14 @@ const filter = ref({
   status: ''
 })
 
+const resetFilters = () => {
+  filter.value = {
+    productCode: '',
+    productName: '',
+    status: ''
+  }
+}
+
 const step3Filter = ref({
   serialCode: '',
   boxCode: '',
@@ -547,6 +562,7 @@ const goToDetail = (code) => {
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 .filter-group input, .filter-group select { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; width: 100%; }
 .search-btn { background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; }
+.filter-section > .btn-reset-filters { margin-left: auto; }
 
 /* Table */
 .data-table-card { 
@@ -560,12 +576,29 @@ const goToDetail = (code) => {
     border-collapse: collapse; 
     min-width: 1000px; /* 창이 좁아져도 형태 유지 */
 }
-.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
+.data-table th {
+  text-align: center;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  background: #f8fafc;
+  color: var(--text-light);
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table td {
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
+}
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { font-weight: 600; }
 
 .store-info-banner { 

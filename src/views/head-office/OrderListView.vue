@@ -168,7 +168,7 @@ const goToEdit = (item) => {
             @click="goToDetail(row)" 
             :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
           >
-            <td class="sku-cell">{{ row.orderCode }}</td>
+            <td class="sku-cell code-order">{{ row.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
             <td class="sku-cell small">{{ row.product.productCode }}</td>
             <td>{{ row.product.quantity }}</td>
@@ -223,9 +223,9 @@ const goToEdit = (item) => {
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; white-space: nowrap; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .status-tag { padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }
@@ -235,7 +235,7 @@ const goToEdit = (item) => {
 .action-btn { background: white; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
 
 .sku-cell.small {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 .clickable-row { cursor: pointer; transition: background-color 0.2s ease; }

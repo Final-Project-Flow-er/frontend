@@ -494,7 +494,7 @@ const handleModalClose = () => {
                   </td>
                   <td class="code-cell">{{ box.boxCode }}</td>
                   <td class="code-cell">{{ box.orderCode }}</td>
-                  <td>{{ box.productCode }}</td>
+                  <td class="sku-cell">{{ box.productCode }}</td>
                   <td class="name-cell">{{ box.name }}</td>
                   <td>{{ box.destination }}</td>
                   <td class="text-right">{{ box.quantity }}</td>

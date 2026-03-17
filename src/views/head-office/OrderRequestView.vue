@@ -19,7 +19,7 @@ onMounted(async () => {
       deliveryDate: formatDate(item.deliveryDate),
     }))
   } catch (e) {
-    alert(e.message)
+    orders.value = []
   }
 })
 
@@ -216,7 +216,7 @@ const getStatusClass = (s) => ({
             <td v-if="isSelectionMode">
               <input type="checkbox" :value="order.orderCode" v-model="selectedCodes" :disabled="!isCancellable(order.status)" />
             </td>
-            <td class="sku-cell">{{ order.orderCode }}</td>
+            <td class="sku-cell code-order">{{ order.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(order.status)]">{{ toStatusLabel(order.status) }}</span></td>
             <td>{{ order.franchiseCode }}</td>
             <td class="sku-cell">{{ order.productCode }}</td>
@@ -283,10 +283,10 @@ const getStatusClass = (s) => ({
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-.data-table th { text-align: left; padding: 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; vertical-align: middle; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
 
-.sku-cell { font-weight: 600; color: var(--primary); }
+.sku-cell { font-weight: 600; color: #1d4ed8; }
 .status-tag { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }

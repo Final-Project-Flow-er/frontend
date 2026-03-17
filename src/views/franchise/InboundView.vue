@@ -322,7 +322,7 @@ const handleModalClose = () => {
                   <td class="code-cell">{{ box.boxCode }}</td>
                   <td class="code-cell">{{ box.orderCode }}</td>
                   <td>{{ box.recipient }}</td>
-                  <td>{{ box.productCode }}</td>
+                  <td class="sku-cell">{{ box.productCode }}</td>
                   <td class="name-cell">{{ box.name }}</td>
                   <td class="text-right">{{ box.quantity }}</td>
                   <td class="text-right">{{ (box.quantity * 12000).toLocaleString() }}</td>
@@ -476,18 +476,23 @@ const handleModalClose = () => {
 
 .data-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   color: #64748b;
-  font-size: 0.85rem;
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
 
 .data-table td {
-  padding: 0.75rem 1rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.9rem;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
   color: #334155;
   white-space: nowrap;
 }

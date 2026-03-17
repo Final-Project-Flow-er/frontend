@@ -77,6 +77,26 @@ const filteredReturns = computed(() => {
   })
 })
 
+const returnCodeToneMap = computed(() => {
+  const toneMap = {}
+  let useGray = false
+
+  filteredReturns.value.forEach((item) => {
+    const code = item.returnCode || '__EMPTY__'
+    if (!(code in toneMap)) {
+      toneMap[code] = useGray ? 'row-tone-gray' : 'row-tone-white'
+      useGray = !useGray
+    }
+  })
+
+  return toneMap
+})
+
+const getRowToneClass = (item) => {
+  const code = item.returnCode || '__EMPTY__'
+  return returnCodeToneMap.value[code] || 'row-tone-white'
+}
+
 const formatNumber = (val) => new Intl.NumberFormat('ko-KR').format(val)
 
 const getStatusClass = (s) => ({
@@ -235,7 +255,7 @@ const toggleSelectAll = (e) => {
         <tbody>
         <tr v-for="item in filteredReturns" :key="item.id"
             @click="goToDetail(item)"
-            :class="['clickable-row', { 'selected-row': selectedIds.includes(item.id) }]">
+            :class="['clickable-row', getRowToneClass(item), { 'selected-row': selectedIds.includes(item.id) }]">
 
           <!-- [NEW] 체크박스 셀 -->
           <td v-if="selectionMode" style="text-align: center;" @click.stop>
@@ -244,9 +264,9 @@ const toggleSelectAll = (e) => {
 
           <td class="code-cell">{{ item.franchiseCode }}</td>
           <td>{{ item.requestDate }}</td>
-          <td class="code-cell">{{ item.returnCode }}</td>
+          <td class="code-cell code-return">{{ item.returnCode }}</td>
           <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
-          <td>{{ item.productCode }}</td>
+          <td class="sku-cell">{{ item.productCode }}</td>
           <td>{{ item.reason }}</td>
           <td>{{ formatNumber(item.quantity) }}</td>
           <td>{{ formatNumber(item.amount) }}</td>
@@ -307,6 +327,8 @@ const toggleSelectAll = (e) => {
 .clickable-row { cursor: pointer; transition: background 0.2s; }
 .clickable-row:hover { background-color: #f8fafc; }
 .selected-row { background-color: #f0fdf4 !important; }
+.row-tone-white { background-color: #ffffff; }
+.row-tone-gray { background-color: #f6f7f9; }
 
 .code-cell { font-weight: 600; color: var(--primary); }
 .num-cell { text-align: right; font-family: 'JetBrains Mono', monospace; }

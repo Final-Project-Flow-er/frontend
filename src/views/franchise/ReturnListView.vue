@@ -175,7 +175,7 @@ const goToDetail = (item) => {
             <td class="sku-cell">{{ item.returnCode }}</td>
             <td>{{ item.boxCode }}</td>
             <td>{{ item.idCode }}</td>
-            <td>{{ item.productCode }}</td>
+            <td class="sku-cell small">{{ item.productCode }}</td>
             <td>{{ item.productName }}</td>
             <td>{{ item.quantity }}</td>
             <td>{{ item.amount }}</td>
@@ -224,10 +224,10 @@ const goToDetail = (item) => {
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; white-space: nowrap; }
 .name-cell { color: var(--text-dark); }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .status-tag { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }

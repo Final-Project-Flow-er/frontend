@@ -166,6 +166,7 @@ const getVehicleTypeLabel = (type) => {
             <tr>
               <th>로그 시각</th>
               <th>가맹점명</th>
+              <th>일시</th>
               <th>배송 상태</th>
               <th>발주 번호</th>
               <th>반품 번호</th>
@@ -179,10 +180,11 @@ const getVehicleTypeLabel = (type) => {
           <tbody>
             <tr v-for="log in paginatedLogs" :key="log.transportLogId">
               <td class="time-cell">
-                {{ formatDate(log.createAt).time }} 
+                {{ formatDate(log.createAt).time }}
                 <span class="date-sub">{{ formatDate(log.createAt).date }}</span>
               </td>
               <td class="name-cell">{{ log.franchiseName }}</td>
+              <td>{{ formatDate(log.createAt).date }} {{ formatDate(log.createAt).time }}</td>
               <td>
                 <span class="status-badge" :class="getStatusClass(log.deliverStatus)">
                   {{ getStatusLabel(log.deliverStatus) }}
@@ -192,12 +194,12 @@ const getVehicleTypeLabel = (type) => {
               <td class="code-cell">{{ log.returnCode || '-' }}</td>
               <td class="code-cell">{{ log.trackingNumber || '-' }}</td>
               <td>{{ getVehicleTypeLabel(log.vehicleType) }}</td>
-              <td class="code-cell">{{ log.vehicleNumber }}</td>
+              <td class="code-cell">{{ log.vehicleNumber || '-' }}</td>
               <td class="name-cell">{{ log.driverName }}</td>
               <td>{{ (log.weight || 0).toLocaleString() }}</td>
             </tr>
             <tr v-if="filteredLogs.length === 0">
-              <td colspan="10" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
+              <td colspan="11" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
             </tr>
           </tbody>
         </table>
@@ -205,23 +207,23 @@ const getVehicleTypeLabel = (type) => {
 
       <!-- Pagination Controls -->
       <div class="pagination" v-if="totalPages > 0">
-        <button 
-          class="page-btn" 
-          :disabled="currentPage === 1" 
+        <button
+          class="page-btn"
+          :disabled="currentPage === 1"
           @click="goToPage(currentPage - 1)"
         >이전</button>
-        <button 
-          v-for="page in totalPages" 
-          :key="page" 
-          class="page-btn" 
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          class="page-btn"
           :class="{ active: currentPage === page }"
           @click="goToPage(page)"
         >
           {{ page }}
         </button>
-        <button 
-          class="page-btn" 
-          :disabled="currentPage === totalPages" 
+        <button
+          class="page-btn"
+          :disabled="currentPage === totalPages"
           @click="goToPage(currentPage + 1)"
         >다음</button>
       </div>
@@ -338,9 +340,10 @@ const getVehicleTypeLabel = (type) => {
   position: sticky;
   top: 0;
   background: #f8fafc;
-  padding: 0.85rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.9rem !important;
   font-weight: 600;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
@@ -348,22 +351,17 @@ const getVehicleTypeLabel = (type) => {
 }
 
 .data-table td {
-  padding: 0.85rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.9rem;
-  color: #334155;
+  font-size: 0.95rem !important;
+  line-height: 1.35 !important;
   text-align: center;
+  color: #334155;
+  font-weight: 400;
 }
 
 .time-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-}
-
-.date-sub {
-  display: block;
-  font-size: 0.75rem;
-  color: #94a3b8;
   font-weight: 400;
 }
 
@@ -379,13 +377,17 @@ const getVehicleTypeLabel = (type) => {
 .status-completed { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
 
 .code-cell {
-  font-family: monospace;
   color: #64748b;
-  font-weight: 600;
+  font-weight: 400;
+}
+
+.code-cell.code-tracking {
+  color: inherit;
+  font-weight: 400;
 }
 
 .name-cell {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .empty-state {

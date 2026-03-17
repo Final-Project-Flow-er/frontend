@@ -51,7 +51,11 @@
           >
         </div>
 
-        <button @click="resetFilters" class="btn-reset-filter">
+        <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
           초기화
         </button>
       </div>
@@ -361,17 +365,19 @@ const goToDetail = (member) => {
 
 .filter-group label {
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #475569;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .filter-group select,
 .filter-group input {
+  height: 42px;
   padding: 0.6rem 0.85rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
+  background: white;
 }
 
 .filter-group select:focus,
@@ -394,6 +400,7 @@ const goToDetail = (member) => {
 
 .search-box input {
   width: 100%;
+  height: 42px;
   padding-left: 2.5rem;
 }
 
@@ -407,12 +414,13 @@ const goToDetail = (member) => {
 
 .btn-reset-filter {
   margin-left: auto;
-  padding: 0.6rem 1.25rem;
+  height: 42px;
+  padding: 0.6rem 1rem;
   background: white;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #64748b;
   cursor: pointer;
 }
@@ -437,16 +445,22 @@ const goToDetail = (member) => {
 
 .member-table th {
   background: #f8fafc;
-  padding: 1rem 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 500; /* Medium instead of semi-bold */
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   color: #475569;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .member-table td {
-  padding: 1rem 0.75rem;
-  font-size: 0.95rem; /* Slightly larger for consistency */
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
+  vertical-align: middle !important;
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
   white-space: normal; /* Prevent cutting */
