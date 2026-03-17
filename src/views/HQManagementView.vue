@@ -50,7 +50,7 @@
             </div>
             <div class="hq-form-group">
               <label>대표자 성명</label>
-              <input type="text" v-model="hqData.representativeName" :disabled="!isEditing" :class="{ 'is-editing': isEditing }">
+              <input type="text" v-model="hqData.representativeName" @input="hqData.representativeName = hqData.representativeName.replace(/[0-9]/g, '')" :disabled="!isEditing" :class="{ 'is-editing': isEditing }">
             </div>
             <div class="hq-form-group">
               <label>사업자 등록 번호</label>

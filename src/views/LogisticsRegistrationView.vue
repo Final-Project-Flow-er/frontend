@@ -59,7 +59,7 @@
               </div>
               <div class="form-group">
                 <label>담당자 이름 <span class="required">*</span></label>
-                <input type="text" v-model="companyData.manager" placeholder="담당자 성함을 입력하세요" required>
+                <input type="text" v-model="companyData.manager" @input="companyData.manager = companyData.manager.replace(/[0-9]/g, '')" placeholder="담당자 성함을 입력하세요" required>
               </div>
               <div class="form-group">
                 <label>주력 운송 지역 <span class="required">*</span></label>
@@ -207,7 +207,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>운전자 성함 <span class="required">*</span></label>
-                <input type="text" v-model="vehicleData.driverName" placeholder="실명을 입력하세요" required>
+                <input type="text" v-model="vehicleData.driverName" @input="vehicleData.driverName = vehicleData.driverName.replace(/[0-9]/g, '')" placeholder="실명을 입력하세요" required>
               </div>
               <div class="form-group">
                 <label>운전자 연락처 <span class="required">*</span></label>

@@ -95,7 +95,7 @@
                 </div>
                 <div class="hq-field">
                   <label>대표이사</label>
-                  <input type="text" v-model="organization.representativeName" :disabled="!isEditing" :class="{ 'editing': isEditing }">
+                  <input type="text" v-model="organization.representativeName" @input="organization.representativeName = organization.representativeName.replace(/[0-9]/g, '')" :disabled="!isEditing" :class="{ 'editing': isEditing }">
                 </div>
               </div>
             </div>
@@ -247,6 +247,7 @@
               <input 
                 type="text" 
                 v-model="organization.representativeName" 
+                @input="organization.representativeName = organization.representativeName.replace(/[0-9]/g, '')"
                 :disabled="!isEditing"
                 :class="{ 'input-disabled': !isEditing }"
                 :placeholder="getOrgTypeLabel(organization.unitType) + ' 대표명을 입력하세요'"

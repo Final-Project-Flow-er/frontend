@@ -80,7 +80,7 @@
               <!-- 공통 필드 -->
               <div class="form-group">
                 <label>이름 <span class="required">*</span></label>
-                <input type="text" v-model="formData.name" placeholder="이름을 입력하세요" required>
+                <input type="text" v-model="formData.name" @input="formData.name = formData.name.replace(/[0-9]/g, '')" placeholder="이름을 입력하세요" required>
               </div>
 
               <div class="form-group">

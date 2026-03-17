@@ -73,6 +73,7 @@
                 <input 
                   type="text" 
                   v-model="member.name" 
+                  @input="member.name = member.name.replace(/[0-9]/g, '')"
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
                 >

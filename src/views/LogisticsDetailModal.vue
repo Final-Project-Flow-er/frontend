@@ -112,7 +112,7 @@
             </div>
             <div class="form-group">
               <label>담당자 이름 <span class="required">*</span></label>
-              <input type="text" v-model="formData.manager" required>
+              <input type="text" v-model="formData.manager" @input="formData.manager = formData.manager.replace(/[0-9]/g, '')" required>
             </div>
             <div class="form-group">
               <label>주력 운송 지역 <span class="required">*</span></label>
@@ -186,7 +186,7 @@
             </div>
             <div class="form-group">
               <label>운전자 이름 <span class="required">*</span></label>
-              <input type="text" v-model="formData.driverName" required>
+              <input type="text" v-model="formData.driverName" @input="formData.driverName = formData.driverName.replace(/[0-9]/g, '')" required>
             </div>
             <div class="form-group">
               <label>기사 연락처 <span class="required">*</span></label>

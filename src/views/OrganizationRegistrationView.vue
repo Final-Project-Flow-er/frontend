@@ -87,6 +87,7 @@
             <input 
               type="text" 
               v-model="storeData.representativeName" 
+              @input="storeData.representativeName = storeData.representativeName.replace(/[0-9]/g, '')"
               placeholder="대표자명을 입력하세요"
               required
             >
@@ -260,6 +261,7 @@
             <input 
               type="text" 
               v-model="factoryData.representativeName" 
+              @input="factoryData.representativeName = factoryData.representativeName.replace(/[0-9]/g, '')"
               placeholder="대표자명을 입력하세요"
               required
             >
