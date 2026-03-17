@@ -88,6 +88,26 @@ const filteredReturns = computed(() => {
   })
 })
 
+const returnCodeToneMap = computed(() => {
+  const toneMap = {}
+  let useGray = false
+
+  filteredReturns.value.forEach((item) => {
+    const code = item.returnCode || '__EMPTY__'
+    if (!(code in toneMap)) {
+      toneMap[code] = useGray ? 'row-tone-gray' : 'row-tone-white'
+      useGray = !useGray
+    }
+  })
+
+  return toneMap
+})
+
+const getRowToneClass = (item) => {
+  const code = item.returnCode || '__EMPTY__'
+  return returnCodeToneMap.value[code] || 'row-tone-white'
+}
+
 const formatNumber = (val) => new Intl.NumberFormat('ko-KR').format(val)
 
 const getStatusClass = (s) => ({
@@ -248,7 +268,7 @@ const toggleSelectAll = (e) => {
         <tbody>
         <tr v-for="item in filteredReturns" :key="item.id"
             @click="goToDetail(item)"
-            :class="['clickable-row', { 'selected-row': selectedIds.includes(item.id) }]">
+            :class="['clickable-row', getRowToneClass(item), { 'selected-row': selectedIds.includes(item.id) }]">
 
           <!-- [RESTORED] 체크박스 셀 -->
           <td v-if="selectionMode" style="text-align: center;" @click.stop>
@@ -320,6 +340,8 @@ const toggleSelectAll = (e) => {
 .clickable-row { cursor: pointer; transition: background 0.2s; }
 .clickable-row:hover { background-color: #f8fafc; }
 .selected-row { background-color: #f0fdf4 !important; }
+.row-tone-white { background-color: #ffffff; }
+.row-tone-gray { background-color: #f6f7f9; }
 
 .code-cell { font-weight: 600; color: var(--primary); }
 .num-cell { text-align: right; font-family: 'JetBrains Mono', monospace; }
