@@ -28,9 +28,8 @@ export const franchiseSettlementsApi = {
         if (limit) url += `&limit=${limit}`
         return request(url)
     },
-    getMonthlyDailyGraph: (params) => {
-        const { month, start, end } = params
-        return request(`${BASE}/monthly/daily-sales-graph?month=${month}&start=${start}&end=${end}`)
+    getMonthlyDailyGraph: (month) => {
+        return request(`${BASE}/monthly/sales-graph?month=${month}`)
     },
 
     // 전표 (Vouchers)

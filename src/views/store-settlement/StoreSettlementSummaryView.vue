@@ -83,16 +83,7 @@ const fetchData = async () => {
 
 const fetchTrendData = async () => {
     try {
-        const [year, month] = selectedMonth.value.split('-').map(Number)
-        const start = `${selectedMonth.value}-01`
-        const lastDay = new Date(year, month, 0).getDate()
-        const end = `${selectedMonth.value}-${pad(lastDay)}`
-        
-        const res = await franchiseSettlementsApi.getMonthlyDailyGraph({
-            month: selectedMonth.value,
-            start,
-            end
-        })
+        const res = await franchiseSettlementsApi.getMonthlyDailyGraph(selectedMonth.value)
         trendData.value = res
     } catch (error) {
         console.error('Failed to fetch trend data:', error)
@@ -191,20 +182,25 @@ const filteredTrendData = computed(() => {
 const trendMax = computed(() => {
   const values = filteredTrendData.value.map(d => d.amount)
   const max = values.length > 0 ? Math.max(...values) : 0
-  if (max === 0) return 1000000 
-  // 넉넉하게 20% 정도 여유 공간을 둡니다.
-  return Math.ceil((max * 1.2) / 100000) * 100000
+  if (max === 0) return 500000 
+  // 10만원 단위로 올림하여 넉넉하게 잡음
+  return Math.ceil((max * 1.1) / 100000) * 100000
 })
+
+// SVG 차트 상수
+const chartW = 900
+const chartH = 220
+const paddingX = 55
+const paddingY = 25
 
 // SVG 포인트 계산
 const trendSvgPoints = computed(() => {
   const data = filteredTrendData.value
   if (data.length === 0) return []
-  const w = 900, h = 220, px = 55, py = 25
-  const stepX = data.length > 1 ? (w - px * 2) / (data.length - 1) : 0
+  const stepX = data.length > 1 ? (chartW - paddingX * 2) / (data.length - 1) : 0
   return data.map((d, i) => {
-    const x = px + i * stepX
-    const y = py + (1 - d.amount / trendMax.value) * (h - py * 2)
+    const x = paddingX + i * stepX
+    const y = paddingY + (1 - d.amount / trendMax.value) * (chartH - paddingY * 2)
     return { x, y, ...d }
   })
 })
@@ -233,7 +229,7 @@ const trendPath = computed(() => {
 const trendAreaPath = computed(() => {
   const points = trendSvgPoints.value
   if (points.length < 2) return ''
-  const baseLine = 195 // 가로 축 라인 위치
+  const baseLine = chartH - paddingY // 가로 축 라인 위치 (195)
   return `${trendPath.value} L ${points[points.length-1].x},${baseLine} L ${points[0].x},${baseLine} Z`
 })
 const trendChartWidth = computed(() => {
@@ -244,10 +240,11 @@ const trendChartWidth = computed(() => {
 // Y축 눈금 (5단계 자동 분할)
 const yTicks = computed(() => {
   const max = trendMax.value
-  const step = max / 4
+  const step = 100000 // 10만원 단위
+  const count = Math.ceil(max / step)
   const ticks = []
-  for (let i = 0; i <= 4; i++) {
-    ticks.push(Math.round(i * step))
+  for (let i = 0; i <= count; i++) {
+    ticks.push(i * step)
   }
   return ticks.reverse()
 })
@@ -526,9 +523,9 @@ const downloadPDF = async () => {
         <div class="trend-chart-scroll">
           <svg :viewBox="`0 0 ${trendChartWidth} 260`" :style="{ width: trendChartWidth + 'px', minWidth: '100%' }" class="trend-svg">
             <!-- 가로 가입드 라인 -->
-            <line v-for="(tick, i) in yTicks" :key="'g'+i" x1="55" :x2="trendChartWidth - 20" :y1="25 + i * (170 / (yTicks.length - 1))" :y2="25 + i * (170 / (yTicks.length - 1))" stroke="#e2e8f0" stroke-width="1" />
+            <line v-for="(tick, i) in yTicks" :key="'g'+i" x1="55" :x2="trendChartWidth - 20" :y1="paddingY + (1 - tick / trendMax) * (chartH - paddingY * 2)" :y2="paddingY + (1 - tick / trendMax) * (chartH - paddingY * 2)" stroke="#e2e8f0" stroke-width="1" />
             <!-- Y축 라벨 -->
-            <text v-for="(tick, i) in yTicks" :key="'yl'+i" x="50" :y="29 + i * (170 / (yTicks.length - 1))" text-anchor="end" fill="#94a3b8" font-size="10">{{ tick >= 10000 ? (tick / 10000) + '만' : fmt(tick) }}</text>
+            <text v-for="(tick, i) in yTicks" :key="'yl'+i" x="50" :y="paddingY + 4 + (1 - tick / trendMax) * (chartH - paddingY * 2)" text-anchor="end" fill="#94a3b8" font-size="10">{{ tick >= 10000 ? (tick / 10000) + '만' : fmt(tick) }}</text>
             <!-- 영역 채우기 -->
             <path v-if="trendSvgPoints.length > 1" :d="trendAreaPath" fill="url(#trendGrad)" opacity="0.15" />
             
