@@ -184,8 +184,7 @@ const getVehicleTypeLabel = (type) => {
                 <span class="date-sub">{{ formatDate(log.createAt).date }}</span>
               </td>
               <td class="name-cell">{{ log.franchiseName }}</td>
-            <tr v-for="log in filteredLogs" :key="log.id">
-              <td class="time-cell">{{ log.time }}</td>
+              <td>{{ formatDate(log.createAt).date }} {{ formatDate(log.createAt).time }}</td>
               <td>
                 <span class="status-badge" :class="getStatusClass(log.deliverStatus)">
                   {{ getStatusLabel(log.deliverStatus) }}
@@ -195,15 +194,12 @@ const getVehicleTypeLabel = (type) => {
               <td class="code-cell">{{ log.returnCode || '-' }}</td>
               <td class="code-cell">{{ log.trackingNumber || '-' }}</td>
               <td>{{ getVehicleTypeLabel(log.vehicleType) }}</td>
-              <td class="code-cell code-tracking">{{ log.trackingNumber }}</td>
-              <td>{{ log.company }}</td>
-              <td>{{ log.vehicleType }}</td>
-              <td class="code-cell">{{ log.vehicleNumber }}</td>
+              <td class="code-cell">{{ log.vehicleNumber || '-' }}</td>
               <td class="name-cell">{{ log.driverName }}</td>
               <td>{{ (log.weight || 0).toLocaleString() }}</td>
             </tr>
             <tr v-if="filteredLogs.length === 0">
-              <td colspan="10" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
+              <td colspan="11" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
             </tr>
           </tbody>
         </table>
