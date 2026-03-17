@@ -69,14 +69,14 @@
         <table>
           <thead>
             <tr v-if="isDisposalView">
-              <th>날짜</th>
+              <th>일시</th>
               <th>제품 명</th>
               <th>유형</th>
               <th>수량 (박스)</th>
               <th>변경수량 (개)</th>
             </tr>
             <tr v-else>
-              <th>날짜</th>
+              <th>일시</th>
               <th>{{ getCodeLabel() }}</th>
               <th>제품 명</th>
               <th>유형</th>
@@ -90,7 +90,7 @@
             <template v-for="log in filteredLogs" :key="log.logId">
               <tr class="clickable-row" @click="toggleRow(log.logId)">
                 <td>{{ formatDate(log.arrivalTime) }}</td>
-                <td v-if="!isDisposalView" class="code-cell">{{ log.orderCode }}</td>
+                <td v-if="!isDisposalView" :class="['code-cell', getCodeTypeClass()]">{{ log.orderCode }}</td>
                 <td class="name-cell">{{ log.name }}</td>
                 <td>
                   <span :class="['type-badge', getTypeClass(log.logType)]">{{ getLogTypeLabel(log.logType) }}</span>
@@ -320,6 +320,11 @@ const getCodeLabel = () => {
     if (activeLogType.value === 'RETURN_IN') return '반품 코드'
     if (activeLogType.value === 'RETURN_OUT') return '발주 코드'
     return '발주 코드'
+}
+
+const getCodeTypeClass = () => {
+    if (activeLogType.value === 'RETURN_IN') return 'code-return'
+    return 'code-order'
 }
 
 const formatDate = (dateString) => {

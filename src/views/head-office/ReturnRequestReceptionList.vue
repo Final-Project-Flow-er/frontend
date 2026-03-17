@@ -21,10 +21,17 @@ const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
 const returns = ref([])
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchReturns = async () => {
   try {
-    const data = await getReturnList(false)
-    returns.value = (data || []).map(item => ({
+    const pageData = await getReturnList(false, { page: currentPage.value, size: pageSize.value })
+    const data = pageData?.content || []
+    totalPages.value = pageData?.totalPages || 0
+    returns.value = data.map(item => ({
       id: item.returnCode,
       franchiseCode: item.franchiseCode,
       requestDate: formatDate(item.requestedDate),
@@ -43,7 +50,25 @@ onMounted(async () => {
   } catch (e) {
     alert(e.message)
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchReturns()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchReturns())
 
 const filter = ref({
   franchiseCode: '',
@@ -52,7 +77,6 @@ const filter = ref({
   productIdCode: '',
   reason: '',
   recipientName: '',
-  recipientPhone: '',
   productCode: '',
   orderCode: '',
   returnCode: '',
@@ -80,13 +104,32 @@ const filteredReturns = computed(() => {
         (!filter.value.productIdCode || item.productIdCode.includes(filter.value.productIdCode)) &&
         (!filter.value.reason || item.reason.includes(filter.value.reason)) &&
         (!filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)) &&
-        (!filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)) &&
         (!filter.value.productCode || item.productCode.includes(filter.value.productCode)) &&
         (!filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)) &&
         (!filter.value.returnCode || item.returnCode.includes(filter.value.returnCode)) &&
         (!filter.value.status || item.status === filter.value.status)
   })
 })
+
+const returnCodeToneMap = computed(() => {
+  const toneMap = {}
+  let useGray = false
+
+  filteredReturns.value.forEach((item) => {
+    const code = item.returnCode || '__EMPTY__'
+    if (!(code in toneMap)) {
+      toneMap[code] = useGray ? 'row-tone-gray' : 'row-tone-white'
+      useGray = !useGray
+    }
+  })
+
+  return toneMap
+})
+
+const getRowToneClass = (item) => {
+  const code = item.returnCode || '__EMPTY__'
+  return returnCodeToneMap.value[code] || 'row-tone-white'
+}
 
 const formatNumber = (val) => new Intl.NumberFormat('ko-KR').format(val)
 
@@ -204,10 +247,6 @@ const toggleSelectAll = (e) => {
           <input type="text" v-model="filter.recipientName" />
         </div>
         <div class="filter-group">
-          <label>수령인 전화번호</label>
-          <input type="text" v-model="filter.recipientPhone" />
-        </div>
-        <div class="filter-group">
           <label>제품 코드</label>
           <input type="text" v-model="filter.productCode" />
         </div>
@@ -248,7 +287,7 @@ const toggleSelectAll = (e) => {
         <tbody>
         <tr v-for="item in filteredReturns" :key="item.id"
             @click="goToDetail(item)"
-            :class="['clickable-row', { 'selected-row': selectedIds.includes(item.id) }]">
+            :class="['clickable-row', getRowToneClass(item), { 'selected-row': selectedIds.includes(item.id) }]">
 
           <!-- [RESTORED] 체크박스 셀 -->
           <td v-if="selectionMode" style="text-align: center;" @click.stop>
@@ -257,9 +296,9 @@ const toggleSelectAll = (e) => {
 
           <td class="code-cell">{{ item.franchiseCode }}</td>
           <td>{{ item.requestDate }}</td>
-          <td class="code-cell">{{ item.returnCode }}</td>
+          <td class="code-cell code-return">{{ item.returnCode }}</td>
           <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
-          <td>{{ item.productCode }}</td>
+          <td class="sku-cell">{{ item.productCode }}</td>
           <td>{{ item.reason }}</td>
           <td>{{ formatNumber(item.quantity) }}</td>
           <td>{{ formatNumber(item.amount) }}</td>
@@ -274,6 +313,21 @@ const toggleSelectAll = (e) => {
         </tr>
         </tbody>
       </table>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
+      </div>
     </div>
   </div>
 </template>
@@ -320,6 +374,8 @@ const toggleSelectAll = (e) => {
 .clickable-row { cursor: pointer; transition: background 0.2s; }
 .clickable-row:hover { background-color: #f8fafc; }
 .selected-row { background-color: #f0fdf4 !important; }
+.row-tone-white { background-color: #ffffff; }
+.row-tone-gray { background-color: #f6f7f9; }
 
 .code-cell { font-weight: 600; color: var(--primary); }
 .num-cell { text-align: right; font-family: 'JetBrains Mono', monospace; }
@@ -333,4 +389,12 @@ const toggleSelectAll = (e) => {
 .status-default { background: #f3f4f6; color: #4b5563; }
 
 .empty-cell { text-align: center; padding: 3rem; color: var(--text-light); }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 </style>

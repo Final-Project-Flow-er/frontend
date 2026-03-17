@@ -246,8 +246,8 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 /* Table Styles */
 .table-container { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
 .product-table { width: 100%; border-collapse: collapse; }
-.product-table th { background: #f8fafc; padding: 0.8rem; text-align: left; font-size: 0.85rem; color: var(--text-light); border-bottom: 1px solid var(--border-color); }
-.product-table td { padding: 0.8rem; border-bottom: 1px solid var(--border-color); font-size: 0.95rem; }
+.product-table th { background: #f8fafc; padding: 1.05rem 0.8rem !important; height: 58px !important; text-align: left; font-size: 0.9rem !important; color: var(--text-light); font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); }
+.product-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; }
 .product-table tr:last-child td { border-bottom: none; }
 .product-table tr.selected { background-color: #f0f9ff; }
 

@@ -2,7 +2,8 @@ import { request } from './http.js'
 
 const BASE = '/api/v1/franchise/sales'
 
-export const getSalesList = () => request(BASE)
+export const getSalesList = ({ page = 0, size = 20 } = {}) =>
+  request(`${BASE}?page=${page}&size=${size}`)
 
 export const getCanceledSalesList = () => request(`${BASE}/canceled`)
 

@@ -13,12 +13,19 @@ const centralStock = ref({})
 // 2. Orders (실제 API 로드)
 const orders = ref([])
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchOrders = async () => {
   try {
-    const data = await getRequestedOrders(true)
+    const pageData = await getRequestedOrders(true, { page: currentPage.value, size: pageSize.value })
+    const data = pageData?.content || []
+    totalPages.value = pageData?.totalPages || 0
     // 평탄화된 응답을 orderCode 기준으로 그룹화
     const orderMap = {}
-    ;(data || []).forEach(item => {
+    data.forEach(item => {
       if (!orderMap[item.orderCode]) {
         orderMap[item.orderCode] = {
           id: item.orderCode,
@@ -41,15 +48,36 @@ onMounted(async () => {
     })
     orders.value = Object.values(orderMap)
   } catch (e) {
-    // 대기 발주가 없으면 빈 목록으로 처리
     orders.value = []
+    centralStock.value = {}
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchOrders()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchOrders())
 
 // 3. Filter
 const filter = ref({
   orderCode: '',
-  productCode: ''
+  franchiseCode: '',
+  recipientName: '',
+  productCode: '',
+  status: ''
 })
 
 // 4. Selection
@@ -81,9 +109,11 @@ const flattenedRows = computed(() => {
 // Core Logic 2: Filtering
 const filteredRows = computed(() => {
   return flattenedRows.value.filter(row => {
-    const matchOrder = !filter.value.orderCode || row.orderCode.includes(filter.value.orderCode)
-    const matchProduct = !filter.value.productCode || row.productCode.includes(filter.value.productCode)
-    return matchOrder && matchProduct
+    return (!filter.value.orderCode || row.orderCode.includes(filter.value.orderCode)) &&
+        (!filter.value.franchiseCode || row.franchiseCode.includes(filter.value.franchiseCode)) &&
+        (!filter.value.recipientName || row.recipientName.includes(filter.value.recipientName)) &&
+        (!filter.value.productCode || row.productCode.includes(filter.value.productCode)) &&
+        (!filter.value.status || row.status === filter.value.status)
   })
 })
 
@@ -206,6 +236,17 @@ const toggleSelectAll = (e) => {
     selectedRowKeys.value = []
   }
 }
+const toggleOrderGroup = (row, e) => {
+  const sameOrderKeys = filteredRows.value
+    .filter(r => r.orderCode === row.orderCode && r.status === 'PENDING')
+    .map(r => r.rowKey)
+  if (e.target.checked) {
+    const merged = new Set([...selectedRowKeys.value, ...sameOrderKeys])
+    selectedRowKeys.value = [...merged]
+  } else {
+    selectedRowKeys.value = selectedRowKeys.value.filter(k => !sameOrderKeys.includes(k))
+  }
+}
 const ORDER_STATUS_LABEL = {
   PENDING: '대기',
   ACCEPTED: '접수',
@@ -263,8 +304,23 @@ const goToDetail = (row) => {
           <input type="text" v-model="filter.orderCode" placeholder="검색..." />
         </div>
         <div class="filter-group">
+          <label>가맹점</label>
+          <input type="text" v-model="filter.franchiseCode" placeholder="SE01" />
+        </div>
+        <div class="filter-group">
+          <label>수령인</label>
+          <input type="text" v-model="filter.recipientName" placeholder="검색..." />
+        </div>
+        <div class="filter-group">
           <label>제품 코드</label>
           <input type="text" v-model="filter.productCode" placeholder="검색..." />
+        </div>
+        <div class="filter-group">
+          <label>제품 상태</label>
+          <select v-model="filter.status">
+            <option value="">전체</option>
+            <option v-for="(label, key) in ORDER_STATUS_LABEL" :key="key" :value="key">{{ label }}</option>
+          </select>
         </div>
       </div>
     </div>
@@ -296,12 +352,12 @@ const goToDetail = (row) => {
 
           <td v-if="selectionMode" @click.stop>
             <input type="checkbox"
-                   :value="row.rowKey"
-                   v-model="selectedRowKeys"
+                   :checked="selectedRowKeys.includes(row.rowKey)"
+                   @change="toggleOrderGroup(row, $event)"
                    :disabled="row.status !== 'PENDING'" />
           </td>
 
-          <td class="sku-cell">{{ row.orderCode }}</td>
+          <td class="sku-cell code-order">{{ row.orderCode }}</td>
           <td>{{ row.franchiseCode }}</td>
           <td>{{ row.recipientName }}</td>
 
@@ -332,6 +388,21 @@ const goToDetail = (row) => {
         </tr>
         </tbody>
       </table>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
+      </div>
     </div>
   </div>
 </template>
@@ -352,15 +423,16 @@ button:hover { opacity: 0.9; }
 
 /* Filter */
 .filter-section { background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 1rem; }
-.filter-grid { display: flex; gap: 1rem; }
+.filter-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+.filter-group select { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; }
 .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .filter-group input { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; }
 
 /* Table */
 .data-table-card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.data-table th { background: #f9fafb; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; color: #1f2937; vertical-align: middle; }
+.data-table th { background: #f9fafb; padding: 1.05rem 0.8rem !important; height: 58px !important; text-align: left; font-weight: 600; color: #4b5563; font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid #e5e7eb; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid #e5e7eb; color: #1f2937; font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
 .data-table tr:hover { background-color: #f9fafb; }
 
 .selected-row { background-color: #f0fdf4 !important; }
@@ -371,15 +443,27 @@ button:hover { opacity: 0.9; }
   color: #2563eb !important; /* 파란색 강제 적용 */
 }
 
+.sku-cell.code-order {
+  color: #0f766e !important;
+}
+
 .text-right { text-align: right; }
 .text-muted { color: #9ca3af; }
 .low-stock { color: #dc2626; font-weight: bold; }
 .empty-cell { text-align: center; padding: 2rem; color: #9ca3af; }
 
 /* Tags */
-.status-tag { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+.status-tag { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }
 .status-danger { background: #fee2e2; color: #991b1b; }
 .status-primary { background: #dbeafe; color: #1e40af; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1f2937; transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1f2937; transition: all 0.2s; }
+.page-num-btn:hover { border-color: #2563eb; color: #2563eb; }
+.page-num-btn.active { background: #1f2937; color: white; border-color: #1f2937; }
 </style>

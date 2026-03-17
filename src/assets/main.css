@@ -30,6 +30,19 @@ body {
   box-sizing: border-box;
 }
 
+/* 전역: 모든 폰트를 Pretendard로 통일 */
+*,
+*::before,
+*::after {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* 브랜드 로고(CHAIN-G)는 바코드 폰트 유지 */
+.logo-barcode,
+.logo-barcode-mini {
+  font-family: 'Libre Barcode 39 Text', system-ui !important;
+}
+
 /* 전역: 모든 테이블 셀 한 줄 출력 */
 th,
 td {
@@ -41,4 +54,338 @@ td {
 .table-container,
 .data-table-scroll-wrapper {
   overflow-x: auto;
+}
+
+/* 전역: 테이블 UI 통일 (/hq/inventory/logs/hq 기준) */
+.table-container,
+.data-table-card,
+.table-outer-container,
+.table-wrapper,
+.notice-table-container,
+.member-table-container,
+.org-table-container {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-container table,
+.table-outer-container table,
+table.notice-table,
+table.data-table,
+table.logistics-table,
+table.log-table,
+table.member-table,
+table.org-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.table-container table thead th,
+.table-outer-container table thead th,
+table.notice-table thead th,
+table.data-table thead th,
+table.logistics-table thead th,
+table.log-table thead th,
+table.member-table thead th,
+table.org-table thead th {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  text-align: center !important;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  line-height: 1.3 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+.table-container table tbody td,
+.table-outer-container table tbody td,
+table.notice-table tbody td,
+table.data-table tbody td,
+table.logistics-table tbody td,
+table.log-table tbody td,
+table.member-table tbody td,
+table.org-table tbody td {
+  color: #0f172a !important;
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  text-align: center !important;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  line-height: 1.35 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+.table-container table tbody tr:nth-child(even),
+.table-outer-container table tbody tr:nth-child(even),
+table.notice-table tbody tr:nth-child(even),
+table.data-table tbody tr:nth-child(even),
+table.logistics-table tbody tr:nth-child(even),
+table.log-table tbody tr:nth-child(even),
+table.member-table tbody tr:nth-child(even),
+table.org-table tbody tr:nth-child(even) {
+  background: #fcfdff !important;
+}
+
+.table-container table tbody tr:hover,
+.table-outer-container table tbody tr:hover,
+table.notice-table tbody tr:hover,
+table.data-table tbody tr:hover,
+table.logistics-table tbody tr:hover,
+table.log-table tbody tr:hover,
+table.member-table tbody tr:hover,
+table.org-table tbody tr:hover {
+  background: #f3f6fb !important;
+}
+
+/* 확장 행(박스코드 상세)은 본사 로그 기준으로 좌측 정렬 유지 */
+.table-container table tbody tr.expanded-row > td,
+.table-outer-container table tbody tr.expanded-row > td,
+table.data-table tbody tr.expanded-row > td,
+table.logistics-table tbody tr.expanded-row > td,
+table.log-table tbody tr.expanded-row > td,
+table.member-table tbody tr.expanded-row > td,
+table.org-table tbody tr.expanded-row > td {
+  text-align: left !important;
+}
+
+.table-container table tbody tr.expanded-row .expanded-content,
+.table-outer-container table tbody tr.expanded-row .expanded-content,
+table.data-table tbody tr.expanded-row .expanded-content,
+table.logistics-table tbody tr.expanded-row .expanded-content,
+table.log-table tbody tr.expanded-row .expanded-content,
+table.member-table tbody tr.expanded-row .expanded-content,
+table.org-table tbody tr.expanded-row .expanded-content {
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+/* 핵심 값은 살짝 강조 (코드/수량/이름) */
+.table-container td.code-cell,
+.table-outer-container td.code-cell,
+table.notice-table td.code-cell,
+table.data-table td.code-cell,
+table.logistics-table td.code-cell,
+table.log-table td.code-cell,
+table.member-table td.code-cell,
+table.org-table td.code-cell,
+.table-container td.number-cell,
+.table-outer-container td.number-cell,
+table.notice-table td.number-cell,
+table.data-table td.number-cell,
+table.logistics-table td.number-cell,
+table.log-table td.number-cell,
+table.member-table td.number-cell,
+table.org-table td.number-cell,
+.table-container td.name-cell,
+.table-outer-container td.name-cell,
+table.notice-table td.name-cell,
+table.data-table td.name-cell,
+table.logistics-table td.name-cell,
+table.log-table td.name-cell,
+table.member-table td.name-cell,
+table.org-table td.name-cell {
+  font-weight: 600 !important;
+}
+
+/* 제품코드는 페이지별 편차 없이 파랑으로 통일 */
+.table-container td.sku-cell,
+.table-outer-container td.sku-cell,
+.data-table-card td.sku-cell,
+.table-wrapper td.sku-cell,
+.notice-table-container td.sku-cell,
+.member-table-container td.sku-cell,
+.org-table-container td.sku-cell,
+table.notice-table td.sku-cell,
+table.data-table td.sku-cell,
+table.logistics-table td.sku-cell,
+table.log-table td.sku-cell,
+table.member-table td.sku-cell,
+table.org-table td.sku-cell {
+  color: #1d4ed8 !important;
+  font-weight: 600 !important;
+}
+
+/* 판매코드는 발주/제품코드와 구분되는 보라 계열로 고정 */
+.table-container td.sales-code,
+.table-outer-container td.sales-code,
+.data-table-card td.sales-code,
+.table-wrapper td.sales-code,
+.notice-table-container td.sales-code,
+.member-table-container td.sales-code,
+.org-table-container td.sales-code,
+table.notice-table td.sales-code,
+table.data-table td.sales-code,
+table.logistics-table td.sales-code,
+table.log-table td.sales-code,
+table.member-table td.sales-code,
+table.org-table td.sales-code {
+  color: #6d28d9 !important;
+  font-weight: 600 !important;
+}
+
+/* 코드 컬러: 발주/반품만 강조, 그 외(운송장 등)는 기본값 유지 */
+.table-container td.code-order,
+.table-outer-container td.code-order,
+.data-table-card td.code-order,
+.table-wrapper td.code-order,
+.notice-table-container td.code-order,
+.member-table-container td.code-order,
+.org-table-container td.code-order,
+table.notice-table td.code-order,
+table.data-table td.code-order,
+table.logistics-table td.code-order,
+table.log-table td.code-order,
+table.member-table td.code-order,
+table.org-table td.code-order {
+  color: #0f766e !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: inherit !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+.table-container td.code-return,
+.table-outer-container td.code-return,
+.data-table-card td.code-return,
+.table-wrapper td.code-return,
+.notice-table-container td.code-return,
+.member-table-container td.code-return,
+.org-table-container td.code-return,
+table.notice-table td.code-return,
+table.data-table td.code-return,
+table.logistics-table td.code-return,
+table.log-table td.code-return,
+table.member-table td.code-return,
+table.org-table td.code-return {
+  color: #c2410c !important;
+}
+
+.table-container td.code-tracking,
+.table-outer-container td.code-tracking,
+.data-table-card td.code-tracking,
+.table-wrapper td.code-tracking,
+.notice-table-container td.code-tracking,
+.member-table-container td.code-tracking,
+.org-table-container td.code-tracking,
+table.notice-table td.code-tracking,
+table.data-table td.code-tracking,
+table.logistics-table td.code-tracking,
+table.log-table td.code-tracking,
+table.member-table td.code-tracking,
+table.org-table td.code-tracking {
+  color: inherit !important;
+}
+
+/* 로그 증감 수량 색상은 원래 규칙 유지 (+ 초록 / - 빨강) */
+.table-container td.plus,
+.table-outer-container td.plus,
+table.data-table td.plus,
+table.logistics-table td.plus,
+table.log-table td.plus,
+table.member-table td.plus,
+table.org-table td.plus {
+  color: #166534 !important;
+  font-weight: 700 !important;
+}
+
+.table-container td.minus,
+.table-outer-container td.minus,
+table.data-table td.minus,
+table.logistics-table td.minus,
+table.log-table td.minus,
+table.member-table td.minus,
+table.org-table td.minus {
+  color: #991b1b !important;
+  font-weight: 700 !important;
+}
+
+/* 공통 초기화 버튼 */
+/* 초기화 버튼 전역 통일 (기준: /admin/logistics) */
+.btn-reset,
+.btn-reset-filter,
+.btn-reset-filters,
+.reset-btn,
+.btn-reset-unified {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  height: 42px !important;
+  min-width: 96px !important;
+  padding: 0.6rem 1rem !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  font-size: 0.9rem !important;
+  line-height: 1 !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: all 0.2s !important;
+}
+
+.btn-reset:hover,
+.btn-reset-filter:hover,
+.btn-reset-filters:hover,
+.reset-btn:hover,
+.btn-reset-unified:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.btn-reset svg,
+.btn-reset-filter svg,
+.btn-reset-filters svg,
+.reset-btn svg,
+.btn-reset-unified svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+.filter-section .btn-reset-unified,
+.filter-bar .btn-reset-unified {
+  margin-left: auto;
+}
+
+/* 기존 초기화 버튼도 동일 톤으로 통일 */
+.filter-section .btn-reset,
+.filter-section .btn-reset-filter,
+.filter-section .btn-reset-filters,
+.filter-section .reset-btn,
+.filter-bar .btn-reset,
+.filter-bar .btn-reset-filter,
+.filter-bar .btn-reset-filters,
+.filter-bar .reset-btn {
+  height: 42px !important;
+  padding: 0.6rem 1rem !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+}
+
+/* 좌상단 페이지 타이틀 공통 굵기 통일 */
+.header-row h2,
+.header-left h1,
+.member-list-header h1,
+.org-list-header h1,
+.registration-header h1 {
+  font-weight: 700 !important;
+  color: #0f172a !important;
 }

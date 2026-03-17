@@ -27,72 +27,107 @@
         </div>
       </div>
 
-      <!-- Safety Stock Alert Section (Collapsible) -->
-      <div v-if="lowStockItems.length > 0" class="alert-section">
-          <div class="alert-header">
-              <div class="alert-title">⚠️ 안전재고 부족 알림</div>
-              <button class="toggle-alert-btn" @click="isSafeStockExpanded = !isSafeStockExpanded">
-                  {{ isSafeStockExpanded ? '접기 ▲' : '더보기 ▼' }}
-              </button>
-          </div>
-          
-          <!-- Summary Header when Collapsed -->
-          <div v-if="!isSafeStockExpanded" class="alert-summary pl-2">
-              <span>안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
-          </div>
-
-          <!-- Detailed List -->
-          <template v-else>
-              <div class="mt-3 pt-3 border-top-dashed">
-                  <ul>
-                      <li v-for="item in lowStockItems" :key="item.productCode">
-                          <strong>{{ item.productName }}</strong> ({{item.productCode}}): 재고 <span class="danger-text">{{ item.quantity }}</span> (안전재고: {{item.safeStock}})
-                      </li>
-                  </ul>
-              </div>
-          </template>
+      <!-- Summary Cards -->
+      <div class="summary-grid">
+        <article class="summary-card risk">
+          <span class="summary-label">위험 재고</span>
+          <strong class="summary-value">{{ inventorySummary.risk }}</strong>
+          <small class="summary-desc">안전재고 이하 (품절 제외)</small>
+        </article>
+        <article class="summary-card sold">
+          <span class="summary-label">품절</span>
+          <strong class="summary-value">{{ inventorySummary.sold }}</strong>
+          <small class="summary-desc">재고 0개</small>
+        </article>
+        <article class="summary-card expiring">
+          <span class="summary-label">유통기한 임박</span>
+          <strong class="summary-value">{{ expiringAlertRows.length }}</strong>
+          <small class="summary-desc">소진/폐기 확인 필요</small>
+        </article>
+        <article class="summary-card safe">
+          <span class="summary-label">정상 재고</span>
+          <strong class="summary-value">{{ inventorySummary.safe }}</strong>
+          <small class="summary-desc">안전재고 초과</small>
+        </article>
       </div>
 
-      <!-- Expiration Alert Section (Collapsible) -->
-      <div v-if="expiringItems.length > 0" class="alert-section expiration">
-          <div class="alert-header">
-              <div class="alert-title">⏳ 유통기한 임박 알림</div>
-              <button class="toggle-alert-btn" @click="isExpirationExpanded = !isExpirationExpanded">
-                  {{ isExpirationExpanded ? '접기 ▲' : '더보기 ▼' }}
-              </button>
-          </div>
-          
-          <!-- Summary Header when Collapsed -->
-          <div v-if="!isExpirationExpanded" class="alert-summary pl-2">
-              <span>유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
-          </div>
-
-          <!-- Detailed List -->
-          <template v-else>
-              <div class="mt-3 pt-3 border-top-dashed">
-                  <ul>
-                      <li v-for="group in expiringItems" :key="group.key">
-                          <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
-                      </li>
-                  </ul>
-              </div>
-          </template>
+        <!-- Priority Section -->
+      <div v-if="priorityItems.length > 0" class="priority-section">
+        <div class="section-header">
+          <h3>우선 확인 필요 ({{ priorityItems.length }}건)</h3>
+          <span></span>
+        </div>
+        <div class="priority-list">
+          <button
+            v-for="item in priorityItems"
+            :key="item.productCode"
+            class="priority-item"
+            @click="goToStep2(item)"
+          >
+            <div class="priority-head">
+              <span class="priority-code">{{ item.productCode }}</span>
+              <span class="priority-name">{{ item.productName }} ({{ getPortionLabel(item.portion) }})</span>
+              <span v-if="isExpiringProduct(item.productName)" class="expiring-badge">
+                유통임박
+              </span>
+              <span :class="['status-badge', getStatusClass(item.quantity, item.safeStock)]">
+                {{ getStatusLabel(item.quantity, item.safeStock) }}
+              </span>
+            </div>
+            <div class="stock-bar-track">
+              <div
+                :class="['stock-bar-fill', getStatusClass(item.quantity, item.safeStock)]"
+                :style="{ width: `${getStockFillPercent(item.quantity, item.safeStock)}%` }"
+              />
+            </div>
+            <p class="stock-value">{{ item.quantity }} / {{ item.safeStock }}</p>
+          </button>
+        </div>
       </div>
 
-      <!-- No Alerts -->
-      <div v-if="lowStockItems.length === 0 && expiringItems.length === 0" class="alert-section safe">
-        <div class="alert-title">✅ 모든 재고가 안전하며, 임박한 상품이 없습니다.</div>
+      <div v-if="expiringAlertRows.length > 0" class="data-table-card expiry-wrap">
+        <div class="section-header">
+          <h3>유통기한 임박 ({{ expiringAlertRows.length }}건)</h3>
+          <button class="toggle-alert-btn" @click="isExpiryExpanded = !isExpiryExpanded">
+            {{ isExpiryExpanded ? '접기 ▲' : '펼치기 ▼' }}
+          </button>
+        </div>
+        <table v-if="isExpiryExpanded" class="data-table">
+          <thead>
+            <tr>
+              <th>제품</th>
+              <th>제조일</th>
+              <th>임박 수량</th>
+              <th>만료까지</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in expiringAlertRows" :key="item.key" class="row-expiring">
+              <td class="product-cell">
+                <p class="product-code sku-cell">{{ item.productCode || '-' }}</p>
+                <p class="product-name">{{ item.productName }}</p>
+              </td>
+              <td>{{ item.manufactureDate }}</td>
+              <td class="number-cell">{{ item.quantity }}</td>
+              <td>
+                <span class="status-badge expiring">{{ item.daysUntilExpiration }}일</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Data Table -->
+      <!-- Main Inventory Table -->
       <div class="data-table-card">
+        <div class="section-header compact">
+          <h3>재고 현황</h3>
+          <span>위험 항목 우선 정렬</span>
+        </div>
         <table class="data-table">
           <thead>
             <tr>
-              <th>제품 코드</th>
-              <th>제품 이름</th>
-              <th>총 수량</th>
-              <th>인분</th>
+              <th>제품</th>
+              <th>재고</th>
               <th>
                 안전재고
                 <button class="icon-btn" @click.stop="openPasswordPopup" title="안전재고 설정">⚙️</button>
@@ -101,16 +136,73 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredProducts" :key="item.productCode" @click="goToStep2(item)" class="clickable-row">
-              <td class="sku-cell">{{ item.productCode }}</td>
-              <td class="name-cell">{{ item.productName }}</td>
-              <td class="number-cell">{{ item.quantity }}</td>
-              <td>{{ item.portion === 1 ? '1~2인분' : '3~4인분' }}</td>
+            <tr
+              v-for="item in nonSoldFilteredProducts"
+              :key="item.productCode"
+              @click="goToStep2(item)"
+              :class="['clickable-row', `row-${getStatusClass(item.quantity, item.safeStock)}`]"
+            >
+              <td class="product-cell">
+                <p class="product-code sku-cell">{{ item.productCode }}</p>
+                <p class="product-name">{{ item.productName }} ({{ getPortionLabel(item.portion) }})</p>
+              </td>
+              <td>
+                <div class="stock-cell">
+                  <div class="stock-bar-track">
+                    <div
+                      :class="['stock-bar-fill', getStatusClass(item.quantity, item.safeStock)]"
+                      :style="{ width: `${getStockFillPercent(item.quantity, item.safeStock)}%` }"
+                    />
+                  </div>
+                  <p class="stock-value">{{ item.quantity }} / {{ item.safeStock }}</p>
+                </div>
+              </td>
               <td class="number-cell">{{ item.safeStock }}</td>
               <td>
                 <span :class="['status-badge', getStatusClass(item.quantity, item.safeStock)]">
                   {{ getStatusLabel(item.quantity, item.safeStock) }}
                 </span>
+              </td>
+            </tr>
+            <tr v-if="nonSoldFilteredProducts.length === 0">
+              <td colspan="4" class="empty-cell">표시할 재고 데이터가 없습니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sold-out Section -->
+      <div v-if="soldOutFilteredProducts.length > 0" class="data-table-card soldout-wrap">
+        <div class="section-header">
+          <h3>품절 ({{ soldOutFilteredProducts.length }}건)</h3>
+          <button class="toggle-alert-btn" @click="isSoldOutExpanded = !isSoldOutExpanded">
+            {{ isSoldOutExpanded ? '접기 ▲' : '펼치기 ▼' }}
+          </button>
+        </div>
+        <table v-if="isSoldOutExpanded" class="data-table">
+          <thead>
+            <tr>
+              <th>제품</th>
+              <th>재고</th>
+              <th>안전재고</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in soldOutFilteredProducts"
+              :key="item.productCode"
+              @click="goToStep2(item)"
+              class="clickable-row row-sold"
+            >
+              <td class="product-cell">
+                <p class="product-code sku-cell">{{ item.productCode }}</p>
+                <p class="product-name">{{ item.productName }} ({{ getPortionLabel(item.portion) }})</p>
+              </td>
+              <td class="number-cell">0</td>
+              <td class="number-cell">{{ item.safeStock }}</td>
+              <td>
+                <span class="status-badge sold">품절</span>
               </td>
             </tr>
           </tbody>
@@ -320,9 +412,8 @@ const currentStep = ref(1)
 const selectedProduct = ref(null)
 const selectedProductionDate = ref(null)
 const selectedItems = ref([])
-
-const isSafeStockExpanded = ref(false)
-const isExpirationExpanded = ref(false)
+const isSoldOutExpanded = ref(false)
+const isExpiryExpanded = ref(false)
 
 const filter = ref({
   productCode: '',
@@ -353,7 +444,7 @@ const lookupProduct = () => {
 
 // Data Store
 const products = ref([])
-const inventoryItems = ref([])
+const expirationItems = ref([])
 
 onMounted(async () => {
     await fetchProducts()
@@ -383,16 +474,10 @@ const fetchAlerts = async () => {
     try {
         const res = await api.get('/franchise/inventory/alerts')
         const data = res.data.data || {}
-        expiringItems.value = (data.expirationAlerts || []).map(e => ({
-            productName: e.productName,
-            productionDate: e.manufactureDate,
-            count: e.quantity,
-            daysLeft: e.daysUntilExpiration,
-            key: e.manufactureDate + e.productName
-        }))
+        expirationItems.value = data.expirationAlerts || []
     } catch (e) {
         console.error('가맹점 알림 조회 실패:', e)
-        expiringItems.value = []
+        expirationItems.value = []
     }
 }
 
@@ -410,6 +495,38 @@ const getStatusClass = (qty, safe) => {
   if (qty <= safe) return 'warning'
   return 'safe'
 }
+
+const getStatusPriority = (qty, safe) => {
+  const status = getStatusClass(qty, safe)
+  if (status === 'sold') return 0
+  if (status === 'danger') return 1
+  if (status === 'warning') return 2
+  return 3
+}
+
+const getStockFillPercent = (qty, safe) => {
+  if (safe <= 0) return qty > 0 ? 100 : 0
+  return Math.max(0, Math.min(100, Math.round((qty / safe) * 100)))
+}
+
+const getPortionLabel = (portion) => (portion === 1 ? '1~2인분' : '3~4인분')
+
+const expiringProductNameSet = computed(() => {
+  return new Set((expirationItems.value || []).map(item => item.productName))
+})
+
+const isExpiringProduct = (productName) => expiringProductNameSet.value.has(productName)
+
+const expiringAlertRows = computed(() => {
+  return (expirationItems.value || []).map((item, index) => ({
+    key: `${item.productName}-${item.manufactureDate || item.productionDate || index}`,
+    productCode: products.value.find(product => product.productName === item.productName)?.productCode || '',
+    productName: item.productName,
+    manufactureDate: item.manufactureDate || item.productionDate || '-',
+    quantity: item.quantity ?? item.count ?? 0,
+    daysUntilExpiration: item.daysUntilExpiration ?? item.daysLeft ?? '-'
+  }))
+})
 
 // Step 1 Compute
 const filteredProducts = computed(() => {
@@ -429,14 +546,42 @@ const filteredProducts = computed(() => {
   })
 })
 
-const lowStockItems = computed(() => {
-  return products.value.filter(item => item.quantity <= item.safeStock)
+const sortedFilteredProducts = computed(() => {
+  return [...filteredProducts.value].sort((a, b) => {
+    const priorityDiff = getStatusPriority(a.quantity, a.safeStock) - getStatusPriority(b.quantity, b.safeStock)
+    if (priorityDiff !== 0) return priorityDiff
+    return a.productCode.localeCompare(b.productCode)
+  })
 })
 
-const expiringItems = ref([])
+const nonSoldFilteredProducts = computed(() => {
+  return sortedFilteredProducts.value.filter(item => item.quantity > 0)
+})
 
-const hasMoreAlerts = computed(() => {
-    return lowStockItems.value.length > 0 || expiringItems.value.length > 0
+const soldOutFilteredProducts = computed(() => {
+  return sortedFilteredProducts.value.filter(item => item.quantity <= 0)
+})
+
+const priorityItems = computed(() => {
+  return sortedFilteredProducts.value
+    .filter(item => item.quantity > 0 && item.quantity <= item.safeStock)
+    .slice(0, 5)
+})
+
+const inventorySummary = computed(() => {
+  const summary = { risk: 0, sold: 0, safe: 0 }
+  filteredProducts.value.forEach(item => {
+    if (item.quantity <= 0) {
+      summary.sold += 1
+      return
+    }
+    if (item.quantity <= item.safeStock) {
+      summary.risk += 1
+      return
+    }
+    summary.safe += 1
+  })
+  return summary
 })
 
 // Step 2 Compute -> API 연동
@@ -674,7 +819,6 @@ const resetSettings = async () => {
         
         // 데이터 다시 불러오기
         await fetchProducts()
-        await fetchAlerts()
         closeSettingsPopup()
       } catch (e) {
         console.error('초기화 실패:', e)
@@ -710,6 +854,96 @@ const resetSettings = async () => {
   border-radius: 8px;
   font-size: 0.95rem;
   width: 100%;
+}
+
+/* Summary */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.summary-card {
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+}
+.summary-card.risk { background: #fff5f5; border-color: #fecaca; }
+.summary-card.sold { background: #f8fafc; border-color: #cbd5e1; }
+.summary-card.expiring { background: #fff8eb; border-color: #fcd34d; }
+.summary-card.safe { background: #ecfdf3; border-color: #bbf7d0; }
+.summary-label { display: block; font-size: 0.85rem; color: #475569; margin-bottom: 0.3rem; font-weight: 700; }
+.summary-value { display: block; font-size: 1.7rem; line-height: 1.1; color: #0f172a; }
+.summary-desc { display: block; margin-top: 0.3rem; color: #64748b; font-size: 0.78rem; }
+
+/* Section common */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.2rem 0.75rem;
+}
+.section-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+.section-header span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.section-header.compact {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.7rem;
+}
+
+/* Priority */
+.priority-section {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
+}
+.priority-list {
+  padding: 0 1.2rem 1.1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.priority-item {
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff8f8;
+  text-align: left;
+  padding: 0.85rem 0.9rem;
+  cursor: pointer;
+}
+.priority-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+.priority-code {
+  color: #b91c1c;
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+.priority-name {
+  color: #111827;
+  font-weight: 700;
+  flex: 1;
+  font-size: 0.9rem;
+}
+.expiring-badge {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.12rem 0.5rem;
 }
 
 /* Alert Section */
@@ -758,14 +992,44 @@ const resetSettings = async () => {
 /* Data Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); text-align: center; }
+.data-table th { text-align: center; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); color: var(--text-dark); text-align: center; font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
+.row-danger { background: #fff3f3; }
+.row-sold { background: #f8fafc; }
+.row-expiring { background: #fffdf5; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { font-weight: 600; }
 .number-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
+.product-cell { text-align: left !important; }
+.product-code { margin: 0; color: #1e293b; font-size: 0.83rem; font-weight: 800; }
+.product-code.sku-cell { color: #1d4ed8; }
+.product-name { margin: 0.2rem 0 0; color: #334155; font-weight: 600; }
+.stock-cell { min-width: 200px; }
+.stock-bar-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.stock-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+.stock-bar-fill.safe { background: #16a34a; }
+.stock-bar-fill.warning { background: #f59e0b; }
+.stock-bar-fill.danger { background: #ef4444; }
+.stock-bar-fill.sold { background: #475569; }
+.stock-value {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #334155;
+  font-weight: 700;
+}
 
 .status-badge {
   padding: 0.25rem 0.75rem;
@@ -777,6 +1041,7 @@ const resetSettings = async () => {
 .status-badge.warning { background: #fffaf0; color: #dd6b20; }
 .status-badge.danger { background: #fff5f5; color: #e53e3e; }
 .status-badge.sold { background: #edf2f7; color: #4a5568; }
+.status-badge.expiring { background: #fef3c7; color: #92400e; }
 
 .checkbox-col { width: 50px; text-align: center; }
 input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
@@ -816,6 +1081,8 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 .error-text { color: #ef4444; font-size: 0.85rem; margin-bottom: 1rem; }
 
 .bottom-actions { display: flex; justify-content: flex-end; margin-top: 1.5rem; gap: 1rem; }
+.soldout-wrap { margin-top: 1rem; }
+.expiry-wrap { margin-bottom: 1rem; }
 
 /* Redesign Specific Styles */
 .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
@@ -887,5 +1154,17 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
   background: var(--text-dark);
   color: white;
   border-color: var(--text-dark);
+}
+
+@media (max-width: 960px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .priority-head {
+    flex-wrap: wrap;
+  }
+  .stock-cell {
+    min-width: 140px;
+  }
 }
 </style>

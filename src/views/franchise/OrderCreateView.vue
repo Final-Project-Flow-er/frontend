@@ -98,14 +98,59 @@ const form = ref({
   arrivalDate: calculateArrivalDate()
 })
 
+const nameError = ref('')
+const phoneError = ref('')
+
+const validateName = () => {
+  const name = form.value.recipientName.trim()
+  if (!name) {
+    nameError.value = '이름을 입력해주세요.'
+    return false
+  }
+  if (!/^[가-힣a-zA-Z\s]+$/.test(name)) {
+    nameError.value = '이름은 한글 또는 영문만 입력 가능합니다.'
+    return false
+  }
+  nameError.value = ''
+  return true
+}
+
+const formatPhone = () => {
+  const digits = form.value.recipientPhone.replace(/\D/g, '')
+  if (digits.length <= 3) {
+    form.value.recipientPhone = digits
+  } else if (digits.length <= 7) {
+    form.value.recipientPhone = `${digits.slice(0, 3)}-${digits.slice(3)}`
+  } else {
+    form.value.recipientPhone = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`
+  }
+  validatePhone()
+}
+
+const validatePhone = () => {
+  const phone = form.value.recipientPhone
+  if (!phone) {
+    phoneError.value = '전화번호를 입력해주세요.'
+    return false
+  }
+  if (!/^010-\d{4}-\d{4}$/.test(phone)) {
+    phoneError.value = '010-xxxx-xxxx 형식으로 입력해주세요.'
+    return false
+  }
+  phoneError.value = ''
+  return true
+}
+
 const submitOrder = async () => {
   const selectedItems = products.value.filter(p => p.actualQuantity > 0)
   if (selectedItems.length === 0) {
     alert('최소 하나 이상의 상품 수량을 입력해주세요.')
     return
   }
-  if (!form.value.recipientName || !form.value.recipientPhone || !form.value.recipientAddress) {
-    alert('수령인 정보를 모두 입력해주세요.')
+  const isNameValid = validateName()
+  const isPhoneValid = validatePhone()
+  if (!isNameValid || !isPhoneValid || !form.value.recipientAddress) {
+    if (!form.value.recipientAddress) alert('수령 주소를 입력해주세요.')
     return
   }
 
@@ -129,6 +174,9 @@ const submitOrder = async () => {
 
 const isFormValid = computed(() => {
   return form.value.recipientName && form.value.recipientPhone && form.value.recipientAddress
+      && !nameError.value && !phoneError.value
+      && /^[가-힣a-zA-Z\s]+$/.test(form.value.recipientName.trim())
+      && /^010-\d{4}-\d{4}$/.test(form.value.recipientPhone)
 })
 </script>
 
@@ -204,11 +252,13 @@ const isFormValid = computed(() => {
       <div class="form-grid">
         <div class="form-group">
           <label>수령인 이름</label>
-          <input type="text" v-model="form.recipientName" placeholder="이름" />
+          <input type="text" v-model="form.recipientName" placeholder="이름" @blur="validateName" />
+          <span v-if="nameError" class="field-error">{{ nameError }}</span>
         </div>
         <div class="form-group">
           <label>수령인 전화번호</label>
-          <input type="text" v-model="form.recipientPhone" placeholder="010-0000-0000" />
+          <input type="tel" v-model="form.recipientPhone" placeholder="010-0000-0000" maxlength="13" @input="formatPhone" @blur="validatePhone" />
+          <span v-if="phoneError" class="field-error">{{ phoneError }}</span>
         </div>
         <div class="form-group">
           <label>도착 날짜 (고정)</label>
@@ -233,6 +283,7 @@ const isFormValid = computed(() => {
 </template>
 
 <style scoped>
+.field-error { color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem; display: block; }
 .header-row { margin-bottom: 1.5rem; }
 .content-wrapper { max-width: 1000px; margin: 0 auto; padding-bottom: 4rem; }
 
@@ -246,8 +297,8 @@ const isFormValid = computed(() => {
 
 /* Table */
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 0.75rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; }
 .code-cell { color: var(--text-light); }
 .name-cell { font-weight: 600; }
 .qty-input { width: 80px; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; }

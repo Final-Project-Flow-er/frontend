@@ -20,11 +20,19 @@ const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
 const orders = ref([])
 
-onMounted(async () => {
-    const data = await getOrderList()
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchOrders = async () => {
+  try {
+    const pageData = (await getOrderList({ page: currentPage.value, size: pageSize.value })) || {}
+    const data = pageData.content || []
+    totalPages.value = pageData.totalPages || 0
     // Group by orderCode
     const map = {}
-    ;(data || []).forEach(item => {
+    data.forEach(item => {
       if (!map[item.orderCode]) {
         map[item.orderCode] = {
           orderCode: item.orderCode,
@@ -47,7 +55,28 @@ onMounted(async () => {
       })
     })
     orders.value = Object.values(map)
+  } catch (e) {
+    console.error('발주 조회 실패:', e)
+  }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchOrders()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchOrders())
 
 const filteredOrders = computed(() => {
   return orders.value.filter(item => {
@@ -168,7 +197,7 @@ const goToEdit = (item) => {
             @click="goToDetail(row)" 
             :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
           >
-            <td class="sku-cell">{{ row.orderCode }}</td>
+            <td class="sku-cell code-order">{{ row.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
             <td class="sku-cell small">{{ row.product.productCode }}</td>
             <td>{{ row.product.quantity }}</td>
@@ -179,6 +208,21 @@ const goToEdit = (item) => {
           </tr>
         </tbody>
       </table>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
+      </div>
     </div>
   </div>
 </template>
@@ -223,9 +267,9 @@ const goToEdit = (item) => {
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; white-space: nowrap; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .status-tag { padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }
@@ -235,7 +279,7 @@ const goToEdit = (item) => {
 .action-btn { background: white; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
 
 .sku-cell.small {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 .clickable-row { cursor: pointer; transition: background-color 0.2s ease; }
@@ -248,4 +292,12 @@ const goToEdit = (item) => {
 .grouped-row td {
   border-top: 1px dashed #e2e8f0;
 }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 </style>

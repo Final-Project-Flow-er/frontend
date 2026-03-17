@@ -24,6 +24,7 @@ onMounted(async () => {
     }))
   } catch (error) {
     console.error('차량 목록을 불러오는 중 오류 발생:', error)
+    vehicles.value = []
   }
 
   try {
@@ -40,6 +41,7 @@ onMounted(async () => {
     }))
   } catch (error) {
     console.error('미배정 발주 목록을 불러오는 중 오류 발생:', error)
+    unassignedOrders.value = []
   }
 })
 
@@ -307,7 +309,7 @@ const goBack = () => router.back()
                       @change="toggleOrder(o.orderCode)"
                     />
                   </td>
-                  <td class="code-cell">{{ o.orderCode }}</td>
+                  <td class="code-cell code-order">{{ o.orderCode }}</td>
                   <td>{{ o.franchise }}</td>
                   <td class="address-cell" :title="o.address">{{ o.address }}</td>
                   <td>{{ o.recipient }}</td>
@@ -482,9 +484,11 @@ const goBack = () => router.back()
   position: sticky;
   top: 0;
   background: #f8fafc;
-  padding: 0.75rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   text-align: left;
-  font-size: 0.8rem;
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-weight: 600;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
@@ -492,9 +496,12 @@ const goBack = () => router.back()
 }
 
 .data-table td {
-  padding: 0.75rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.85rem;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
   color: #334155;
 }
 
@@ -516,7 +523,7 @@ const goBack = () => router.back()
 }
 .weight-cell .max-weight {
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 .weight-cell .overload {
   color: #ef4444;
@@ -529,7 +536,7 @@ const goBack = () => router.back()
   text-overflow: ellipsis; 
   white-space: nowrap; 
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 .name-cell { font-weight: 500; }
 .cost-cell { font-weight: 600; color: #0f172a; }

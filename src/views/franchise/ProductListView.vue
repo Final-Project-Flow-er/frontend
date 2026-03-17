@@ -9,24 +9,49 @@ const filter = ref({
   salesCode: '',
   date: '',
   productCode: '',
-  productName: '',
-  quantity: ''
+  productName: ''
 })
 
 const sales = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchSales = async () => {
   loading.value = true
+  error.value = null
   try {
-    sales.value = await getSalesList()
+    const pageData = (await getSalesList({ page: currentPage.value, size: pageSize.value })) || {}
+    sales.value = pageData.content || []
+    totalPages.value = pageData.totalPages || 0
   } catch (e) {
     error.value = e.message
   } finally {
     loading.value = false
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchSales()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchSales())
 
 const formatSalesDate = (isoStr) => {
   if (!isoStr) return ''
@@ -40,9 +65,8 @@ const filteredSales = computed(() => {
     const matchDate = !filter.value.date || formattedDate.startsWith(filter.value.date)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
-    const matchQuantity = !filter.value.quantity || item.quantity.toString() === filter.value.quantity
 
-    return matchSalesCode && matchDate && matchProductCode && matchProductName && matchQuantity
+    return matchSalesCode && matchDate && matchProductCode && matchProductName
   })
 })
 
@@ -78,10 +102,6 @@ const goToSalesDetail = (salesCode) => {
         <label>제품 이름</label>
         <input type="text" v-model="filter.productName" placeholder="Product Name..." />
       </div>
-      <div class="filter-group narrow">
-        <label>수량</label>
-        <input type="number" v-model="filter.quantity" placeholder="0" />
-      </div>
     </div>
 
     <div v-if="error" class="error-message">{{ error }}</div>
@@ -108,7 +128,7 @@ const goToSalesDetail = (salesCode) => {
             <td colspan="7" class="text-center loading-row">판매 내역이 없습니다.</td>
           </tr>
           <tr v-else v-for="(item, index) in filteredSales" :key="index" class="clickable-row" @click="goToSalesDetail(item.salesCode)">
-            <td class="sku-cell">{{ item.salesCode }}</td>
+            <td class="sales-code">{{ item.salesCode }}</td>
             <td>{{ formatSalesDate(item.salesDate) }}</td>
             <td class="sku-cell">{{ item.productCode }}</td>
             <td class="name-cell">{{ item.productName }}</td>
@@ -118,6 +138,21 @@ const goToSalesDetail = (salesCode) => {
           </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
       </div>
     </div>
   </div>
@@ -142,12 +177,12 @@ const goToSalesDetail = (salesCode) => {
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); }
 .table-scroll-container { overflow-x: auto; width: 100%; border-radius: 8px; }
 .data-table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-.data-table th, .data-table td { white-space: nowrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; }
-.data-table td { font-size: 0.85rem; }
+.data-table th, .data-table td { white-space: nowrap; padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.data-table th { text-align: left; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+.data-table td { font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; }
 
-/* [변경] code-cell 스타일 삭제, sku-cell이 판매 코드에도 적용됨 */
-.sku-cell { color: var(--primary); font-weight: 600; } /* 제품 코드 & 판매 코드 파란색 */
+.sales-code { color: #6d28d9 !important; font-weight: 600 !important; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 
 .name-cell { color: var(--text-dark); max-width: 300px; white-space: normal; }
 .total-cell { font-weight: 700; color: var(--text-dark); }
@@ -160,6 +195,14 @@ const goToSalesDetail = (salesCode) => {
 .clickable-row:hover { background: #f8fafc; }
 .loading-row { padding: 2rem; color: var(--text-light); }
 .error-message { background: #fee2e2; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 
 :root {
   --primary: #4f46e5;
