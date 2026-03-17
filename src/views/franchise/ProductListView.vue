@@ -9,24 +9,49 @@ const filter = ref({
   salesCode: '',
   date: '',
   productCode: '',
-  productName: '',
-  quantity: ''
+  productName: ''
 })
 
 const sales = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-onMounted(async () => {
+// 페이지네이션 상태
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+
+const fetchSales = async () => {
   loading.value = true
+  error.value = null
   try {
-    sales.value = await getSalesList()
+    const pageData = (await getSalesList({ page: currentPage.value, size: pageSize.value })) || {}
+    sales.value = pageData.content || []
+    totalPages.value = pageData.totalPages || 0
   } catch (e) {
     error.value = e.message
   } finally {
     loading.value = false
   }
+}
+
+const changePage = async (page) => {
+  currentPage.value = page
+  await fetchSales()
+}
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  if (total <= maxVisible) return Array.from({ length: total }, (_, i) => i)
+  let start = Math.max(0, current - Math.floor(maxVisible / 2))
+  let end = start + maxVisible
+  if (end > total) { end = total; start = end - maxVisible }
+  return Array.from({ length: end - start }, (_, i) => start + i)
 })
+
+onMounted(() => fetchSales())
 
 const formatSalesDate = (isoStr) => {
   if (!isoStr) return ''
@@ -40,9 +65,8 @@ const filteredSales = computed(() => {
     const matchDate = !filter.value.date || formattedDate.startsWith(filter.value.date)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
-    const matchQuantity = !filter.value.quantity || item.quantity.toString() === filter.value.quantity
 
-    return matchSalesCode && matchDate && matchProductCode && matchProductName && matchQuantity
+    return matchSalesCode && matchDate && matchProductCode && matchProductName
   })
 })
 
@@ -77,10 +101,6 @@ const goToSalesDetail = (salesCode) => {
       <div class="filter-group grow-2">
         <label>제품 이름</label>
         <input type="text" v-model="filter.productName" placeholder="Product Name..." />
-      </div>
-      <div class="filter-group narrow">
-        <label>수량</label>
-        <input type="number" v-model="filter.quantity" placeholder="0" />
       </div>
     </div>
 
@@ -118,6 +138,21 @@ const goToSalesDetail = (salesCode) => {
           </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- 페이지네이션 -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
+        <div class="page-numbers">
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="changePage(p)"
+            :class="{ active: currentPage === p }"
+            class="page-num-btn"
+          >{{ p + 1 }}</button>
+        </div>
+        <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
       </div>
     </div>
   </div>
@@ -160,6 +195,14 @@ const goToSalesDetail = (salesCode) => {
 .clickable-row:hover { background: #f8fafc; }
 .loading-row { padding: 2rem; color: var(--text-light); }
 .error-message { background: #fee2e2; color: #991b1b; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.page-nav-btn { padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.5rem; }
+.page-num-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-dark); transition: all 0.2s; }
+.page-num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-num-btn.active { background: var(--text-dark); color: white; border-color: var(--text-dark); }
 
 :root {
   --primary: #4f46e5;

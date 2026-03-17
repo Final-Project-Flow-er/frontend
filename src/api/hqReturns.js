@@ -2,7 +2,8 @@ import { request } from './http.js'
 
 const BASE = '/api/v1/hq/returns'
 
-export const getReturnList = (isAll) => request(`${BASE}?isAll=${isAll}`)
+export const getReturnList = (isAll, { page = 0, size = 20 } = {}) =>
+  request(`${BASE}?isAll=${isAll}&page=${page}&size=${size}`)
 export const getReturnDetail = (returnCode) => request(`${BASE}/${returnCode}`)
 export const acceptReturns = (returnCodes) => request(BASE, {
   method: 'PATCH',

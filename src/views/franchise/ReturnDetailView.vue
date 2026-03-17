@@ -228,7 +228,7 @@ const saveChanges = async () => {
           <div v-for="(product, index) in returnItem.products" :key="index" class="product-list-item">
             <span class="box-col">{{ product.boxCode }}</span>
             <span class="id-code id-col">{{ product.idCode }}</span>
-            <span class="sku-col">{{ product.productCode }}</span>
+            <span class="sku-col sku-cell">{{ product.productCode }}</span>
             <span class="name-cell">{{ product.productName }}</span>
             <span class="qty-col">{{ product.quantity }}개</span>
             <span class="price-col">{{ formatPrice(product.amount) }}</span>
@@ -240,7 +240,7 @@ const saveChanges = async () => {
             <span class="check-col"><input type="checkbox" :value="product.idCode" v-model="selectedProducts" /></span>
             <span class="box-col">{{ product.boxCode }}</span>
             <span class="id-code id-col">{{ product.idCode }}</span>
-            <span class="sku-col">{{ product.productCode }}</span>
+            <span class="sku-col sku-cell">{{ product.productCode }}</span>
             <span class="name-cell">{{ product.productName }}</span>
             <span class="qty-col">{{ product.quantity }}개</span>
             <span class="price-col">{{ formatPrice(product.amount) }}</span>
@@ -314,8 +314,10 @@ const saveChanges = async () => {
   min-width: 1300px;
   white-space: nowrap;
 }
-.product-list-header { background: #f8fafc; font-weight: 600; color: var(--text-light); }
+.product-list-header { background: #f8fafc; font-weight: 600; color: var(--text-light); text-align: center; }
+.product-list-item { text-align: center; }
 .product-list-item:last-child { border-bottom: none; }
+.product-list-item .sku-cell { color: var(--primary); font-weight: 600; }
 
 .summary-section {
   display: flex;

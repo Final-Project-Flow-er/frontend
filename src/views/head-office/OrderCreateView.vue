@@ -6,6 +6,12 @@ import { getMyInfo } from '@/api/users.js'
 
 const router = useRouter()
 
+const statusMap = {
+  'SAFE': '안전',
+  'WARNING': '부족',
+  'DANGER': '위험'
+}
+
 const parseSpicinessFromName = (name) => {
   if (name.includes('아주 매운맛')) return '아주 매운맛'
   if (name.includes('매운맛')) return '매운맛'
@@ -45,10 +51,10 @@ onMounted(async () => {
       id: s.productId,
       code: s.productCode,
       name: s.productName,
-      status: s.status,
+      status: statusMap[s.status] || s.status || '',
       spiciness: parseSpicinessFromName(s.productName),
-      current: s.totalQuantity,
-      safety: s.safetyStock,
+      current: s.totalQuantity ?? 0,
+      safety: s.safetyStock ?? 0,
       recommended: 0,
       inputQty: 0
     }))
@@ -204,11 +210,11 @@ const createOrder = async () => {
       <div class="form-grid">
         <div class="form-group">
           <label>발주자 이름</label>
-          <input type="text" v-model="orderInfo.managerName" />
+          <input type="text" v-model="orderInfo.managerName" readonly class="disabled" />
         </div>
         <div class="form-group">
           <label>발주자 전화번호</label>
-          <input type="text" v-model="orderInfo.managerPhone" />
+          <input type="text" v-model="orderInfo.managerPhone" readonly class="disabled" />
         </div>
         <div class="form-group wide">
           <label>요구사항</label>
