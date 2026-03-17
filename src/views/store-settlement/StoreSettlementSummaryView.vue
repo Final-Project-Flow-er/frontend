@@ -83,16 +83,7 @@ const fetchData = async () => {
 
 const fetchTrendData = async () => {
     try {
-        const [year, month] = selectedMonth.value.split('-').map(Number)
-        const start = `${selectedMonth.value}-01`
-        const lastDay = new Date(year, month, 0).getDate()
-        const end = `${selectedMonth.value}-${pad(lastDay)}`
-        
-        const res = await franchiseSettlementsApi.getMonthlyDailyGraph({
-            month: selectedMonth.value,
-            start,
-            end
-        })
+        const res = await franchiseSettlementsApi.getMonthlyDailyGraph(selectedMonth.value)
         trendData.value = res
     } catch (error) {
         console.error('Failed to fetch trend data:', error)
@@ -105,7 +96,8 @@ watch([selectedDate, selectedMonth, activeTab], fetchData)
 
 /* ── 모달 & 토글 ── */
 const showSalesTrend = ref(false)
-const showCalendar = ref(false)
+const showStartCalendar = ref(false)
+const showEndCalendar = ref(false)
 
 watch(showSalesTrend, (val) => {
     if (val && activeTab.value === 'monthly' && trendData.value.length === 0) {
@@ -133,43 +125,44 @@ const calendarDays = computed(() => {
   return cells
 })
 
-const onDayClick = (dateStr) => {
-  if (pickState.value === 'start') {
-    trendStartDate.value = dateStr
+const onStartDayClick = (dateStr) => {
+  trendStartDate.value = dateStr
+  showStartCalendar.value = false
+  // 종료일이 시작일보다 빠르면 초기화
+  if (trendEndDate.value && trendEndDate.value < dateStr) {
     trendEndDate.value = ''
-    pickState.value = 'end'
-  } else {
-    if (dateStr < trendStartDate.value) {
-      trendStartDate.value = dateStr
-      trendEndDate.value = ''
-      pickState.value = 'end'
-    } else {
-      trendEndDate.value = dateStr
-      pickState.value = 'start'
-      showCalendar.value = false
-    }
   }
 }
 
-const getDayClass = (dateStr) => {
+const onEndDayClick = (dateStr) => {
+  if (trendStartDate.value && dateStr < trendStartDate.value) return
+  trendEndDate.value = dateStr
+  showEndCalendar.value = false
+}
+
+const getDayClass = (dateStr, type) => {
   if (!dateStr) return ''
   const classes = []
-  if (dateStr === trendStartDate.value) classes.push('range-start')
-  if (dateStr === trendEndDate.value) classes.push('range-end')
-  if (trendStartDate.value && trendEndDate.value && dateStr > trendStartDate.value && dateStr < trendEndDate.value) classes.push('in-range')
-  if (pickState.value === 'end' && trendStartDate.value && !trendEndDate.value && hoveredDate.value) {
-    const hoverEnd = hoveredDate.value >= trendStartDate.value ? hoveredDate.value : ''
-    if (hoverEnd && dateStr > trendStartDate.value && dateStr <= hoverEnd) classes.push('hover-range')
+  if (type === 'start' && dateStr === trendStartDate.value) classes.push('selected')
+  if (type === 'end' && dateStr === trendEndDate.value) classes.push('selected')
+  
+  // 종료일 선택 시 시작일보다 이전 날짜 비활성화
+  if (type === 'end' && trendStartDate.value && dateStr < trendStartDate.value) classes.push('disabled')
+  
+  // 범위 표시 (시작/종료일 모두 있을 때)
+  if (trendStartDate.value && trendEndDate.value && dateStr >= trendStartDate.value && dateStr <= trendEndDate.value) {
+    classes.push('in-range')
   }
   return classes.join(' ')
 }
 
-const rangeLabel = computed(() => {
+const chartTitle = computed(() => {
   if (trendStartDate.value && trendEndDate.value) {
-    return `${trendStartDate.value.split('-')[2]}일 ~ ${trendEndDate.value.split('-')[2]}일`
+    const s = trendStartDate.value.substring(5).replace('-', '월 ') + '일'
+    const e = trendEndDate.value.substring(5).replace('-', '월 ') + '일'
+    return `📈 ${s} ~ ${e} 매출 추이`
   }
-  if (trendStartDate.value) return `${trendStartDate.value.split('-')[2]}일 ~ 종료일 선택`
-  return '기간을 선택하세요'
+  return '📈 월 전체 매출 추이'
 })
 
 // 기간 필터 적용된 그래프 데이터
@@ -185,48 +178,103 @@ const filteredTrendData = computed(() => {
   return data
 })
 
-// Y축 최대값 (50만원 단위 올림)
+// Y축 최대값 (데이터 최대값 기준으로 자동 계산, 최소 10만원)
 const trendMax = computed(() => {
-  const max = Math.max(...filteredTrendData.value.map(d => d.amount), 1)
-  return Math.ceil(max / 500000) * 500000
+  const values = filteredTrendData.value.map(d => d.amount)
+  const max = values.length > 0 ? Math.max(...values) : 0
+  if (max === 0) return 500000 
+  // 10만원 단위로 올림하여 넉넉하게 잡음
+  return Math.ceil((max * 1.1) / 100000) * 100000
 })
+
+// SVG 차트 상수
+const chartW = 900
+const chartH = 220
+const paddingX = 55
+const paddingY = 25
 
 // SVG 포인트 계산
 const trendSvgPoints = computed(() => {
   const data = filteredTrendData.value
   if (data.length === 0) return []
-  const w = 900, h = 220, px = 55, py = 25
-  const stepX = data.length > 1 ? (w - px * 2) / (data.length - 1) : 0
+  const stepX = data.length > 1 ? (chartW - paddingX * 2) / (data.length - 1) : 0
   return data.map((d, i) => {
-    const x = px + i * stepX
-    const y = py + (1 - d.amount / trendMax.value) * (h - py * 2)
+    const x = paddingX + i * stepX
+    const y = paddingY + (1 - d.amount / trendMax.value) * (chartH - paddingY * 2)
     return { x, y, ...d }
   })
 })
-const trendPolyline = computed(() => trendSvgPoints.value.map(p => `${p.x},${p.y}`).join(' '))
+
+// Smooth 곡선(Catmull-Rom spline 방식과 유사한 Cubic Bezier 계산)
+const trendPath = computed(() => {
+  const points = trendSvgPoints.value
+  if (points.length < 2) return ''
+  
+  let d = `M ${points[0].x},${points[0].y}`
+  
+  for (let i = 0; i < points.length - 1; i++) {
+    const curr = points[i]
+    const next = points[i + 1]
+    
+    // 단순 곡률 계수 0.2
+    const cp1x = curr.x + (next.x - curr.x) * 0.3
+    const cp2x = next.x - (next.x - curr.x) * 0.3
+    
+    d += ` C ${cp1x},${curr.y} ${cp2x},${next.y} ${next.x},${next.y}`
+  }
+  return d
+})
+
+// 영역 채우기용 Path
+const trendAreaPath = computed(() => {
+  const points = trendSvgPoints.value
+  if (points.length < 2) return ''
+  const baseLine = chartH - paddingY // 가로 축 라인 위치 (195)
+  return `${trendPath.value} L ${points[points.length-1].x},${baseLine} L ${points[0].x},${baseLine} Z`
+})
 const trendChartWidth = computed(() => {
   const n = filteredTrendData.value.length
   return Math.max(900, n * 32)
 })
 
-// Y축 눈금 (50만원 단위)
+// Y축 눈금 (5단계 자동 분할)
 const yTicks = computed(() => {
   const max = trendMax.value
-  const step = 500000
+  const step = 100000 // 10만원 단위
+  const count = Math.ceil(max / step)
   const ticks = []
-  for (let v = 0; v <= max; v += step) {
-    ticks.push(v)
+  for (let i = 0; i <= count; i++) {
+    ticks.push(i * step)
   }
   return ticks.reverse()
 })
+
+// X축 라벨 표시 여부 (5일 간격 및 마지막 날)
+const shouldShowXLabel = (day, index, total) => {
+  const d = parseInt(day)
+  return d === 1 || d % 5 === 0 || index === total - 1
+}
+
+// 툴팁 상태
+const tooltip = ref({ show: false, x: 0, y: 0, date: '', amount: 0 })
+const showTooltip = (e, p) => {
+  tooltip.value = {
+    show: true,
+    x: p.x,
+    y: p.y - 10,
+    date: p.fullDate,
+    amount: p.amount
+  }
+}
+const hideTooltip = () => { tooltip.value.show = false }
 
 // 기간 초기화
 const resetTrendRange = () => {
   trendStartDate.value = ''
   trendEndDate.value = ''
-  pickState.value = 'start'
+  showStartCalendar.value = false
+  showEndCalendar.value = false
   hoveredDate.value = ''
-  showCalendar.value = false
 }
 
 /* ── 포맷 ── */
@@ -422,17 +470,37 @@ const downloadPDF = async () => {
     <!-- 매출 추이 차트 -->
     <div v-if="showSalesTrend && activeTab === 'monthly' && trendData.length > 0" class="trend-chart-card">
       <div class="trend-chart-header">
-        <h3>📈 일자별 매출 추이</h3>
+        <h3>{{ chartTitle }}</h3>
         <div class="trend-range-info">
-          <div class="cal-trigger-wrap">
-            <button class="cal-trigger-btn" @click="showCalendar = !showCalendar">
-              📅 {{ rangeLabel }}
+          <div class="filter-controls">
+            <!-- 시작일 선택 -->
+            <div class="cal-trigger-wrap">
+              <button class="cal-input-btn" @click="showStartCalendar = !showStartCalendar; showEndCalendar = false">
+                <span class="btn-label">시작일</span>
+                <span class="btn-value">{{ trendStartDate ? trendStartDate.substring(5).replace('-', '월 ') + '일' : '선택' }}</span>
+              </button>
+            </div>
+
+            <span class="filter-separator">~</span>
+
+            <!-- 종료일 선택 -->
+            <div class="cal-trigger-wrap">
+              <button class="cal-input-btn" @click="showEndCalendar = !showEndCalendar; showStartCalendar = false" :disabled="!trendStartDate">
+                <span class="btn-label">종료일</span>
+                <span class="btn-value">{{ trendEndDate ? trendEndDate.substring(5).replace('-', '월 ') + '일' : '선택' }}</span>
+              </button>
+            </div>
+
+            <button v-if="trendStartDate || trendEndDate" class="range-reset-btn" @click="resetTrendRange">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              전체 보기
             </button>
-            <!-- 달력 팝업 -->
-            <div v-if="showCalendar" class="cal-dropdown">
+
+            <!-- 중앙 정렬 달력 Popover -->
+            <div v-if="showStartCalendar || showEndCalendar" class="cal-dropdown centered">
               <div class="cal-dropdown-header">
                 <span class="cal-month-label">{{ selectedMonth.split('-')[0] }}년 {{ selectedMonth.split('-')[1] }}월</span>
-                <span class="cal-hint">{{ pickState === 'start' ? '시작일 선택' : '종료일 선택' }}</span>
+                <span class="cal-hint">{{ showStartCalendar ? '시작일 선택' : '종료일 선택' }}</span>
               </div>
               <div class="cal-weekdays">
                 <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -441,37 +509,57 @@ const downloadPDF = async () => {
                 <div
                   v-for="(cell, i) in calendarDays"
                   :key="i"
-                  :class="['cal-day', cell ? getDayClass(cell.date) : 'empty']"
-                  @click="cell && onDayClick(cell.date)"
-                  @mouseenter="cell && (hoveredDate = cell.date)"
-                  @mouseleave="hoveredDate = ''"
+                  :class="['cal-day', cell ? getDayClass(cell.date, showStartCalendar ? 'start' : 'end') : 'empty']"
+                  @click="cell && (showStartCalendar ? onStartDayClick(cell.date) : onEndDayClick(cell.date))"
                 >
                   <span v-if="cell">{{ cell.day }}</span>
                 </div>
               </div>
             </div>
           </div>
-          <button v-if="trendStartDate" class="range-reset-btn" @click="resetTrendRange">초기화</button>
         </div>
       </div>
       <div class="trend-chart-body">
         <div class="trend-chart-scroll">
           <svg :viewBox="`0 0 ${trendChartWidth} 260`" :style="{ width: trendChartWidth + 'px', minWidth: '100%' }" class="trend-svg">
             <!-- 가로 가입드 라인 -->
-            <line v-for="(tick, i) in yTicks" :key="'g'+i" x1="55" :x2="trendChartWidth - 20" :y1="25 + i * (170 / (yTicks.length - 1))" :y2="25 + i * (170 / (yTicks.length - 1))" stroke="#e2e8f0" stroke-width="1" />
+            <line v-for="(tick, i) in yTicks" :key="'g'+i" x1="55" :x2="trendChartWidth - 20" :y1="paddingY + (1 - tick / trendMax) * (chartH - paddingY * 2)" :y2="paddingY + (1 - tick / trendMax) * (chartH - paddingY * 2)" stroke="#e2e8f0" stroke-width="1" />
             <!-- Y축 라벨 -->
-            <text v-for="(tick, i) in yTicks" :key="'yl'+i" x="50" :y="29 + i * (170 / (yTicks.length - 1))" text-anchor="end" fill="#94a3b8" font-size="10">{{ tick >= 10000 ? (tick / 10000) + '만' : fmt(tick) }}</text>
+            <text v-for="(tick, i) in yTicks" :key="'yl'+i" x="50" :y="paddingY + 4 + (1 - tick / trendMax) * (chartH - paddingY * 2)" text-anchor="end" fill="#94a3b8" font-size="10">{{ tick >= 10000 ? (tick / 10000) + '만' : fmt(tick) }}</text>
             <!-- 영역 채우기 -->
-            <polygon v-if="trendSvgPoints.length > 1" :points="`55,195 ${trendPolyline} ${trendSvgPoints[trendSvgPoints.length-1].x},195`" fill="url(#trendGrad)" opacity="0.12" />
-            <!-- 선 -->
-            <polyline v-if="trendSvgPoints.length > 1" :points="trendPolyline" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path v-if="trendSvgPoints.length > 1" :d="trendAreaPath" fill="url(#trendGrad)" opacity="0.15" />
+            
+            <!-- 선 (Smooth Path) -->
+            <path v-if="trendSvgPoints.length > 1" :d="trendPath" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            
             <!-- 포인트 -->
             <g v-for="(p, i) in trendSvgPoints" :key="i">
-              <circle :cx="p.x" :cy="p.y" r="4" fill="white" stroke="#6366f1" stroke-width="2" class="trend-point" />
-              <text :x="p.x" :y="p.y - 12" text-anchor="middle" fill="#475569" font-size="8.5" font-weight="600" class="trend-value-label">₩{{ fmt(p.amount) }}</text>
+              <circle 
+                :cx="p.x" :cy="p.y" r="3.5" 
+                fill="white" stroke="#6366f1" stroke-width="2" 
+                class="trend-point"
+                @mouseenter="showTooltip($event, p)"
+                @mouseleave="hideTooltip"
+              />
             </g>
-            <!-- X축 라벨 -->
-            <text v-for="(p, i) in trendSvgPoints" :key="'xl'+i" :x="p.x" y="248" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="500">{{ p.label }}일</text>
+
+            <!-- X축 라벨 (5일 간격 필터링) -->
+            <text 
+              v-for="(p, i) in trendSvgPoints" 
+              :key="'xl'+i" 
+              v-show="shouldShowXLabel(p.label, i, trendSvgPoints.length)"
+              :x="p.x" y="248" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="500"
+            >
+              {{ p.label }}일
+            </text>
+
+            <!-- 커스텀 툴팁 (SVG 내부) -->
+            <g v-if="tooltip.show" :transform="`translate(${tooltip.x}, ${tooltip.y})`">
+              <rect x="-50" y="-45" width="100" height="38" rx="6" fill="#1e293b" opacity="0.9" />
+              <text y="-30" text-anchor="middle" fill="white" font-size="10" font-weight="600">{{ tooltip.date }}</text>
+              <text y="-15" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700">₩{{ fmt(tooltip.amount) }}</text>
+              <path d="M -5 -7 L 0 0 L 5 -7 Z" fill="#1e293b" opacity="0.9" />
+            </g>
             <!-- 그라데이션 -->
             <defs>
               <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
@@ -612,21 +700,29 @@ const downloadPDF = async () => {
 .range-reset-btn { padding: 0.35rem 0.75rem; border-radius: 8px; border: 1px solid #ef4444; background: white; color: #ef4444; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: all 0.2s; }
 .range-reset-btn:hover { background: #ef4444; color: white; }
 
-/* ── 달력 커스텀 (간략) ── */
-.cal-trigger-wrap { position: relative; }
-.cal-trigger-btn { padding: 0.45rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: #f8fafc; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--text-dark); }
-.cal-dropdown { position: absolute; top: calc(100% + 8px); right: 0; width: 280px; background: white; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 50; padding: 1rem; }
-.cal-dropdown-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
-.cal-month-label { font-weight: 700; font-size: 0.9rem; }
-.cal-hint { font-size: 0.75rem; color: var(--primary); font-weight: 600; }
+/* ── 달력 커스텀 ── */
+.filter-controls { display: flex; align-items: center; gap: 0.5rem; background: #f1f5f9; padding: 0.35rem; border-radius: 12px; position: relative; }
+.filter-separator { color: #94a3b8; font-weight: 700; font-size: 0.9rem; }
+.cal-trigger-wrap { position: static; }
+.cal-input-btn { display: flex; flex-direction: column; align-items: flex-start; padding: 0.4rem 1rem; border-radius: 9px; border: 1px solid transparent; background: white; cursor: pointer; transition: all 0.2s; min-width: 100px; text-align: left; }
+.cal-input-btn:hover:not(:disabled) { border-color: var(--primary); box-shadow: 0 2px 8px rgba(99,102,241,0.1); }
+.cal-input-btn:disabled { opacity: 0.6; cursor: not-allowed; background: #f8fafc; }
+.btn-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+.btn-value { font-size: 0.85rem; font-weight: 700; color: #1e293b; }
+
+.cal-dropdown { position: absolute; top: calc(100% + 10px); width: 260px; background: white; border: 1px solid var(--border-color); border-radius: 14px; box-shadow: 0 15px 35px rgba(0,0,0,0.12); z-index: 50; padding: 1.25rem; }
+.cal-dropdown.centered { left: 50%; transform: translateX(-50%); }
+.cal-dropdown-header { margin-bottom: 0.75rem; text-align: center; }
+.cal-hint { display: block; font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-top: 2px; }
+.cal-month-label { font-weight: 800; font-size: 0.95rem; color: #1e293b; }
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 0.5rem; }
-.cal-weekdays span { text-align: center; font-size: 0.75rem; color: #94a3b8; font-weight: 600; }
+.cal-weekdays span { text-align: center; font-size: 0.75rem; color: #94a3b8; font-weight: 700; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.cal-day { height: 32px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-.cal-day:hover:not(.empty) { background: #f1f5f9; }
-.cal-day.range-start, .cal-day.range-end { background: var(--primary) !important; color: white; font-weight: 700; }
-.cal-day.in-range { background: #eff6ff; color: var(--primary); font-weight: 600; }
-.cal-day.hover-range { background: #f8fafc; }
+.cal-day { height: 32px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; border-radius: 8px; transition: all 0.15s; font-weight: 500; color: #475569; }
+.cal-day:hover:not(.empty):not(.disabled):not(.selected) { background: #f1f5f9; color: var(--primary); }
+.cal-day.selected { background: var(--primary) !important; color: white !important; font-weight: 700; }
+.cal-day.disabled { opacity: 0.25; cursor: not-allowed; }
+.cal-day.in-range:not(.selected) { background: #eef2ff; color: var(--primary); }
 
 .trend-chart-body { padding: 1.5rem; }
 .trend-chart-scroll { overflow-x: auto; padding-bottom: 1rem; }

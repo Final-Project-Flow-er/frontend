@@ -74,38 +74,6 @@ onMounted(() => {
 
 watch([selectedDate, selectedMonth, activeTab, selectedFilter, currentPage], fetchVouchers)
 
-/* ── 월별 매출 데이터 (상단 요약/그래프 레이어용) ── */
-const showGraph = ref(false)
-const trendData = ref([])
-const maxSales = computed(() => Math.max(...trendData.value.map(d => d.amount), 1))
-
-const fetchTrendData = async () => {
-    try {
-        const [year, month] = selectedMonth.value.split('-').map(Number)
-        const start = `${selectedMonth.value}-01`
-        const lastDay = new Date(year, month, 0).getDate()
-        const end = `${selectedMonth.value}-${pad(lastDay)}`
-        
-        const res = await franchiseSettlementsApi.getMonthlyDailyGraph({
-            month: selectedMonth.value,
-            start,
-            end
-        })
-        trendData.value = res.map(d => ({
-            month: d.date.split('-')[2] + '일',
-            sales: d.amount
-        }))
-    } catch (error) {
-        console.error('Failed to fetch trend data:', error)
-    }
-}
-
-watch(showGraph, (val) => {
-    if (val && trendData.value.length === 0) {
-        fetchTrendData()
-    }
-})
-
 /* ── 포맷 ── */
 const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n || 0))
 
@@ -225,46 +193,6 @@ const downloadExcel = async () => {
           <button :disabled="currentPage === totalPages - 1" @click="currentPage++">다음</button>
       </div>
     </div>
-
-    <!-- 월별 그래프 (월별 탭만) -->
-    <div v-if="activeTab === 'monthly'" class="graph-section">
-      <div class="table-header">
-        <h3>월별 매출 추이</h3>
-        <button class="graph-toggle" @click="showGraph = !showGraph">
-          {{ showGraph ? '그래프 숨기기' : '그래프 조회하기' }}
-        </button>
-      </div>
-      <div v-if="showGraph" class="chart-area">
-        <div class="chart-container">
-          <div class="chart-y-labels">
-            <span>{{ fmt(maxSales) }}</span>
-            <span>{{ fmt(Math.round(maxSales * 0.75)) }}</span>
-            <span>{{ fmt(Math.round(maxSales * 0.5)) }}</span>
-            <span>{{ fmt(Math.round(maxSales * 0.25)) }}</span>
-            <span>0</span>
-          </div>
-          <div class="chart-bars">
-            <div
-              v-for="(d, idx) in trendData"
-              :key="idx"
-              class="bar-col"
-            >
-              <div class="bar-wrapper">
-                <div
-                  class="bar"
-                  :style="{ height: (d.sales / maxSales * 100) + '%' }"
-                  :title="'₩ ' + fmt(d.sales)"
-                >
-                  <span v-if="d.sales > 0" class="bar-label">{{ fmt(d.sales) }}</span>
-                </div>
-              </div>
-              <span class="bar-month">{{ d.month }}</span>
-            </div>
-            <div v-if="trendData.length === 0" class="empty-chart">데이터가 없습니다.</div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -331,21 +259,4 @@ const downloadExcel = async () => {
 .type-refund { background: #d1fae5; color: #059669; }
 .type-loss { background: #fee2e2; color: #dc2626; }
 .type-adjust { background: #f1f5f9; color: #475569; }
-
-/* ── 그래프 ── */
-.graph-section { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 1.5rem; }
-.graph-toggle { padding: 0.45rem 1rem; border-radius: 8px; border: 1px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
-.graph-toggle:hover { background: var(--primary); color: white; }
-.chart-area { padding: 1.5rem; }
-.chart-container { display: flex; gap: 0.5rem; height: 280px; }
-.chart-y-labels { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; font-size: 0.7rem; color: var(--text-light); min-width: 70px; padding-bottom: 24px; }
-.chart-bars { flex: 1; display: flex; align-items: flex-end; gap: 4px; border-left: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 0 0.5rem; position: relative; overflow-x: auto; }
-.bar-col { flex: 0 0 40px; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.bar-wrapper { flex: 1; display: flex; align-items: flex-end; width: 100%; }
-.bar { width: 100%; max-width: 32px; margin: 0 auto; background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%); border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.5s ease; position: relative; cursor: pointer; }
-.bar:hover { opacity: 0.85; }
-.bar-label { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: var(--text-light); white-space: nowrap; display: none; }
-.bar:hover .bar-label { display: block; }
-.bar-month { font-size: 0.7rem; color: var(--text-light); margin-top: 6px; white-space: nowrap; transform: rotate(-45deg); transform-origin: top; }
-.empty-chart { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; }
 </style>
