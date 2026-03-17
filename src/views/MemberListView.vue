@@ -47,7 +47,7 @@
           <input 
             type="text" 
             v-model="filters.orgName" 
-            placeholder="가맹점/공장명 검색..."
+            placeholder="소속 사업장 검색"
           >
         </div>
 

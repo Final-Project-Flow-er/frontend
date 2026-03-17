@@ -141,27 +141,26 @@
               <!-- 소속 정보 검색 -->
               <div class="info-field">
                 <label>{{ getOrgLabel(member.role) }}</label>
-                <select 
+                <div v-if="isEditing" class="search-select-group">
+                  <input 
+                    type="text" 
+                    v-model="member.orgName" 
+                    placeholder="사업장을 검색하여 선택하세요" 
+                    readonly 
+                    @click="openUnitModal"
+                  >
+                  <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    검색
+                  </button>
+                </div>
+                <input 
+                  v-else 
+                  type="text" 
                   v-model="member.orgName" 
-                  :disabled="!isEditing"
-                  :class="{ 'input-disabled': !isEditing }"
+                  disabled 
+                  class="input-disabled"
                 >
-                  <template v-if="member.role === 'HQ'">
-                    <option v-for="org in hqOptions" :key="org.id" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </template>
-                  <template v-else-if="member.role === 'FRANCHISE'">
-                    <option v-for="org in franchiseOptions" :key="org.id" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </template>
-                  <template v-else-if="member.role === 'FACTORY'">
-                    <option v-for="org in factoryOptions" :key="org.id" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </template>
-                </select>
               </div>
 
               <div class="info-field">
@@ -185,6 +184,16 @@
       <p>회원 정보를 찾을 수 없거나 불러오는데 실패했습니다.</p>
       <button @click="goBack" class="btn-back-error">목록으로 돌아가기</button>
     </div>
+    
+    <!-- 사업장 선택 모달 -->
+    <BusinessUnitSelectionModal 
+      v-if="member"
+      :is-open="isUnitModalOpen"
+      :title="member.role === 'HQ' ? '본사' : (member.role === 'FRANCHISE' ? '가맹점' : '공장')"
+      :units="member.role === 'HQ' ? hqOptions : (member.role === 'FRANCHISE' ? franchiseOptions : factoryOptions)"
+      @close="isUnitModalOpen = false"
+      @select="handleUnitSelect"
+    />
   </div>
 </template>
 
@@ -192,6 +201,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserManagementStore } from '../stores/userManagement'
+import BusinessUnitSelectionModal from './BusinessUnitSelectionModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -203,6 +213,20 @@ const isEditing = ref(false)
 const isLoading = ref(true)
 const member = ref(null)
 const originalMember = ref(null)
+
+const isUnitModalOpen = ref(false)
+const openUnitModal = () => {
+  if (isEditing.value) {
+    isUnitModalOpen.value = true
+  }
+}
+
+const handleUnitSelect = (unit) => {
+  member.value.orgName = unit.name
+  member.value.orgCode = unit.businessNumber || unit.code || ''
+  member.value.businessUnitId = unit.id
+  isUnitModalOpen.value = false
+}
 
 // 사업장 옵션 (백엔드 연동)
 const hqOptions = computed(() => userManagementStore.businessUnits.hq)
@@ -790,6 +814,37 @@ const handlePhoneInput = (e) => {
   .card-body {
     grid-template-columns: 1fr;
   }
+}
+
+.search-select-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search-select-group input {
+  flex: 1;
+  cursor: pointer;
+  background: #f8fafc;
+}
+
+.btn-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1rem;
+  background: #0f172a;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-search-trigger:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
 }
 
 .loading-state {

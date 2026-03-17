@@ -40,7 +40,7 @@
                   type="tel"
                   v-model="companyData.officePhone"
                   @input="handlePhoneInput"
-                  placeholder="02-000-0000"
+                  placeholder="연락처를 입력하세요"
                   maxlength="13"
                   required
                 >
@@ -96,7 +96,7 @@
                 <input
                   type="number"
                   v-model.number="companyData.ownedVehicles"
-                  placeholder="대"
+                  placeholder="보유 차량 대수를 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -107,7 +107,7 @@
                 <input
                   type="number"
                   v-model.number="companyData.unitPrice"
-                  placeholder="원/km"
+                  placeholder="km당 운송 단가를 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -155,7 +155,7 @@
                   type="text"
                   v-model="vehicleData.vehicleNumber"
                   @input="handleVehicleNumberInput"
-                  placeholder="ex. 12가 3456"
+                  placeholder="차량 번호를 입력하세요"
                   maxlength="9"
                   required
                 >
@@ -194,7 +194,7 @@
                 <input
                   type="number"
                   v-model.number="vehicleData.maxLoad"
-                  placeholder="ex. 1"
+                  placeholder="최대 적재 중량을 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -216,7 +216,7 @@
                   type="tel"
                   v-model="vehicleData.driverPhone"
                   @input="handleDriverPhoneInput"
-                  placeholder="010-0000-0000"
+                  placeholder="연락처를 입력하세요"
                   maxlength="13"
                   required
                 >
