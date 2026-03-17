@@ -6,7 +6,7 @@
 
     <nav class="menu">
       <template v-for="(group, index) in filteredMenuGroups" :key="index">
-        <div class="menu-group">{{ group.title }}</div>
+      <!-- <div class="menu-group">{{ group.title }}</div> -->
         <ul>
           <li
               v-for="item in group.items"
@@ -49,6 +49,13 @@ const router = useRouter()
 const route = useRoute()
 
 const menuGroups = ref([
+  {
+    role: ['admin', 'headOffice', 'franchise', 'factory'],
+    title: 'GENERAL',
+    items: [
+      { name: '대시보드', path: '/', icon: 'home' }
+    ]
+  },
   {
     role: ['admin', 'headOffice'],
     title: '본사',
@@ -166,7 +173,22 @@ const menuGroups = ref([
 ])
 
 const userRole = sessionStorage.getItem('userRole')
-const filteredMenuGroups = ref(menuGroups.value.filter(group => group.role.includes(userRole)))
+// 모든 메뉴를 하나로 합침
+const allItems = menuGroups.value
+  .filter(group => group.role.includes(userRole))
+  .flatMap(group => group.items)
+
+// 중복 제거 (대시보드 홈 등)
+const uniqueItems = []
+const seenPaths = new Set()
+for (const item of allItems) {
+  if (!seenPaths.has(item.path)) {
+    uniqueItems.push(item)
+    if (item.path) seenPaths.add(item.path)
+  }
+}
+
+const filteredMenuGroups = ref([{ title: '', items: uniqueItems }])
 
 const goHome = () => {
   router.push({ path: '/' })
@@ -274,7 +296,7 @@ const navigateTo = (path) => {
 }
 
 
-.menu-group { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 0 1.5rem 0.5rem; margin-top: 1.5rem; }
+/* .menu-group { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 0 1.5rem 0.5rem; margin-top: 1.5rem; } */
 
 .menu ul { list-style: none; padding: 0; margin: 0; }
 

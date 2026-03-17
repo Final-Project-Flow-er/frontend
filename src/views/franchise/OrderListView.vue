@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { getOrderList } from '@/api/franchiseOrders.js'
+import { getReturnList } from '@/api/franchiseReturns.js'
 
 const router = useRouter()
 
@@ -28,180 +30,161 @@ const filter = ref({
   totalAmount: ''
 })
 
-// [데이터 1] 발주 데이터
-const orders = ref([
-  {
-    orderStatus: '대기',
-    orderDate: '2023-10-25',
-    orderCode: 'SE0120231025001',
-    recipientName: '김철수',
-    recipientPhone: '010-1234-5678',
-    arrivalDate: '2023-10-27',
-    arrivalTime: '14:00',
-    products: [
-      { productCode: 'OR0101', quantity: 50, amount: 5000 },
-      { productCode: 'RO0201', quantity: 10, amount: 7000 }
-    ]
-  },
-  {
-    orderStatus: '배송중',
-    orderDate: '2023-10-24',
-    orderCode: 'SE0120231024002',
-    recipientName: '이영희',
-    recipientPhone: '010-9876-5432',
-    arrivalDate: '2023-10-26',
-    arrivalTime: '10:00',
-    products: [
-      { productCode: 'RO0201', quantity: 30, amount: 7000 }
-    ]
-  },
-  {
-    orderStatus: '배송완료',
-    orderDate: '2023-10-23',
-    orderCode: 'SE0120231023003',
-    recipientName: '박민수',
-    recipientPhone: '010-5555-4444',
-    arrivalDate: '2023-10-25',
-    arrivalTime: '16:30',
-    products: [
-      { productCode: 'MA0301', quantity: 20, amount: 7000 },
-      { productCode: 'OR0403', quantity: 5, amount: 13000 }
-    ]
-  },
-  {
-    orderStatus: '취소',
-    orderDate: '2023-10-22',
-    orderCode: 'SE0120231022004',
-    recipientName: '최지원',
-    recipientPhone: '010-1111-2222',
-    arrivalDate: '-',
-    arrivalTime: '-',
-    products: [
-      { productCode: 'OR0403', quantity: 10, amount: 13000 }
-    ]
-  },
-])
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+const formatDateTime = (iso) => iso ? iso.replace('T', ' ').substring(0, 16) : ''
+const formatTime = (iso) => iso ? iso.replace('T', ' ').substring(11, 16) : ''
+
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+
+// 백엔드 영문 상태 → 한글 표시 매핑
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+
+const RETURN_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+
+const toOrderStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+const toReturnStatusLabel = (s) => RETURN_STATUS_LABEL[s] || s
+
+// [데이터 1] 발주 데이터 (flat from API)
+const rawOrders = ref([])
+const loading = ref(false)
+const error = ref(null)
+
+const fetchOrders = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    rawOrders.value = (await getOrderList()) || []
+  } catch (e) {
+    console.error('발주 조회 실패:', e)
+    error.value = e.message || '발주 데이터를 불러오지 못했습니다.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchReturns = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    rawReturns.value = (await getReturnList()) || []
+  } catch (e) {
+    console.error('반품 조회 실패:', e)
+    error.value = e.message || '반품 데이터를 불러오지 못했습니다.'
+  } finally {
+    loading.value = false
+  }
+}
+
+// 탭 전환 시 해당 API 호출
+watch(viewMode, (mode) => {
+  if (mode === 'order') fetchOrders()
+  else fetchReturns()
+})
+
+// 초기 로드: 발주 내역
+onMounted(() => fetchOrders())
+
+// Build order total per orderCode
+const orderTotalMap = computed(() => {
+  const map = {}
+  rawOrders.value.forEach(item => {
+    if (!map[item.orderCode]) map[item.orderCode] = 0
+    map[item.orderCode] += Number(item.totalPrice || 0)
+  })
+  return map
+})
 
 const filteredFlatOrders = computed(() => {
-  let flatList = []
-  orders.value.forEach(order => {
-    const orderTotalAmount = order.products.reduce((acc, p) => acc + (p.quantity * p.amount), 0)
-    order.products.forEach(product => {
-      flatList.push({
-        orderCode: order.orderCode,
-        orderStatus: order.orderStatus,
-        orderDate: order.orderDate,
-        recipientName: order.recipientName,
-        recipientPhone: order.recipientPhone,
-        arrivalDate: order.arrivalDate,
-        arrivalTime: order.arrivalTime,
-        orderTotalAmount: orderTotalAmount,
-        productCode: product.productCode,
-        quantity: product.quantity,
-        unitPrice: product.amount,
-        lineTotalAmount: product.quantity * product.amount
-      })
-    })
-  })
-  return flatList.filter(item => {
+  return rawOrders.value.map(item => ({
+    orderCode: item.orderCode,
+    orderStatus: item.orderStatus,
+    orderDate: formatDate(item.requestedDate),
+    recipientName: item.receiver || '',
+    recipientPhone: '',
+    arrivalDate: formatDate(item.deliveryDate),
+    arrivalTime: formatTime(item.deliveryDate),
+    orderTotalAmount: orderTotalMap.value[item.orderCode] || 0,
+    productCode: item.productCode,
+    quantity: item.quantity ?? '-',
+    unitPrice: item.unitPrice,
+    lineTotalAmount: Number(item.totalPrice || 0)
+  })).filter(item => {
     const matchStatus = !filter.value.status || item.orderStatus === filter.value.status
     const matchOrderDate = !filter.value.orderDate || item.orderDate.includes(filter.value.orderDate)
     const matchOrderCode = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchRecipientName = !filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)
-    const matchRecipientPhone = !filter.value.recipientPhone || item.recipientPhone.includes(filter.value.recipientPhone)
     const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
-    const matchArrivalTime = !filter.value.arrivalTime || item.arrivalTime.includes(filter.value.arrivalTime)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
-    return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchRecipientPhone && matchArrivalDate && matchArrivalTime && matchProductCode
+    return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchArrivalDate && matchProductCode
   })
 })
 
 // [데이터 2] 반품 데이터
-const returns = ref([
-  {
-    orderCode: 'SE0120231026001',
-    returnCode: 'RESE0120231026001',
-    boxCode: 'SE01FA0120231026OR0101001',
-    idCode: 'SE01FA01AOR0101B001',
-    productCode: 'OR0101',
-    productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    quantity: 1,
-    amount: 5000,
-    totalAmount: 5000,
-    recipientName: '김철수',
-    recipientPhone: '010-1234-5678',
-    franchiseCode: 'SE01',
-    details: '박스 파손 심함',
-    reason: '상품 하자',
-    date: '2023-10-26',
-    status: '대기'
-  },
-  {
-    orderCode: 'SE0120231025005',
-    returnCode: 'RESE0120231025005',
-    boxCode: 'SE01FA0120231025RO0201005',
-    idCode: 'SE01FA01ARO0201B005',
-    productCode: 'RO0201',
-    productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    quantity: 2,
-    amount: 7000,
-    totalAmount: 14000,
-    recipientName: '이영희',
-    recipientPhone: '010-9876-5432',
-    franchiseCode: 'SE01',
-    details: '고객 반품 요청',
-    reason: '오발주',
-    date: '2023-10-25',
-    status: '접수'
-  },
-  {
-    orderCode: 'SE0120231024010',
-    returnCode: 'RESE0120231024010',
-    boxCode: 'SE01FA0120231024MA0301010',
-    idCode: 'SE01FA01AMA0301B010',
-    productCode: 'MA0301',
-    productName: '마라 떡볶이 밀키트 매운맛 1,2인분',
-    quantity: 1,
-    amount: 7000,
-    totalAmount: 7000,
-    recipientName: '박민수',
-    recipientPhone: '010-5555-4444',
-    franchiseCode: 'SE01',
-    details: '오배송 확인됨',
-    reason: '오발주',
-    date: '2023-10-24',
-    status: '배송중'
-  }
-])
+const rawReturns = ref([])
 
 const filteredReturns = computed(() => {
-  return returns.value.filter(item => {
+  return rawReturns.value.map(item => ({
+    returnCode: item.returnCode,
+    status: item.status,
+    orderCode: item.orderCode,
+    productCode: item.productCode,
+    productName: item.productName,
+    amount: Number(item.unitPrice || 0),
+    quantity: item.quantity,
+    totalAmount: Number(item.totalPrice || 0),
+    reason: TYPE_LABEL[item.type] || item.type,
+    date: formatDate(item.requestedDate),
+    boxCode: '',
+    idCode: ''
+  })).filter(item => {
     const matchOrder = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchReturn = !filter.value.returnCode || item.returnCode.includes(filter.value.returnCode)
-    const matchBox = !filter.value.boxCode || item.boxCode.includes(filter.value.boxCode)
-    const matchId = !filter.value.idCode || item.idCode.includes(filter.value.idCode)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
     const matchQty = !filter.value.quantity || String(item.quantity).includes(filter.value.quantity)
     const matchAmount = !filter.value.amount || String(item.amount).includes(filter.value.amount)
     const matchTotal = !filter.value.totalAmount || String(item.totalAmount).includes(filter.value.totalAmount)
-
-    return matchOrder && matchReturn && matchBox && matchId && matchProductCode && matchProductName && matchQty && matchAmount && matchTotal
+    return matchOrder && matchReturn && matchProductCode && matchProductName && matchQty && matchAmount && matchTotal
   })
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '배송 완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger',
-  '검수': 'status-primary',
-  '대금 차감 완료': 'status-ok',
-  '대금 차감 거절': 'status-danger'
-}[s] || '')
+const getStatusClass = (s) => {
+  const label = ORDER_STATUS_LABEL[s] || RETURN_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '부분 접수': 'status-info',
+    '배송 대기': 'status-warning',
+    '배송대기': 'status-warning',
+    '배송중': 'status-primary',
+    '배송 완료': 'status-ok',
+    '배송완료': 'status-ok',
+    '취소': 'status-danger',
+    '반려': 'status-danger',
+    '검수중': 'status-primary',
+    '대금 차감 완료': 'status-ok',
+    '대금 차감 거절': 'status-danger'
+  }[label] || ''
+}
 
 const formatNumber = (num) => new Intl.NumberFormat('ko-KR').format(num)
 
@@ -209,7 +192,7 @@ const goToDetail = (item) => {
   if (viewMode.value === 'order') {
     router.push({ name: 'franchise-order-detail', params: { id: item.orderCode } })
   } else {
-    router.push(`/franchise/returns/${item.returnCode}`)
+    router.push({ name: 'franchise-return-detail', params: { id: item.returnCode } })
   }
 }
 </script>
@@ -271,13 +254,14 @@ const goToDetail = (item) => {
           <label>발주 상태</label>
           <select v-model="filter.status">
             <option value="">전체</option>
-            <option value="대기">대기</option>
-            <option value="접수">접수</option>
-            <option value="부분 접수">부분 접수</option>
-            <option value="배송중">배송중</option>
-            <option value="배송완료">배송완료</option>
-            <option value="취소">취소</option>
-            <option value="반려">반려</option>
+            <option value="PENDING">대기</option>
+            <option value="ACCEPTED">접수</option>
+            <option value="PARTIAL">부분 접수</option>
+            <option value="SHIPPING_PENDING">배송 대기</option>
+            <option value="SHIPPING">배송중</option>
+            <option value="COMPLETED">배송 완료</option>
+            <option value="CANCELED">취소</option>
+            <option value="REJECTED">반려</option>
           </select>
         </div>
         <div class="filter-group">
@@ -321,6 +305,9 @@ const goToDetail = (item) => {
       </div>
     </div>
 
+    <!-- 로딩/에러 표시 -->
+    <div v-if="loading" class="status-message">데이터를 불러오는 중...</div>
+
     <!-- Data Table -->
     <div class="data-table-card">
       <!-- 1. 발주 테이블 -->
@@ -346,8 +333,8 @@ const goToDetail = (item) => {
             @click="goToDetail(item)"
             class="clickable-row"
         >
-          <td class="sku-cell">{{ item.orderCode }}</td>
-          <td><span :class="['status-tag', getStatusClass(item.orderStatus)]">{{ item.orderStatus }}</span></td>
+          <td class="sku-cell code-order">{{ item.orderCode }}</td>
+          <td><span :class="['status-tag', getStatusClass(item.orderStatus)]">{{ toOrderStatusLabel(item.orderStatus) }}</span></td>
           <td class="sku-cell small">{{ item.productCode }}</td>
           <td class="text-right">{{ formatNumber(item.unitPrice) }}</td>
           <td class="text-right">{{ formatNumber(item.quantity) }}</td>
@@ -385,7 +372,7 @@ const goToDetail = (item) => {
             class="clickable-row"
         >
           <td class="sku-cell">{{ item.returnCode }}</td>
-          <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
+          <td><span :class="['status-tag', getStatusClass(item.status)]">{{ toReturnStatusLabel(item.status) }}</span></td>
           <td>{{ item.orderCode }}</td>
           <td class="sku-cell small">{{ item.productCode }}</td>
           <td style="min-width: 150px; white-space: normal;">{{ item.productName }}</td>
@@ -474,10 +461,10 @@ const goToDetail = (item) => {
   overflow-x: auto;
 }
 .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-.data-table th { text-align: left; padding: 0.75rem 1rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; vertical-align: middle; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; white-space: nowrap; vertical-align: middle; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .sku-cell.small { font-size: 0.9rem; }
 .name-cell { font-weight: 500; }
 .text-right { text-align: right; }
@@ -494,6 +481,9 @@ const goToDetail = (item) => {
 
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f8fafc; }
+
+.status-message { text-align: center; padding: 1rem; font-size: 0.95rem; color: var(--text-light); }
+.error-message { color: #991b1b; background: #fee2e2; border-radius: 8px; border: 1px solid #fecaca; }
 
 :root {
   --primary: #4f46e5;

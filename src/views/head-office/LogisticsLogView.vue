@@ -1,60 +1,118 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getTransportLogList } from '@/api/internalTransport'
 
 const router = useRouter()
 
-// Mock Data - Transport Logs
-const logs = ref([
-  { id: 1, time: '2026-02-12 14:30:15', status: '배송 대기', trackingNumber: 'TRK20260212001', company: '우리통상', vehicleType: '5톤 트럭', vehicleNumber: '서울 12가 3456', driverName: '홍길동', driverPhone: '010-1234-5678' },
-  { id: 2, time: '2026-02-12 14:15:00', status: '배송중', trackingNumber: 'TRK20260212002', company: '대한물류', vehicleType: '1톤 탑차', vehicleNumber: '경기 88나 9999', driverName: '김철수', driverPhone: '010-2222-3333' },
-  { id: 3, time: '2026-02-12 10:05:45', status: '배송 완료', trackingNumber: 'TRK20260211045', company: '에이원', vehicleType: '2.5톤 트럭', vehicleNumber: '인천 77다 1111', driverName: '이영희', driverPhone: '010-5555-6666' },
-  { id: 4, time: '2026-02-12 09:20:10', status: '배송중', trackingNumber: 'TRK20260212003', company: '우리통상', vehicleType: '1톤 탑차', vehicleNumber: '서울 55라 1234', driverName: '정지훈', driverPhone: '010-8888-9999' },
-  { id: 5, time: '2026-02-12 08:45:30', status: '배송 완료', trackingNumber: 'TRK20260211046', company: '대한물류', vehicleType: '5톤 트럭', vehicleNumber: '경기 22마 5678', driverName: '차유진', driverPhone: '010-4444-5555' },
-  { id: 6, time: '2026-02-11 17:30:00', status: '배송 완료', trackingNumber: 'TRK20260211001', company: '우리통상', vehicleType: '5톤 트럭', vehicleNumber: '서울 12가 3456', driverName: '홍길동', driverPhone: '010-1234-5678' },
-  { id: 7, time: '2026-02-11 16:15:20', status: '배송 완료', trackingNumber: 'TRK20260211002', company: '대한물류', vehicleType: '1톤 탑차', vehicleNumber: '경기 88나 9999', driverName: '김철수', driverPhone: '010-2222-3333' },
-  { id: 8, time: '2026-02-11 15:40:10', status: '배송 완료', trackingNumber: 'TRK20260211003', company: '에이원', vehicleType: '2.5톤 트럭', vehicleNumber: '인천 77다 1111', driverName: '이영희', driverPhone: '010-5555-6666' },
-  { id: 9, time: '2026-02-11 14:20:00', status: '배송 완료', trackingNumber: 'TRK20260211004', company: '우리통상', vehicleType: '1톤 탑차', vehicleNumber: '서울 55라 1234', driverName: '정지훈', driverPhone: '010-8888-9999' },
-  { id: 10, time: '2026-02-11 13:10:45', status: '배송 완료', trackingNumber: 'TRK20260211005', company: '대한물류', vehicleType: '5톤 트럭', vehicleNumber: '경기 22마 5678', driverName: '차유진', driverPhone: '010-4444-5555' },
-  { id: 11, time: '2026-02-10 18:00:00', status: '배송 완료', trackingNumber: 'TRK20260210001', company: '우리통상', vehicleType: '5톤 트럭', vehicleNumber: '서울 12가 3456', driverName: '홍길동', driverPhone: '010-1234-5678' },
-  { id: 12, time: '2026-02-10 17:15:30', status: '배송 완료', trackingNumber: 'TRK20260210002', company: '대한물류', vehicleType: '1톤 탑차', vehicleNumber: '경기 88나 9999', driverName: '김철수', driverPhone: '010-2222-3333' },
-  { id: 13, time: '2026-02-10 16:40:20', status: '배송 완료', trackingNumber: 'TRK20260210003', company: '에이원', vehicleType: '2.5톤 트럭', vehicleNumber: '인천 77다 1111', driverName: '이영희', driverPhone: '010-5555-6666' },
-  { id: 14, time: '2026-02-10 15:20:10', status: '배송 완료', trackingNumber: 'TRK20260210004', company: '우리통상', vehicleType: '1톤 탑차', vehicleNumber: '서울 55라 1234', driverName: '정지훈', driverPhone: '010-8888-9999' },
-  { id: 15, time: '2026-02-10 14:10:55', status: '배송 완료', trackingNumber: 'TRK20260210005', company: '대한물류', vehicleType: '5톤 트럭', vehicleNumber: '경기 22마 5678', driverName: '차유진', driverPhone: '010-4444-5555' },
-  { id: 16, time: '2026-02-09 18:00:00', status: '배송 완료', trackingNumber: 'TRK20260209001', company: '우리통상', vehicleType: '5톤 트럭', vehicleNumber: '서울 12가 3456', driverName: '홍길동', driverPhone: '010-1234-5678' },
-  { id: 17, time: '2026-02-09 17:15:30', status: '배송 완료', trackingNumber: 'TRK20260209002', company: '대한물류', vehicleType: '1톤 탑차', vehicleNumber: '경기 88나 9999', driverName: '김철수', driverPhone: '010-2222-3333' },
-  { id: 18, time: '2026-02-09 16:40:20', status: '배송 완료', trackingNumber: 'TRK20260209003', company: '에이원', vehicleType: '2.5톤 트럭', vehicleNumber: '인천 77다 1111', driverName: '이영희', driverPhone: '010-5555-6666' },
-  { id: 19, time: '2026-02-09 15:20:10', status: '배송 완료', trackingNumber: 'TRK20260209004', company: '우리통상', vehicleType: '1톤 탑차', vehicleNumber: '서울 55라 1234', driverName: '정지훈', driverPhone: '010-8888-9999' },
-  { id: 20, time: '2026-02-09 14:10:55', status: '배송 완료', trackingNumber: 'TRK20260209005', company: '대한물류', vehicleType: '5톤 트럭', vehicleNumber: '경기 22마 5678', driverName: '차유진', driverPhone: '010-4444-5555' }
-])
+// Transport Logs from API
+const logs = ref([])
+const currentPage = ref(1)
+const itemsPerPage = 15
+
+const fetchLogs = async () => {
+  try {
+    const data = await getTransportLogList()
+    logs.value = data
+  } catch (error) {
+    console.error('Failed to fetch transport logs:', error)
+  }
+}
+
+onMounted(() => {
+  fetchLogs()
+})
 
 const filter = ref({
   date: '',
   status: '',
-  company: ''
+  company: '',
+  vehicleType: ''
 })
 
-const companies = ['우리통상', '대한물류', '에이원']
-const statuses = ['배송 대기', '배송중', '배송 완료']
+const companies = computed(() => {
+  const names = logs.value.map(log => log.franchiseName)
+  return [...new Set(names)].filter(Boolean)
+})
+
+const statuses = [
+  { value: 'PENDING', label: '배송 대기' },
+  { value: 'IN_TRANSIT', label: '배송중' },
+  { value: 'DELIVERED', label: '배송 완료' }
+]
+
+const vehicleTypes = [
+  { value: 'CARGO', label: '카고' },
+  { value: 'WING_BODY', label: '윙바디' },
+  { value: 'REFRIGERATED_TOP', label: '냉동탑차' },
+  { value: 'CHILLED_TOP', label: '냉장탑차' },
+  { value: 'CONTAINER', label: '컨테이너 캐리어' }
+]
 
 const filteredLogs = computed(() => {
   return logs.value.filter(log => {
-    const logDate = log.time.split(' ')[0]
+    const logDate = log.createAt ? log.createAt.split('T')[0] : ''
     return (!filter.value.date || logDate === filter.value.date) &&
-           (!filter.value.status || log.status === filter.value.status) &&
-           (!filter.value.company || log.company === filter.value.company)
+           (!filter.value.status || log.deliverStatus === filter.value.status) &&
+           (!filter.value.company || log.franchiseName === filter.value.company) &&
+           (!filter.value.vehicleType || log.vehicleType === filter.value.vehicleType)
   })
 })
 
+// Pagination
+const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage))
+const paginatedLogs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredLogs.value.slice(start, end)
+})
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
 const goBack = () => router.back()
+
+const getStatusLabel = (status) => {
+  const s = statuses.find(item => item.value === status)
+  return s ? s.label : status
+}
 
 const getStatusClass = (status) => {
   switch (status) {
-    case '배송 대기': return 'status-pending'
-    case '배송중': return 'status-shipping'
-    case '배송 완료': return 'status-completed'
+    case 'PENDING': return 'status-pending'
+    case 'IN_TRANSIT': return 'status-shipping'
+    case 'DELIVERED': return 'status-completed'
     default: return ''
   }
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const s = String(date.getSeconds()).padStart(2, '0')
+  return {
+    date: `${y}-${m}-${d}`,
+    time: `${h}:${min}:${s}`
+  }
+}
+
+const getVehicleTypeLabel = (type) => {
+  const types = {
+    'CARGO': '카고',
+    'WING_BODY': '윙바디',
+    'REFRIGERATED_TOP': '냉동탑차',
+    'CHILLED_TOP': '냉장탑차',
+    'CONTAINER': '컨테이너 캐리어'
+  }
+  return types[type] || type
 }
 
 </script>
@@ -72,24 +130,31 @@ const getStatusClass = (status) => {
       <div class="filter-grid">
         <div class="filter-group">
           <label>날짜 선택</label>
-          <input type="date" v-model="filter.date" />
+          <input type="date" v-model="filter.date" @change="currentPage = 1" />
         </div>
         <div class="filter-group">
           <label>배송 상태</label>
-          <select v-model="filter.status">
+          <select v-model="filter.status" @change="currentPage = 1">
             <option value="">전체 상태</option>
-            <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
+            <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
           </select>
         </div>
         <div class="filter-group">
-          <label>운송 업체</label>
-          <select v-model="filter.company">
-            <option value="">전체 업체</option>
+          <label>가맹점명</label>
+          <select v-model="filter.company" @change="currentPage = 1">
+            <option value="">전체 가맹점</option>
             <option v-for="c in companies" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label>차량 종류</label>
+          <select v-model="filter.vehicleType" @change="currentPage = 1">
+            <option value="">전체 차량</option>
+            <option v-for="v in vehicleTypes" :key="v.value" :value="v.value">{{ v.label }}</option>
+          </select>
+        </div>
         <div class="filter-group reset-group">
-           <button class="reset-btn" @click="filter = { date: '', status: '', company: '' }">필터 초기화</button>
+           <button class="reset-btn" @click="filter = { date: '', status: '', company: '', vehicleType: '' }; currentPage = 1">필터 초기화</button>
         </div>
       </div>
     </div>
@@ -100,37 +165,72 @@ const getStatusClass = (status) => {
           <thead>
             <tr>
               <th>로그 시각</th>
+              <th>가맹점명</th>
+              <th>일시</th>
               <th>배송 상태</th>
+              <th>발주 번호</th>
+              <th>반품 번호</th>
               <th>운송장 번호</th>
-              <th>운송 업체</th>
-              <th>운송 차량</th>
+              <th>차량 종류</th>
               <th>차량 번호</th>
               <th>운송 기사</th>
-              <th>전화번호</th>
+              <th>무게 (kg)</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="log in filteredLogs" :key="log.id">
-              <td class="time-cell">{{ log.time.split(' ')[1] }} <span class="date-sub">{{ log.time.split(' ')[0] }}</span></td>
-              <td>
-                <span class="status-badge" :class="getStatusClass(log.status)">{{ log.status }}</span>
+            <tr v-for="log in paginatedLogs" :key="log.transportLogId">
+              <td class="time-cell">
+                {{ formatDate(log.createAt).time }}
+                <span class="date-sub">{{ formatDate(log.createAt).date }}</span>
               </td>
-              <td class="code-cell">{{ log.trackingNumber }}</td>
-              <td>{{ log.company }}</td>
-              <td>{{ log.vehicleType }}</td>
-              <td class="code-cell">{{ log.vehicleNumber }}</td>
+              <td class="name-cell">{{ log.franchiseName }}</td>
+              <td>{{ formatDate(log.createAt).date }} {{ formatDate(log.createAt).time }}</td>
+              <td>
+                <span class="status-badge" :class="getStatusClass(log.deliverStatus)">
+                  {{ getStatusLabel(log.deliverStatus) }}
+                </span>
+              </td>
+              <td class="code-cell">{{ log.orderCode || '-' }}</td>
+              <td class="code-cell">{{ log.returnCode || '-' }}</td>
+              <td class="code-cell">{{ log.trackingNumber || '-' }}</td>
+              <td>{{ getVehicleTypeLabel(log.vehicleType) }}</td>
+              <td class="code-cell">{{ log.vehicleNumber || '-' }}</td>
               <td class="name-cell">{{ log.driverName }}</td>
-              <td>{{ log.driverPhone }}</td>
+              <td>{{ (log.weight || 0).toLocaleString() }}</td>
             </tr>
             <tr v-if="filteredLogs.length === 0">
-              <td colspan="8" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
+              <td colspan="11" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination" v-if="totalPages > 0">
+        <button
+          class="page-btn"
+          :disabled="currentPage === 1"
+          @click="goToPage(currentPage - 1)"
+        >이전</button>
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          class="page-btn"
+          :class="{ active: currentPage === page }"
+          @click="goToPage(page)"
+        >
+          {{ page }}
+        </button>
+        <button
+          class="page-btn"
+          :disabled="currentPage === totalPages"
+          @click="goToPage(currentPage + 1)"
+        >다음</button>
+      </div>
     </div>
   </div>
 </template>
+
 
 <style scoped>
 .content-wrapper {
@@ -240,9 +340,10 @@ const getStatusClass = (status) => {
   position: sticky;
   top: 0;
   background: #f8fafc;
-  padding: 0.85rem;
-  text-align: left;
-  font-size: 0.8rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  text-align: center;
+  font-size: 0.9rem !important;
   font-weight: 600;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
@@ -250,21 +351,17 @@ const getStatusClass = (status) => {
 }
 
 .data-table td {
-  padding: 0.85rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.9rem;
+  font-size: 0.95rem !important;
+  line-height: 1.35 !important;
+  text-align: center;
   color: #334155;
+  font-weight: 400;
 }
 
 .time-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-}
-
-.date-sub {
-  display: block;
-  font-size: 0.75rem;
-  color: #94a3b8;
   font-weight: 400;
 }
 
@@ -280,19 +377,63 @@ const getStatusClass = (status) => {
 .status-completed { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
 
 .code-cell {
-  font-family: monospace;
   color: #64748b;
-  font-weight: 600;
+  font-weight: 400;
+}
+
+.code-cell.code-tracking {
+  color: inherit;
+  font-weight: 400;
 }
 
 .name-cell {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .empty-state {
   text-align: center;
   padding: 3rem;
   color: #94a3b8;
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.page-btn {
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 40px;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.page-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

@@ -45,42 +45,61 @@
               <option value="DANGER">위험</option>
             </select>
           </div>
+          <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+            초기화
+          </button>
         </div>
 
-        <!-- Safety Stock & Expiration Alert Section (Collapsible) -->
-        <div v-if="lowStockItems.length > 0 || expiringItems.length > 0" class="alert-section">
+        <!-- Safety Stock Alert Section (Collapsible) -->
+        <div v-if="lowStockItems.length > 0" class="alert-section">
             <div class="alert-header">
-                <div class="alert-title">⚠ 재고 경고 알림</div>
-                <button v-if="hasMoreAlerts" class="toggle-alert-btn" @click="toggleAlertExpand">
-                    {{ isAlertExpanded ? '접기 ▲' : '더보기 ▼' }}
+                <div class="alert-title">⚠️ 안전재고 부족 알림</div>
+                <button class="toggle-alert-btn" @click="isSafeStockExpanded = !isSafeStockExpanded">
+                    {{ isSafeStockExpanded ? '접기 ▲' : '더보기 ▼' }}
                 </button>
             </div>
             
             <!-- Summary Header when Collapsed -->
-            <div v-if="!isAlertExpanded" class="alert-summary pl-2">
-                <span v-if="expiringItems.length > 0">유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
-                <span v-if="lowStockItems.length > 0 && expiringItems.length > 0" class="mx-2">|</span>
-                <span v-if="lowStockItems.length > 0">안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
+            <div v-if="!isSafeStockExpanded" class="alert-summary pl-2">
+                <span>안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
             </div>
 
-            <!-- Detailed Lists (Only when Expanded) -->
-            <template v-if="isAlertExpanded">
-                <!-- Expiration Alert -->
-                <div v-if="expiringItems.length > 0" class="expiration-warning" style="border-top: none; padding-top: 0; margin-top: 0; margin-bottom: 1rem;">
-                    <div class="sub-alert-title">⏳ 유통기한 임박 (3일 이내)</div>
-                    <ul>
-                        <li v-for="group in expiringItems" :key="group.key">
-                            <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Low Stock -->
-                <div v-if="lowStockItems.length > 0" :class="{ 'mt-3 pt-3 border-top-dashed': expiringItems.length > 0 }">
-                    <div class="sub-alert-title">⚠️ 안전재고 부족</div>
+            <!-- Detailed List -->
+            <template v-else>
+                <div class="mt-3 pt-3 border-top-dashed">
                     <ul>
                         <li v-for="item in lowStockItems" :key="item.productCode">
                             <strong>{{ item.productName }}</strong> ({{item.productCode}}): 재고 <span class="danger-text">{{ item.quantity }}</span> (안전재고: {{item.safeStock}})
+                        </li>
+                    </ul>
+                </div>
+            </template>
+        </div>
+
+        <!-- Expiration Alert Section (Collapsible) -->
+        <div v-if="expiringItems.length > 0" class="alert-section expiration">
+            <div class="alert-header">
+                <div class="alert-title">⏳ 유통기한 임박 알림</div>
+                <button class="toggle-alert-btn" @click="isExpirationExpanded = !isExpirationExpanded">
+                    {{ isExpirationExpanded ? '접기 ▲' : '더보기 ▼' }}
+                </button>
+            </div>
+            
+            <!-- Summary Header when Collapsed -->
+            <div v-if="!isExpirationExpanded" class="alert-summary pl-2">
+                <span>유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
+            </div>
+
+            <!-- Detailed List -->
+            <template v-else>
+                <div class="mt-3 pt-3 border-top-dashed">
+                    <ul>
+                        <li v-for="group in expiringItems" :key="group.key">
+                            <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
                         </li>
                     </ul>
                 </div>
@@ -146,6 +165,23 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 2 Pagination -->
+            <div class="pagination" v-if="batchTotalPages > 1">
+                <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in batchTotalPages" 
+                        :key="p" 
+                        @click="changeBatchPage(p - 1)" 
+                        :class="{ active: batchPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+            </div>
         </div>
       </template>
 
@@ -167,10 +203,6 @@
             <div class="filter-group">
                 <label>박스 코드</label>
                 <input type="text" v-model="step3Filter.boxCode" placeholder="박스코드 검색" />
-            </div>
-            <div class="filter-group">
-                <label>제조일자</label>
-                <input type="date" v-model="step3Filter.productionDate" />
             </div>
             <div class="filter-group">
                 <label>배송완료 일자</label>
@@ -198,8 +230,8 @@
                         <td class="sku-cell">{{ item.serialCode }}</td>
                         <td>{{ item.boxCode }}</td>
                         <td>
-                            <span :class="['status-item-badge', item.status === 'AVAILABLE' ? 'available' : 'return_pending']">
-                                {{ item.status === 'AVAILABLE' ? '가용' : '반품 대기' }}
+                            <span :class="['status-item-badge', (item.status || '').toLowerCase().split('.').pop()]">
+                                {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
                             </span>
                         </td>
                         <td>{{ item.shippingDate || '-' }}</td>
@@ -207,6 +239,23 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 3 Pagination -->
+            <div class="pagination" v-if="itemTotalPages > 1">
+                <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in itemTotalPages" 
+                        :key="p" 
+                        @click="changeItemPage(p - 1)" 
+                        :class="{ active: itemPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+            </div>
         </div>
       </template>
     </div>
@@ -216,9 +265,8 @@
       <div class="modal-content">
         <h3>가맹점 선택</h3>
         <div class="modal-body">
-            <input type="text" v-model="storeSearch" placeholder="가맹점 이름 검색..." class="store-search-input" />
             <ul class="store-list scrollable">
-                <li v-for="store in filteredStores" :key="store.code" @click="selectStore(store)">
+                <li v-for="store in stores" :key="store.id" @click="selectStore(store)">
                     <span class="store-name">{{ store.name }}</span>
                     <span class="store-code">{{ store.code }}</span>
                 </li>
@@ -234,47 +282,52 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api/index'
 
 const router = useRouter()
 
 // Store Selection Logic
 const showStoreModal = ref(true) // Open by default initially? Or false? User said "Pop window first"
 const selectedStore = ref(null)
-const storeSearch = ref('')
 
-const stores = ref([
-    { name: '서울 강남점', code: 'SE01' },
-    { name: '서울 서초점', code: 'SE02' },
-    { name: '서울 송파점', code: 'SE03' },
-    { name: '서울 마포점', code: 'SE04' },
-    { name: '서울 영등포점', code: 'SE05' }
-])
+const stores = ref([])
 
-const filteredStores = computed(() => {
-    return stores.value.filter(s => s.name.includes(storeSearch.value) || s.code.includes(storeSearch.value))
-})
+const fetchStores = async () => {
+    try {
+        const res = await api.get('/hq/inventory/franchises')
+        const data = res.data.data || {}
+        stores.value = Object.entries(data).map(([id, name]) => ({
+            id: Number(id),
+            name: name,
+            code: `가맹점${id}` // franchiseCode가 Map에 없어 임시로 표시
+        }))
+    } catch (e) {
+        console.error('가맹점 목록 조회 실패', e)
+    }
+}
 
 const openStoreSelectModal = () => {
     showStoreModal.value = true
 }
 
-const selectStore = (store) => {
+const selectStore = async (store) => {
     selectedStore.value = store
     showStoreModal.value = false
-    generateMockInventory() // Regenerate inventory for this store (Mock)
+    await fetchFranchiseInventory(store.id)
 }
+
+onMounted(() => {
+    fetchStores()
+})
 
 // Inventory Logic
 const currentStep = ref(1)
 const selectedProduct = ref(null)
 const selectedProductionDate = ref(null)
-const isAlertExpanded = ref(false)
-
-const toggleAlertExpand = () => {
-    isAlertExpanded.value = !isAlertExpanded.value
-}
+const isSafeStockExpanded = ref(false)
+const isExpirationExpanded = ref(false)
 
 const filter = ref({
   productCode: '',
@@ -282,10 +335,17 @@ const filter = ref({
   status: ''
 })
 
+const resetFilters = () => {
+  filter.value = {
+    productCode: '',
+    productName: '',
+    status: ''
+  }
+}
+
 const step3Filter = ref({
   serialCode: '',
   boxCode: '',
-  productionDate: '',
   shippingDate: '',
   inboundDate: ''
 })
@@ -294,89 +354,57 @@ const products = ref([])
 const inventoryItems = ref([]) // Granular items
 
 
-const generateMockInventory = () => {
-    // Reset steps
-    currentStep.value = 1
-    selectedProduct.value = null
+const fetchFranchiseInventory = async (franchiseId) => {
+    try {
+        currentStep.value = 1
+        selectedProduct.value = null
+        
+        const res = await api.get(`/hq/inventory/franchises/${franchiseId}`)
+        products.value = (res.data.data || []).map(p => ({
+            productId: p.productId,
+            productCode: p.productCode,
+            productName: p.productName,
+            quantity: p.totalQuantity,
+            safeStock: p.safetyStock || 0,
+            portion: p.size === '01' ? 1 : 3,
+            status: p.status
+        }))
 
-    const pList = []
-    const iList = []
-    const types = [ { code: 'OR', name: '오리지널 떡볶이 밀키트' }, { code: 'RO', name: '로제 떡볶이 밀키트' }, { code: 'MA', name: '마라 떡볶이 밀키트' } ]
-    const spices = [ { code: '01', name: '순한맛' }, { code: '02', name: '기본맛' } ]
-    const sizes = [ { code: '01', name: '1~2인분', portion: 1 }, { code: '03', name: '3~4인분', portion: 3 } ]
+        await fetchFranchiseAlerts(franchiseId)
+    } catch (e) {
+        console.error('가맹점 재고 데이터 조회 실패:', e)
+        products.value = []
+    }
+}
 
-    // Force dates to trigger expiration (Today is 02-19, Mfg 02-06~02-08 triggers 14-day limit)
-    const dates = ['2026-02-01', '2026-02-07', '2026-02-10'] 
-    const storeCode = selectedStore.value.code
-    const regionCode = 'UL01'
-    const factoryCode = 'FA01'
-    const productionLines = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9']
-
-    types.forEach((t, tIdx) => {
-        spices.forEach((s, sIdx) => {
-            sizes.forEach((sz, szIdx) => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
-                
-                // Force safeStock to be high for the first item to trigger low stock alert
-                const safe = (tIdx === 0 && sIdx === 0 && szIdx === 0) ? 200 : 10
-                let totalQty = 0
-
-                dates.forEach(d => {
-                    const line = productionLines[Math.floor(Math.random() * productionLines.length)]
-                    
-                    const batchQty = 25 
-                    totalQty += batchQty
-
-                    const boxStatuses = {} 
-
-                    for(let i=0; i<batchQty; i++) {
-                        const boxIndex = Math.floor(i/20) + 1
-                        const itemIndex = (i % 20) + 1
-                        const boxCode = `${storeCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}`
-                        const serialCode = `${regionCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}-${itemIndex.toString().padStart(2, '0')}`
-
-                        if (boxStatuses[boxIndex] === undefined) {
-                            boxStatuses[boxIndex] = 'AVAILABLE'
-                        }
-
-                        iList.push({
-                            serialCode: serialCode,
-                            boxCode: boxCode,
-                            productCode: code,
-                            productionDate: d,
-                            shippingDate: '2026-02-11',
-                            arrivalTime: '2026-02-12',
-                            status: boxStatuses[boxIndex]
-                        })
-                    }
-                })
-
-                pList.push({
-                    productCode: code,
-                    productName: name,
-                    quantity: totalQty,
-                    portion: sz.portion,
-                    safeStock: safe
-                })
-            })
-        })
-    })
-    products.value = pList
-    inventoryItems.value = iList
+const fetchFranchiseAlerts = async (franchiseId) => {
+    try {
+        const res = await api.get(`/hq/inventory/franchises/${franchiseId}/alerts`)
+        const data = res.data.data || {}
+        expiringItems.value = (data.expirationAlerts || []).map(e => ({
+            productName: e.productName,
+            productionDate: e.manufactureDate,
+            count: e.quantity,
+            daysLeft: e.daysUntilExpiration,
+            key: e.manufactureDate + e.productName
+        }))
+    } catch (e) {
+        console.error('가맹점 알림 조회 실패:', e)
+        expiringItems.value = []
+    }
 }
 
 const getStatusLabel = (qty, safe) => {
   if (qty <= 0) return '품절'
-  if (qty <= safe - 10) return '위험'
-  if (qty <= safe) return '부족'
+  if (qty <= safe) return '위험'
+  if (qty <= safe + 20) return '부족'
   return '안전'
 }
 
 const getStatusClass = (qty, safe) => {
   if (qty <= 0) return 'sold'
-  if (qty <= safe - 10) return 'danger'
-  if (qty <= safe) return 'warning'
+  if (qty <= safe) return 'danger'
+  if (qty <= safe + 20) return 'warning'
   return 'safe'
 }
 
@@ -401,90 +429,114 @@ const lowStockItems = computed(() => {
   return products.value.filter(item => item.quantity <= item.safeStock)
 })
 
-const sortedBatches = computed(() => {
-    if (!selectedProduct.value) return []
-    const dates = {}
-    inventoryItems.value
-        .filter(i => i.productCode === selectedProduct.value.productCode)
-        .forEach(i => {
-            if (!dates[i.productionDate]) {
-                dates[i.productionDate] = { total: 0, available: 0, pending: 0 }
-            }
-            dates[i.productionDate].total++
-            if (i.status === 'AVAILABLE') dates[i.productionDate].available++
-            else dates[i.productionDate].pending++
-        })
-    
-    return Object.entries(dates)
-        .map(([date, counts]) => ({ productionDate: date, ...counts }))
-        .sort((a, b) => a.productionDate.localeCompare(b.productionDate)) // FIFO
-})
-
-// Expiration Logic: Mfg Date + 14 Days
-const expiringItems = computed(() => {
-    const today = new Date()
-    const alertList = []
-
-    // Group by Product & MfgDate
-    const groups = {}
-
-    inventoryItems.value.forEach(item => {
-        if (item.status !== 'AVAILABLE') return
-
-        const mfg = new Date(item.productionDate)
-        const exp = new Date(mfg)
-        exp.setDate(mfg.getDate() + 14) // +14 Days Expiration policy
-        
-        const diffTime = exp - today
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-        if (diffDays <= 3 && diffDays >= 0) {
-            const key = `${item.productCode}-${item.productionDate}`
-            if (!groups[key]) {
-                const prod = products.value.find(p => p.productCode === item.productCode)
-                groups[key] = {
-                    key,
-                    productName: prod ? prod.productName : item.productCode,
-                    productionDate: item.productionDate,
-                    count: 0,
-                    daysLeft: diffDays
-                }
-            }
-            groups[key].count++
-        }
-    })
-    // 3개만 보이게 제한 (보여주기 식)
-    return Object.values(groups).slice(0, 3)
-})
-
+const expiringItems = ref([])
 const hasMoreAlerts = computed(() => {
     return lowStockItems.value.length > 0 || expiringItems.value.length > 0
 })
 
-const granularItems = computed(() => {
-    if (!selectedProduct.value || !selectedProductionDate.value) return []
-    return inventoryItems.value.filter(i => {
-        const matchProduct = i.productCode === selectedProduct.value.productCode && i.productionDate === selectedProductionDate.value
-        
-        const matchSerial = !step3Filter.value.serialCode || i.serialCode.includes(step3Filter.value.serialCode)
-        const matchBox = !step3Filter.value.boxCode || i.boxCode.includes(step3Filter.value.boxCode)
-        const matchProdDate = !step3Filter.value.productionDate || i.productionDate === step3Filter.value.productionDate
-        const matchShipDate = !step3Filter.value.shippingDate || i.shippingDate === step3Filter.value.shippingDate
-        const matchInboundDate = !step3Filter.value.inboundDate || i.arrivalTime === step3Filter.value.inboundDate
+const sortedBatches = ref([])
 
-        return matchProduct && matchSerial && matchBox && matchProdDate && matchShipDate && matchInboundDate
+const granularItems = ref([])
+
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
+const fetchBatches = async (productId) => {
+  try {
+    const res = await api.get(`/hq/inventory/franchises/${selectedStore.value.id}/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
     })
-})
-
-const goToStep2 = (product) => {
-    selectedProduct.value = product
-    currentStep.value = 2
+    const pageData = res.data.data || {}
+    sortedBatches.value = (pageData.content || [])
+      .map(b => ({
+        productionDate: b.manufactureDate,
+        total: b.totalQuantity,
+        available: b.availableQuantity,
+        pending: b.returnPending
+      }))
+      .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed:', e)
+    sortedBatches.value = []
+    batchTotalPages.value = 0
+  }
 }
 
-const goToStep3 = (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    currentStep.value = 3
+const fetchItems = async () => {
+  if (!selectedProduct.value || !selectedProductionDate.value || !selectedStore.value) return
+  try {
+    const params = {
+      franchiseId: selectedStore.value.id,
+      productId: selectedProduct.value.productId,
+      manufactureDate: selectedProductionDate.value,
+      page: itemPage.value,
+      size: itemSize.value
+    }
+    if (step3Filter.value.serialCode) params.serialCode = step3Filter.value.serialCode
+    if (step3Filter.value.boxCode) params.boxCode = step3Filter.value.boxCode
+    if (step3Filter.value.shippingDate) params.shippedAt = step3Filter.value.shippingDate
+    if (step3Filter.value.inboundDate) params.receivedAt = step3Filter.value.inboundDate
+
+    const res = await api.get('/hq/inventory/franchises/items', { params })
+    const pageData = res.data.data || {}
+    granularItems.value = (pageData.content || []).map(i => {
+      const rawStatus = i.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        serialCode: i.serialCode,
+        boxCode: i.boxCode,
+        status: parsedStatus,
+        shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+        arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed:', e)
+    granularItems.value = []
+    itemTotalPages.value = 0
+  }
 }
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems()
+}
+
+const goToStep2 = async (product) => {
+  selectedProduct.value = product
+  batchPage.value = 0
+  await fetchBatches(product.productId)
+  currentStep.value = 2
+}
+
+const goToStep3 = async (batch) => {
+  selectedProductionDate.value = batch.productionDate
+  itemPage.value = 0
+  await fetchItems()
+  currentStep.value = 3
+}
+
+
+// ----------------
+
+// Filter for items changes -> fetch from backend again
+watch(step3Filter, () => {
+    if (currentStep.value === 3) {
+        fetchItems()
+    }
+}, { deep: true })
 
 const goToDetail = (code) => {
   router.push(`/store/inventory/${code}`)
@@ -510,6 +562,7 @@ const goToDetail = (code) => {
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 .filter-group input, .filter-group select { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; width: 100%; }
 .search-btn { background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; }
+.filter-section > .btn-reset-filters { margin-left: auto; }
 
 /* Table */
 .data-table-card { 
@@ -523,12 +576,29 @@ const goToDetail = (code) => {
     border-collapse: collapse; 
     min-width: 1000px; /* 창이 좁아져도 형태 유지 */
 }
-.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
+.data-table th {
+  text-align: center;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  background: #f8fafc;
+  color: var(--text-light);
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table td {
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
+}
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { font-weight: 600; }
 
 .store-info-banner { 
@@ -573,7 +643,8 @@ const goToDetail = (code) => {
 
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
 .status-item-badge.available { background: #e6fffa; color: #2c7a7b; }
-.status-item-badge.return_pending { background: #fff5f5; color: #e53e3e; }
+.status-item-badge.return_wait { background: #fee2e2; color: #991b1b; }
+.status-item-badge.expired { background: #fef3c7; color: #92400e; }
 
 
 /* Alert Section */
@@ -588,6 +659,12 @@ const goToDetail = (code) => {
   background: #f0fff4;
   border-color: #c6f6d5;
 }
+.alert-section.expiration {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.alert-section.expiration .alert-title { color: #92400e; }
+.alert-section.expiration li { color: #78350f; }
 .alert-title {
   font-weight: 700;
   font-size: 1.1rem;
@@ -627,6 +704,57 @@ const goToDetail = (code) => {
 }
 .data-table-card::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
 }
 
 </style>

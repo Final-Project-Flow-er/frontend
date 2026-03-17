@@ -1,84 +1,54 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getOrderList, updateOrders } from '@/api/factoryOrders.js'
 
-// [데이터] 떡볶이 프랜차이즈 공장 발주 요청 (특정 품목 삭제됨)
-const orders = ref([
-  {
-    id: 1,
-    orderCode: 'HEAD20260210001',
-    status: '대기',
-    managerName: '김철수',
-    managerPhone: '010-1234-5678',
-    employeeId: 'EMP001',
-    orderDate: '2026-02-10',
-    inboundDate: '2026-02-14',
-    type: '정기',
-    products: [
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 2인분', quantity: 500, unitPrice: 4500, totalAmount: 2250000 },
-      { productCode: 'OR0102', productName: '오리지널 떡볶이 밀키트 매운맛 2인분', quantity: 300, unitPrice: 4500, totalAmount: 1350000 }
-      // 고추장 소스 삭제됨
-    ]
-  },
-  {
-    id: 2,
-    orderCode: 'HEAD20260210005',
-    status: '대기',
-    managerName: '이영희',
-    managerPhone: '010-9876-5432',
-    employeeId: 'EMP002',
-    orderDate: '2026-02-10',
-    inboundDate: '2026-02-13',
-    type: '비정기', // 긴급 발주
-    products: [
-      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 2인분', quantity: 200, unitPrice: 5500, totalAmount: 1100000 }
-      // 모짜렐라 치즈 삭제됨
-    ]
-  },
-  {
-    id: 3,
-    orderCode: 'HEAD20260211012',
-    status: '대기',
-    managerName: '박민수',
-    managerPhone: '010-5555-4444',
-    employeeId: 'EMP003',
-    orderDate: '2026-02-11',
-    inboundDate: '2026-02-15',
-    type: '정기',
-    products: [
-      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 2인분', quantity: 400, unitPrice: 6000, totalAmount: 2400000 },
-      { productCode: 'MA0302', productName: '마라 떡볶이 밀키트 (납작당면 포함)', quantity: 200, unitPrice: 6500, totalAmount: 1300000 }
-      // 부산 어묵 삭제됨
-    ]
-  },
-  {
-    id: 4,
-    orderCode: 'HEAD20260212003',
-    status: '대기',
-    managerName: '최지훈',
-    managerPhone: '010-1111-2222',
-    employeeId: 'EMP004',
-    orderDate: '2026-02-12',
-    inboundDate: '2026-02-16',
-    type: '정기',
-    products: [
-      { productCode: 'SC002', productName: '로제 분말 소스 5kg', quantity: 30, unitPrice: 45000, totalAmount: 1350000 }
-    ]
-  },
-  {
-    id: 5,
-    orderCode: 'HEAD20260209099',
-    status: '접수', // 필터링 테스트용
-    managerName: '정수진',
-    managerPhone: '010-7777-8888',
-    employeeId: 'EMP005',
-    orderDate: '2026-02-09',
-    inboundDate: '2026-02-12',
-    type: '비정기',
-    products: [
-      { productCode: 'VE001', productName: '대파 슬라이스 1kg', quantity: 50, unitPrice: 3000, totalAmount: 150000 }
-    ]
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const STATUS_MAP = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  AWAITING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+
+const orders = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getOrderList(false)
+    // Group by orderCode
+    const map = {}
+    ;(data || []).forEach(item => {
+      if (!map[item.orderCode]) {
+        map[item.orderCode] = {
+          id: item.orderCode,
+          orderCode: item.orderCode,
+          status: STATUS_MAP[item.status] || item.status,
+          managerName: item.username || '',
+          managerPhone: item.phoneNumber || '',
+          employeeId: '',
+          orderDate: formatDate(item.requestedDate),
+          inboundDate: formatDate(item.storedDate),
+          type: item.isRegular ? '정기' : '비정기',
+          products: []
+        }
+      }
+      map[item.orderCode].products.push({
+        productCode: item.productCode,
+        productName: '',
+        quantity: item.quantity,
+        unitPrice: 0,
+        totalAmount: 0
+      })
+    })
+    orders.value = Object.values(map)
+  } catch (e) {
+    alert(e.message)
   }
-])
+})
 
 const filter = ref({
   orderCode: '',
@@ -163,24 +133,34 @@ const enterAcceptMode = () => { selectionMode.value = 'accept'; selectedOrderIds
 const enterRejectMode = () => { selectionMode.value = 'reject'; selectedOrderIds.value = [] }
 const cancelSelection = () => { selectionMode.value = null; selectedOrderIds.value = [] }
 
-const confirmAccept = () => {
+const confirmAccept = async () => {
   if (selectedOrderIds.value.length === 0) { alert('접수할 발주 요청을 선택해주세요.'); return }
-  orders.value = orders.value.map(o => {
-    if (selectedOrderIds.value.includes(o.id)) return { ...o, status: '접수' }
-    return o
-  })
-  alert(`${selectedOrderIds.value.length}건의 발주 요청이 접수되었습니다.`)
-  cancelSelection()
+  try {
+    await updateOrders({ isAccept: true, orderCodes: selectedOrderIds.value })
+    orders.value = orders.value.map(o => {
+      if (selectedOrderIds.value.includes(o.id)) return { ...o, status: '접수' }
+      return o
+    })
+    alert(`${selectedOrderIds.value.length}건의 발주 요청이 접수되었습니다.`)
+    cancelSelection()
+  } catch (e) {
+    alert(e.message || '접수 처리에 실패했습니다.')
+  }
 }
 
-const confirmReject = () => {
+const confirmReject = async () => {
   if (selectedOrderIds.value.length === 0) { alert('반려할 발주 요청을 선택해주세요.'); return }
-  orders.value = orders.value.map(o => {
-    if (selectedOrderIds.value.includes(o.id)) return { ...o, status: '반려' }
-    return o
-  })
-  alert(`${selectedOrderIds.value.length}건의 발주 요청이 반려되었습니다.`)
-  cancelSelection()
+  try {
+    await updateOrders({ isAccept: false, orderCodes: selectedOrderIds.value })
+    orders.value = orders.value.map(o => {
+      if (selectedOrderIds.value.includes(o.id)) return { ...o, status: '반려' }
+      return o
+    })
+    alert(`${selectedOrderIds.value.length}건의 발주 요청이 반려되었습니다.`)
+    cancelSelection()
+  } catch (e) {
+    alert(e.message || '반려 처리에 실패했습니다.')
+  }
 }
 
 const toggleOrderSelection = (orderId) => {
@@ -358,17 +338,22 @@ const toggleSelectAll = (event) => {
 .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
 .data-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   background: #f8fafc;
   color: var(--text-light);
-  font-size: 0.8rem;
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 .data-table td {
-  padding: 0.75rem 1rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.85rem;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -377,7 +362,7 @@ const toggleSelectAll = (event) => {
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .order-code-text { font-weight: 600; color: var(--text-dark); }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { color: var(--text-dark); max-width: 300px; white-space: normal; }
 .font-bold-slate { font-weight: 600; color: #334155; }
 

@@ -104,35 +104,7 @@ const selectAll = ref(false)
 const items = ref([])
 
 onMounted(() => {
-  // Generate dummy items based on productCode
-  // Box Code format: UL01{YYYYMMDD}{ProductCodeWithPadd}{Seq}
-  // User Req: UL01 + Factory Numbering ? For now assume UL01 is fixed prefix.
-  // Actually regex-like: UL01 + Date + Product Code + Box Code
-  
-  const today = '20260209'
-  const prefix = productCode.value 
-  
-  for (let b = 1; b <= 5; b++) { // 5 boxes
-    const boxSeq = b < 10 ? '0' + b : b
-    // Box Code ends in '00'
-    const boxCode = `SEO001${today}${prefix}${boxSeq}00`
-    
-    for (let i = 1; i <= 20; i++) { // 20 items per box
-      const itemSeq = i < 10 ? '0' + i : i
-      // Identification Code ends in 01~20
-      const serialCode = `SEO001${today}${prefix}${boxSeq}${itemSeq}`
-      
-      items.value.push({
-        boxCode: boxCode,
-        serialCode: serialCode, 
-        expireDate: '2026-08-09',
-        manufactureDate: '2026-02-09',
-        deliveryCompleteDate: '2026-02-10 14:00:00',
-        inboundCompleteDate: '2026-02-10 15:30:00',
-        status: (b * i) > 90 ? 'RETURN_WAIT' : 'AVAILABLE'
-      })
-    }
-  }
+  // TODO: 실제 API 연동 필요 (현재는 더미 제거 상태)
 })
 
 const filteredItems = computed(() => {
@@ -227,9 +199,9 @@ const requestReturn = () => {
 /* Data Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.data-table th { text-align: center; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .checkbox-cell { width: 50px; text-align: center; }
 
 .status-badge {

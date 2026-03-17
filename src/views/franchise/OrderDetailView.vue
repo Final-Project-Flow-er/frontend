@@ -1,95 +1,81 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getOrderDetail, cancelOrder as cancelOrderApi } from '@/api/franchiseOrders.js'
 
 const route = useRoute()
 const router = useRouter()
 const orderId = route.params.id
 const orderItem = ref(null)
 
-// Mock Data - In a real app, fetch by orderId
-const orders = [
-  { 
-    orderStatus: '대기', 
-    orderDate: '2023-10-25', 
-    orderCode: 'SE0120231025001', 
-    recipientName: '김철수', 
-    recipientPhone: '010-1234-5678', 
-    address: '서울시 강남구 테헤란로 123',
-    arrivalDate: '2023-10-27', 
-    arrivalTime: '14:00', 
-    products: [
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50, amount: 5000 },
-      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 20, amount: 7000 }
-    ],
-    totalAmount: 390000
-  },
-  { 
-    orderStatus: '배송중', 
-    orderDate: '2023-10-24', 
-    orderCode: 'SE0120231024002', 
-    recipientName: '이영희', 
-    recipientPhone: '010-9876-5432', 
-    address: '서울시 서초구 서초대로 456',
-    arrivalDate: '2023-10-26', 
-    arrivalTime: '10:00', 
-    products: [
-      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 30, amount: 7000 }
-    ],
-    totalAmount: 210000
-  },
-  { 
-    orderStatus: '배송완료', 
-    orderDate: '2023-10-23', 
-    orderCode: 'SE0120231023003', 
-    recipientName: '박민수', 
-    recipientPhone: '010-5555-4444', 
-    address: '경기도 성남시 분당구 판교로 789',
-    arrivalDate: '2023-10-25', 
-    arrivalTime: '16:30', 
-    products: [
-      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 20, amount: 7000 }
-    ],
-    totalAmount: 140000
-  },
-  { 
-    orderStatus: '취소', 
-    orderDate: '2023-10-22', 
-    orderCode: 'SE0120231022004', 
-    recipientName: '최지원', 
-    recipientPhone: '010-1111-2222', 
-    address: '인천광역시 송도과학로 10',
-    arrivalDate: '-', 
-    arrivalTime: '-', 
-    products: [
-      { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 10, amount: 13000 }
-    ],
-    totalAmount: 130000
-  },
-]
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+const formatTime = (iso) => iso ? iso.replace('T', ' ').substring(11, 16) : ''
 
-onMounted(() => {
-  // Simulate fetch
-  orderItem.value = orders.find(o => o.orderCode === orderId)
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+
+onMounted(async () => {
+  try {
+    const data = await getOrderDetail(orderId)
+    orderItem.value = {
+      orderCode: data.orderCode,
+      orderStatus: data.status,
+      orderDate: formatDate(data.requestedDate),
+      recipientName: data.receiver,
+      recipientPhone: data.phoneNumber,
+      address: data.address,
+      arrivalDate: formatDate(data.deliveryDate),
+      arrivalTime: data.deliveryTime || formatTime(data.deliveryDate),
+      products: (data.items || []).map(p => ({
+        productCode: p.productCode,
+        productName: p.productName,
+        quantity: p.quantity,
+        amount: Number(p.unitPrice || 0)
+      })),
+      totalAmount: (data.items || []).reduce((sum, p) => sum + (p.quantity * Number(p.unitPrice || 0)), 0),
+      canceledReason: data.canceledReason || null
+    }
+  } catch (e) {
+    alert(e.message)
+  }
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger'
-}[s] || '')
+const getStatusClass = (s) => {
+  const label = ORDER_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '부분 접수': 'status-info',
+    '배송 대기': 'status-warning',
+    '배송중': 'status-primary',
+    '배송 완료': 'status-ok',
+    '취소': 'status-danger',
+    '반려': 'status-danger'
+  }[label] || ''
+}
 
-const cancelOrder = () => {
-  if (orderItem.value.orderStatus !== '대기') {
+const cancelOrder = async () => {
+  if (orderItem.value.orderStatus !== 'PENDING') {
     alert('발주 상태가 대기가 아니면 취소할 수 없습니다.')
     return
   }
-  // In a real app, API call to cancel order
-  alert('발주가 취소되었습니다.')
-  router.push('/orders')
+  if (!confirm('이 발주를 취소하시겠습니까?')) return
+  try {
+    await cancelOrderApi(orderId)
+    alert('발주가 취소되었습니다.')
+    router.push({ name: 'franchise-order-list' })
+  } catch (e) {
+    alert(e.message || '발주 취소에 실패했습니다.')
+  }
 }
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
@@ -104,8 +90,8 @@ const goToEdit = () => {
     <div class="header-row">
       <h2>발주 상세 정보</h2>
       <div class="header-actions">
-        <button v-if="orderItem.orderStatus === '대기'" @click="cancelOrder" class="delete-btn">발주 취소</button>
-        <button v-if="orderItem.orderStatus === '대기'" @click="goToEdit" class="edit-btn">수정</button>
+        <button v-if="orderItem.orderStatus === 'PENDING'" @click="cancelOrder" class="delete-btn">발주 취소</button>
+        <button v-if="orderItem.orderStatus === 'PENDING'" @click="goToEdit" class="edit-btn">수정</button>
         <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
       </div>
     </div>
@@ -113,7 +99,7 @@ const goToEdit = () => {
     <div class="detail-card">
       <div class="section-title">
         <h3>기본 정보</h3>
-        <span :class="['status-tag', getStatusClass(orderItem.orderStatus)]">{{ orderItem.orderStatus }}</span>
+        <span :class="['status-tag', getStatusClass(orderItem.orderStatus)]">{{ toStatusLabel(orderItem.orderStatus) }}</span>
       </div>
       <div class="info-grid">
         <div class="info-item">
@@ -179,6 +165,14 @@ const goToEdit = () => {
         </div>
       </div>
 
+      <!-- 취소 사유 -->
+      <template v-if="orderItem.canceledReason">
+        <div class="divider"></div>
+        <div class="section-title"><h3>취소 사유</h3></div>
+        <div class="cancel-reason-box">
+          <p>{{ orderItem.canceledReason }}</p>
+        </div>
+      </template>
 
     </div>
   </div>
@@ -269,6 +263,19 @@ const goToEdit = () => {
 .product-list-total .total-price {
   color: var(--primary);
   font-size: 1.2rem !important;
+}
+
+.cancel-reason-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+.cancel-reason-box p {
+  margin: 0;
+  color: #991b1b;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 </style>

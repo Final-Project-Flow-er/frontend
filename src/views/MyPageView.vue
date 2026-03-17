@@ -36,7 +36,6 @@
               <span class="user-role-detail">{{ roleDisplayName }}</span>
             </span>
           </div>
-          <p class="user-id">@{{ userInfo.id }}</p>
         </div>
       </div>
     </header>
@@ -95,20 +94,14 @@
                 type="tel" 
                 v-model="userInfo.phone" 
                 class="premium-input"
+                @input="formatPhoneNumber(userInfo, 'phone')"
+                maxlength="13"
               >
               <div v-else class="value-box">{{ userInfo.phone }}</div>
             </div>
             <div class="info-item">
               <label>생년월일</label>
               <div class="value-box">{{ userInfo.birthdate }}</div>
-            </div>
-            <div class="info-item">
-              <label>권한</label>
-              <div class="value-box">{{ roleTypeLabel }}</div>
-            </div>
-            <div class="info-item">
-              <label>역할</label>
-              <div class="value-box">{{ roleDisplayName }}</div>
             </div>
           </div>
         </div>
@@ -125,7 +118,7 @@
             </div>
             
             <div class="action-list">
-              <button @click="showOrgModal = true" class="action-item">
+              <button @click="openOrgModal" class="action-item">
                 <div class="action-icon store">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -164,13 +157,13 @@
     </main>
 
     <!-- 모달: 내 조직 정보 -->
-    <div v-if="showOrgModal" class="modal-overlay" @click="closeOrgModal">
+    <div v-if="showOrgModal" class="modal-overlay" @click="handleCloseOrgModal">
       <div class="modal-content modal-fancy" @click.stop>
         <div class="modal-header">
           <h2>내 사업장 정보</h2>
           <div class="modal-header-actions">
             <button v-if="!isEditingOrg" @click="startEditOrg" class="btn-edit-tool">수정</button>
-            <button @click="closeOrgModal" class="btn-modal-close">
+            <button @click="handleCloseOrgModal" class="btn-modal-close">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -179,23 +172,9 @@
           </div>
         </div>
 
-        <div class="modal-body fancy-scroll">
+        <div class="modal-body fancy-scroll" :class="{ 'editing-mode': isEditingOrg }">
           <div class="org-hero">
-            <div class="org-avatar-big">
-              <img v-if="myOrgInfo.photoUrl" :src="myOrgInfo.photoUrl" alt="조직 사진">
-              <div v-else class="org-placeholder-big">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <path d="M3 9h18"></path>
-                </svg>
-              </div>
-              <button v-if="isEditingOrg" class="avatar-edit-btn small" @click="uploadOrgPhoto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                </svg>
-              </button>
-            </div>
-            <div class="org-hero-text">
+            <div class="org-hero-text no-avatar">
               <h3 class="org-name-title">{{ myOrgInfo.name }}</h3>
               <span class="org-code-pill">{{ myOrgInfo.code }}</span>
             </div>
@@ -208,15 +187,34 @@
             </div>
             <div class="info-group">
               <label>연락처</label>
-              <input v-model="myOrgInfo.phone" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small">
+              <input 
+                v-model="myOrgInfo.phone" 
+                :disabled="!isEditingOrg" 
+                :class="{ 'input-locked': !isEditingOrg }" 
+                class="premium-input-small"
+                @input="handleOrgPhoneInput"
+                maxlength="13"
+              >
             </div>
-            <div class="info-group full-width">
+            <div class="info-group">
+              <label>사업자 번호</label>
+              <input v-model="myOrgInfo.businessNumber" disabled class="premium-input-small input-locked">
+            </div>
+            <div class="info-group">
               <label>주소</label>
-              <input v-model="myOrgInfo.address" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small">
+              <input v-model="myOrgInfo.address" disabled class="premium-input-small input-locked">
             </div>
 
             <!-- 가맹점 전용 -->
             <template v-if="myOrgInfo.type === 'store'">
+              <div class="info-group">
+                <label>대표자명</label>
+                <input v-model="myOrgInfo.representative" disabled class="premium-input-small input-locked">
+              </div>
+              <div class="info-group">
+                <label>지역</label>
+                <input :value="regionLabel" disabled class="premium-input-small input-locked">
+              </div>
               <div class="info-group full-width">
                 <label>운영 요일</label>
                 <div class="fancy-days-chips">
@@ -234,41 +232,80 @@
                 <label>마감 시간</label>
                 <input type="time" v-model="myOrgInfo.closeTime" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small">
               </div>
+              
+              <div v-if="!isEditingOrg" class="info-group">
+                <label>누적 경고 횟수</label>
+                <div class="premium-input-small input-locked warning-text" :class="{ 'critical': myOrgInfo.warningCount >= 3 }">
+                  {{ myOrgInfo.warningCount }}
+                </div>
+              </div>
+              <div v-if="!isEditingOrg" class="info-group">
+                <label>경고 상태</label>
+                <div class="premium-input-small input-locked warning-text" :class="{ 'critical': myOrgInfo.warningCount >= 3 }">
+                  {{ myOrgInfo.warningCount >= 3 ? '반품 제한 중' : '정상' }}
+                </div>
+              </div>
+              <div v-if="!isEditingOrg && myOrgInfo.penaltyEndDate" class="info-group">
+                <label>반품 제한 종료일</label>
+                <div class="premium-input-small input-locked warning-text critical">
+                  {{ new Date(myOrgInfo.penaltyEndDate).toLocaleDateString() }}
+                </div>
+              </div>
             </template>
 
             <!-- 공장 전용 -->
             <template v-else-if="myOrgInfo.type === 'factory'">
               <div class="info-group">
                 <label>공장 대표명</label>
-                <input v-model="myOrgInfo.representative" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small">
+                <input v-model="myOrgInfo.representative" disabled class="premium-input-small input-locked">
               </div>
               <div class="info-group">
                 <label>공장 지역</label>
-                <select v-model="myOrgInfo.region" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-select-small">
-                  <option value="SE01">서울</option>
-                  <option value="GG01">경기</option>
-                  <option value="IC01">인천</option>
-                  <option value="BS01">부산</option>
-                  <option value="DG01">대구</option>
-                  <option value="DJ01">대전</option>
-                  <option value="GJ01">광주</option>
-                  <option value="UL01">울산</option>
-                  <option value="SJ01">세종</option>
-                  <option value="GW01">강원</option>
-                  <option value="CB01">충북</option>
-                  <option value="CN01">충남</option>
-                  <option value="JB01">전북</option>
-                  <option value="JN01">전남</option>
-                  <option value="GB01">경북</option>
-                  <option value="GN01">경남</option>
-                  <option value="JJ01">제주</option>
-                </select>
+                <input :value="regionLabel" disabled class="premium-input-small input-locked">
               </div>
               <div class="info-group">
                 <label>생산 라인 개수</label>
                 <input type="number" v-model.number="myOrgInfo.lineCount" :disabled="!isEditingOrg" :class="{ 'input-locked': !isEditingOrg }" class="premium-input-small" min="1" max="9">
               </div>
             </template>
+
+            <!-- 가맹점 사진 관리 (가맹점 전용) -->
+            <div v-if="myOrgInfo.type === 'store'" class="info-group full-width">
+              <label>매장 사진 (최대 5장)</label>
+              <div class="org-photo-manage-container">
+                <div class="org-photo-preview-scroll">
+                  <!-- 기존 이미지 -->
+                  <div v-for="img in myOrgInfo.images" :key="img.storedName" class="org-photo-item">
+                    <img :src="img.url" alt="매장 사진" @click="openModal(img.url)" class="clickable-image">
+                    <button v-if="isEditingOrg" @click="removeExistingOrgPhoto(img.storedName)" class="btn-remove-mini">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- 새 이미지 미리보기 -->
+                  <div v-for="(preview, idx) in orgPreviewImageUrls" :key="'new-'+idx" class="org-photo-item new">
+                    <img :src="preview" alt="새 매장 사진" @click="openModal(preview)" class="clickable-image">
+                    <button v-if="isEditingOrg" @click="removeNewOrgPhoto(idx)" class="btn-remove-mini">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- 추가 버튼 -->
+                  <button v-if="isEditingOrg && (myOrgInfo.images.length + orgPhotoFiles.length < 5)" 
+                          @click="uploadOrgPhoto" 
+                          class="btn-add-org-photo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div v-if="isEditingOrg" class="modal-footer-sticky">
@@ -299,18 +336,34 @@
             </div>
             <div class="info-group full-width">
               <label>새 비밀번호</label>
-              <input type="password" v-model="passwordData.newPassword" placeholder="새 비밀번호를 입력하세요" class="premium-input">
+              <input type="password" v-model="passwordData.newPassword" placeholder="새 비밀번호를 입력하세요" class="premium-input" :class="{ 'input-error': passwordData.newPassword && !isPasswordValid }">
+              <p v-if="passwordData.newPassword && !isPasswordValid" class="validation-msg error">8자 이상, 대소문자, 숫자, 특수문자 포함 필수</p>
             </div>
             <div class="info-group full-width">
               <label>새 비밀번호 확인</label>
-              <input type="password" v-model="passwordData.confirmPassword" placeholder="한 번 더 입력하세요" class="premium-input">
+              <input type="password" v-model="passwordData.confirmPassword" placeholder="한 번 더 입력하세요" class="premium-input" :class="{ 'input-error': passwordData.confirmPassword && !isPasswordMatch }">
+              <p v-if="passwordData.confirmPassword && isPasswordMatch" class="validation-msg success">비밀번호가 일치합니다.</p>
+              <p v-if="passwordData.confirmPassword && !isPasswordMatch" class="validation-msg error">비밀번호가 일치하지 않습니다.</p>
             </div>
           </div>
           <div class="modal-footer-actions">
-            <button @click="changePassword" class="btn-indigo-primary full">변경 완료</button>
+            <button @click="changePassword" class="btn-indigo-primary full" :disabled="!isPasswordValid || !isPasswordMatch || !passwordData.currentPassword">변경 완료</button>
             <button @click="closePasswordModal" class="btn-slate-ghost full">취소</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 이미지 확대 모달 -->
+    <div v-if="modalImageUrl" class="image-modal-overlay" @click="closeModal">
+      <div class="image-modal-content">
+        <button class="btn-close-modal-round" @click="closeModal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <img :src="modalImageUrl" alt="확대 사진" @click.stop>
       </div>
     </div>
 
@@ -318,61 +371,144 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 사용자 정보
 const userInfo = reactive({
-  employeeNumber: '20001',
-  id: 'admin123',
-  name: '유저',
-  email: 'admin@example.com',
-  phone: '010-1234-5678',
-  birthdate: '2002-06-26',
-  role: 'franchise',
-  roleDetail: 'fr_owner', // 권한별 세부 역할
+  employeeNumber: '',
+  id: '',
+  name: '',
+  email: '',
+  phone: '',
+  birthdate: '',
+  role: '',
+  roleDetail: '', // 권한별 세부 역할 (Position)
   photoUrl: ''
 })
 
-// 세부 역할 라벨 (마이페이지 표시용)
+// 세부 역할 라벨 (Backend UserPosition Enum과 매핑)
 const ROLE_DETAIL_LABELS = {
-  hq_hr: '인사 관리자',
-  hq_settlement: '정산 관리자',
-  hq_logistics: '물류 관리자',
-  hq_system: '시스템 관리자',
-  fr_owner: '점주',
-  fr_manager: '매니저',
-  fr_staff: '직원',
-  fa_production: '생산 관리자',
-  fa_logistics: '물류 관리자',
-  fa_factory: '공장 관리자'
+  HR_MANAGER: '인사 관리자',
+  FINANCE_MANAGER: '정산 관리자',
+  LOGISTICS_MANAGER: '물류 관리자',
+  SYSTEM_MANAGER: '시스템 관리자',
+  OWNER: '점주',
+  STORE_MANAGER: '매니저',
+  STAFF: '직원',
+  PRODUCTION_MANAGER: '생산 관리자',
+  FACTORY_LOGISTICS_MANAGER: '공장 물류 관리자',
+  FACTORY_MANAGER: '공장 관리자'
 }
 
-// 권한 라벨 (본사/가맹점/공장) - 이름 밑에 표시
-const ROLE_TYPE_LABELS = { hq: '본사', franchise: '가맹점', factory: '공장' }
-const roleTypeLabel = computed(() => ROLE_TYPE_LABELS[userInfo.role] || '')
+// 권한 라벨 (Backend UserRole Enum과 매핑)
+const ROLE_TYPE_LABELS = { 
+  ADMIN: '총 관리자', 
+  HQ: '본사', 
+  FRANCHISE: '가맹점', 
+  FACTORY: '공장' 
+}
 
+// 지역 라벨 (Backend Region Enum과 매핑)
+const REGION_LABELS = {
+  SEOUL: '서울',
+  GYEONGGI: '경기',
+  INCHEON: '인천',
+  BUSAN: '부산',
+  DAEGU: '대구',
+  DAEJEON: '대전',
+  GWANGJU: '광주',
+  ULSAN: '울산',
+  SEJONG: '세종',
+  GANGWON: '강원',
+  CHUNGBUK: '충북',
+  CHUNGNAM: '충남',
+  JEONBUK: '전북',
+  JEONNAM: '전남',
+  GYEONGBUK: '경북',
+  GYEONGNAM: '경남',
+  JEJU: '제주'
+}
+
+const roleTypeLabel = computed(() => ROLE_TYPE_LABELS[userInfo.role] || '')
 const roleDisplayName = computed(() => {
-  return userInfo.roleDetail ? ROLE_DETAIL_LABELS[userInfo.roleDetail] : '사용자'
+  return userInfo.roleDetail ? (ROLE_DETAIL_LABELS[userInfo.roleDetail] || userInfo.roleDetail) : '사용자'
+})
+const regionLabel = computed(() => REGION_LABELS[myOrgInfo.region] || myOrgInfo.region)
+
+// 유효성 검사 및 포맷팅
+const handleOrgPhoneInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.startsWith('02')) {
+    if (val.length > 2 && val.length <= 5) {
+      val = val.slice(0, 2) + '-' + val.slice(2);
+    } else if (val.length > 5 && val.length <= 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
+    } else if (val.length > 9) {
+      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    }
+  } else {
+    if (val.length > 3 && val.length <= 7) {
+      val = val.slice(0, 3) + '-' + val.slice(3);
+    } else if (val.length > 7 && val.length <= 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
+    } else if (val.length > 11) {
+      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    }
+  }
+  myOrgInfo.phone = val;
+}
+
+const formatPhoneNumber = (target, key) => {
+  let val = target[key].replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7, 11);
+  }
+  target[key] = val;
+}
+
+const isEmailValid = computed(() => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return !userInfo.email || emailRegex.test(userInfo.email)
+})
+
+const isPasswordValid = computed(() => {
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+=\-]).{8,}$/
+  return pwdRegex.test(passwordData.newPassword)
+})
+
+const isPasswordMatch = computed(() => {
+  return passwordData.newPassword === passwordData.confirmPassword
 })
 
 // 내 조직 정보
 const myOrgInfo = reactive({
-  code: 'SE01',
-  type: 'store',
-  name: '서울점',
-  address: '서울특별시 강남구 테헤란로 123',
-  phone: '02-1234-5678',
-  operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
-  openTime: '09:00',
-  closeTime: '22:00',
-  photoUrl: '',
+  code: '',
+  type: '', // 'store' or 'factory' or 'hq'
+  name: '',
+  address: '',
+  phone: '',
+  businessNumber: '',
+  operatingDays: [],
+  openTime: '',
+  closeTime: '',
+  images: [], // List of { storedName, url }
   representative: '',
-  region: 'UL01',
-  lineCount: 1
+  region: '',
+  lineCount: 0,
+  warningCount: 0,
+  penaltyEndDate: null
 })
+
+const orgPhotoFiles = ref([])
+const orgDeleteStoredFileNames = ref([])
+const orgPreviewImageUrls = ref([])
 
 // 요일 정보
 const weekDays = [
@@ -390,6 +526,15 @@ const isEditingInfo = ref(false)
 const isEditingOrg = ref(false)
 const showOrgModal = ref(false)
 const showPasswordModal = ref(false)
+const modalImageUrl = ref('')
+
+const openModal = (url) => {
+  modalImageUrl.value = url
+}
+
+const closeModal = () => {
+  modalImageUrl.value = ''
+}
 
 const passwordData = reactive({
   currentPassword: '',
@@ -397,6 +542,92 @@ const passwordData = reactive({
   confirmPassword: ''
 })
 
+const selectedProfileImage = ref(null)
+
+// 데이터 초기화
+onMounted(async () => {
+  await fetchMyInfo()
+})
+
+const fetchMyInfo = async () => {
+  try {
+    const data = await authStore.getMyInfo()
+    if (data) {
+      userInfo.employeeNumber = data.employeeNumber
+      userInfo.id = data.loginId
+      userInfo.name = data.username
+      userInfo.email = data.email
+      userInfo.phone = data.phone
+      if (userInfo.phone) formatPhoneNumber(userInfo, 'phone')
+      userInfo.birthdate = data.birthDate
+      userInfo.role = data.role
+      userInfo.roleDetail = data.position
+      userInfo.photoUrl = data.profileImageUrl
+    }
+  } catch (error) {
+    alert('내 정보를 불러오는데 실패했습니다.')
+  }
+}
+
+const fetchWorkplaceInfo = async () => {
+  try {
+    const data = await authStore.getMyWorkplaceInfo()
+    if (data) {
+      myOrgInfo.code = data.code
+      myOrgInfo.name = data.name
+      myOrgInfo.address = data.address
+      myOrgInfo.phone = data.phone
+      myOrgInfo.businessNumber = data.businessNumber
+      
+      // unitType에 따른 내 사업장 타입 매핑
+      if (data.unitType === 'FRANCHISE') {
+        myOrgInfo.type = 'store'
+      } else if (data.unitType === 'FACTORY') {
+        myOrgInfo.type = 'factory'
+      } else {
+        myOrgInfo.type = 'hq'
+      }
+
+      myOrgInfo.representative = data.representativeName
+      myOrgInfo.region = data.region
+      
+      const formatTime = (time) => {
+        if (!time) return ''
+        if (Array.isArray(time)) {
+          return `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`
+        }
+        if (typeof time === 'string') {
+          return time.substring(0, 5)
+        }
+        return ''
+      }
+
+      if (data.franchiseDetail) {
+        myOrgInfo.operatingDays = data.franchiseDetail.operatingDays ? data.franchiseDetail.operatingDays.split(',') : []
+        myOrgInfo.openTime = formatTime(data.franchiseDetail.openTime)
+        myOrgInfo.closeTime = formatTime(data.franchiseDetail.closeTime)
+        myOrgInfo.images = data.franchiseDetail.images || []
+        myOrgInfo.warningCount = data.franchiseDetail.warningCount || 0
+        myOrgInfo.penaltyEndDate = data.franchiseDetail.penaltyEndDate
+      } else if (data.factoryDetail) {
+        myOrgInfo.lineCount = data.factoryDetail.productionLineCount || 0
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch workplace info:', error)
+    alert('사업장 정보를 불러오는데 실패했습니다.')
+  }
+}
+
+// 상장 정보 모달 열기 시 데이터 조회
+const openOrgModal = async () => {
+  try {
+    await fetchWorkplaceInfo()
+    showOrgModal.value = true
+  } catch (error) {
+    // fetchWorkplaceInfo에서 처리됨
+  }
+}
 
 // 수정 원본 데이터 (취소용)
 let originalUserInfo = {}
@@ -404,20 +635,58 @@ let originalOrgInfo = {}
 
 // 정보 수정 시작
 const startEditInfo = () => {
-  originalUserInfo = { ...userInfo }
+  originalUserInfo = JSON.parse(JSON.stringify(userInfo))
   isEditingInfo.value = true
 }
 
 // 정보 수정 취소
 const cancelEditInfo = () => {
   Object.assign(userInfo, originalUserInfo)
+  selectedProfileImage.value = null
   isEditingInfo.value = false
 }
 
 // 정보 저장
-const saveUserInfo = () => {
-  alert('사용자 정보가 저장되었습니다.')
-  isEditingInfo.value = false
+const saveUserInfo = async () => {
+  if (!userInfo.email?.trim() || !userInfo.phone?.trim()) {
+    alert('모든 필수 정보를 입력해주세요.')
+    return
+  }
+  if (!isEmailValid.value) {
+    alert('올바른 이메일 형식을 입력해주세요.')
+    return
+  }
+  if (userInfo.phone.replace(/[^0-9]/g, '').length !== 11) {
+    alert('연락처는 11자리 숫자로 입력해주세요.')
+    return
+  }
+  try {
+    // URL에서 파일명만 추출하는 유틸리티
+    const getFileName = (url) => {
+      if (!url || url.startsWith('data:')) return null
+      try {
+        const path = new URL(url).pathname
+        return path.substring(path.lastIndexOf('/') + 1)
+      } catch (e) {
+        return url // URL 형식이 아니면 그대로 반환
+      }
+    }
+
+    const updateData = {
+      email: userInfo.email,
+      phone: userInfo.phone,
+      profileImageUrl: getFileName(userInfo.photoUrl)
+    }
+    await authStore.updateMyInfo(updateData, selectedProfileImage.value)
+    alert('사용자 정보가 저장되었습니다.')
+    isEditingInfo.value = false
+    selectedProfileImage.value = null
+    await fetchMyInfo() // 최신 정보 다시 불러오기
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || '정보 저장에 실패했습니다.'
+    console.error('Save user info failed:', error)
+    alert(errorMsg)
+  }
 }
 
 // 사진 업로드
@@ -428,6 +697,7 @@ const uploadPhoto = () => {
   input.onchange = (e) => {
     const file = e.target.files[0]
     if (file) {
+      selectedProfileImage.value = file
       const reader = new FileReader()
       reader.onload = (event) => {
         userInfo.photoUrl = event.target.result
@@ -447,13 +717,77 @@ const startEditOrg = () => {
 // 조직 정보 수정 취소
 const cancelEditOrg = () => {
   Object.assign(myOrgInfo, originalOrgInfo)
+  orgPhotoFiles.value = []
+  orgDeleteStoredFileNames.value = []
+  orgPreviewImageUrls.value = []
   isEditingOrg.value = false
 }
 
 // 조직 정보 저장
-const saveOrgInfo = () => {
-  alert('사업장 정보가 저장되었습니다.')
-  isEditingOrg.value = false
+const saveOrgInfo = async () => {
+  if (!myOrgInfo.phone?.trim()) {
+    alert('연락처를 입력해주세요.')
+    return
+  }
+
+  if (myOrgInfo.phone.replace(/[^0-9]/g, '').length < 9) {
+    alert('올바른 연락처 형식이 아닙니다.')
+    return
+  }
+
+  if (myOrgInfo.type === 'store') {
+    if (!myOrgInfo.operatingDays || myOrgInfo.operatingDays.length === 0) {
+      alert('운영 요일을 최소 하루 이상 선택해주세요.')
+      return
+    }
+    if (!myOrgInfo.openTime || !myOrgInfo.closeTime) {
+      alert('운영 시간을 모두 입력해주세요.')
+      return
+    }
+  }
+
+  if (myOrgInfo.type === 'factory') {
+    if (!myOrgInfo.lineCount || myOrgInfo.lineCount < 1) {
+      alert('생산 라인 개수는 1개 이상이어야 합니다.')
+      return
+    }
+  }
+
+  try {
+    const updateData = {
+      phone: myOrgInfo.phone,
+      operatingDays: (myOrgInfo.operatingDays || []).join(','),
+      openTime: myOrgInfo.openTime && myOrgInfo.openTime !== '' ? myOrgInfo.openTime + (myOrgInfo.openTime.length === 5 ? ':00' : '') : null,
+      closeTime: myOrgInfo.closeTime && myOrgInfo.closeTime !== '' ? myOrgInfo.closeTime + (myOrgInfo.closeTime.length === 5 ? ':00' : '') : null,
+      productionLineCount: myOrgInfo.type === 'factory' ? parseInt(myOrgInfo.lineCount) : null
+    }
+    
+    await authStore.updateMyWorkplaceInfo(updateData, orgDeleteStoredFileNames.value, orgPhotoFiles.value)
+    
+    alert('사업장 정보가 저장되었습니다.')
+    isEditingOrg.value = false
+    orgPhotoFiles.value = []
+    orgDeleteStoredFileNames.value = []
+    orgPreviewImageUrls.value = []
+    await fetchWorkplaceInfo()
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || '사업장 정보 저장에 실패했습니다.'
+    console.error('Save org info failed:', error)
+    alert(errorMsg)
+  }
+}
+
+// 가맹점 사진 수정 관련 함수
+const removeExistingOrgPhoto = (storedName) => {
+  if (!orgDeleteStoredFileNames.value.includes(storedName)) {
+    orgDeleteStoredFileNames.value.push(storedName)
+  }
+  myOrgInfo.images = myOrgInfo.images.filter(img => img.storedName !== storedName)
+}
+
+const removeNewOrgPhoto = (index) => {
+  orgPhotoFiles.value.splice(index, 1)
+  orgPreviewImageUrls.value.splice(index, 1)
 }
 
 // 사진 업로드 (조직)
@@ -461,21 +795,31 @@ const uploadOrgPhoto = () => {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'
+  input.multiple = true
   input.onchange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
+    const files = Array.from(e.target.files)
+    const currentTotal = myOrgInfo.images.length + orgPhotoFiles.value.length
+    
+    let allowedFiles = files
+    if (currentTotal + files.length > 5) {
+      alert('매장 사진은 최대 5장까지 등록 가능합니다.')
+      allowedFiles = files.slice(0, 5 - currentTotal)
+    }
+
+    allowedFiles.forEach(file => {
+      orgPhotoFiles.value.push(file)
       const reader = new FileReader()
       reader.onload = (event) => {
-        myOrgInfo.photoUrl = event.target.result
+        orgPreviewImageUrls.value.push(event.target.result)
       }
       reader.readAsDataURL(file)
-    }
+    })
   }
   input.click()
 }
 
 // 모달 닫기
-const closeOrgModal = () => {
+const handleCloseOrgModal = () => {
   if (isEditingOrg.value) {
     if (confirm('수정 중인 내용이 사라집니다. 닫으시겠습니까?')) {
       cancelEditOrg()
@@ -493,9 +837,8 @@ const closePasswordModal = () => {
   showPasswordModal.value = false
 }
 
-
 // 비밀번호 변경
-const changePassword = () => {
+const changePassword = async () => {
   if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
     alert('모든 필드를 입력해주세요.')
     return
@@ -505,12 +848,25 @@ const changePassword = () => {
     return
   }
   
+  // 비밀번호 정규식 체크 (백엔드와 동일하게)
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+=\-]).{8,}$/
+  if (!pwdRegex.test(passwordData.newPassword)) {
+    alert('비밀번호는 8자 이상이며, 알파벳 대소문자, 숫자, 특수문자를 모두 포함해야 합니다.')
+    return
+  }
+
   if (confirm('비밀번호를 변경하시겠습니까?\n변경 후에는 자동으로 로그아웃됩니다.')) {
-    alert('비밀번호가 성공적으로 변경되었습니다.')
-    router.push('/login')
+    try {
+      await authStore.changePassword(passwordData.currentPassword, passwordData.newPassword)
+      alert('비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.')
+      await authStore.logout()
+      router.push('/login')
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || '비밀번호 변경에 실패했습니다. 현재 비밀번호를 확인해주세요.'
+      alert(errorMsg)
+    }
   }
 }
-
 </script>
 
 <style scoped>
@@ -532,8 +888,8 @@ const changePassword = () => {
   height: 180px;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   display: flex;
-  align-items: flex-end;
-  padding: 0 0 2rem;
+  align-items: center; /* 바의 수직 중앙에 배치 */
+  padding: 0;
   margin-bottom: 2rem;
   overflow: hidden;
 }
@@ -552,7 +908,7 @@ const changePassword = () => {
   position: relative;
   z-index: 10;
   display: flex;
-  align-items: center;
+  align-items: center; /* 프로필과 텍스트의 중심을 맞춤 */
   gap: 2rem;
   width: 100%;
   max-width: 1200px;
@@ -623,13 +979,14 @@ const changePassword = () => {
 
 .hero-user-info {
   flex: 1;
+  margin-top: 15px; /* 요청하신 대로 확실하게 내림 */
 }
 
 .user-main {
   display: flex;
   align-items: baseline;
   gap: 1.25rem;
-  margin-top: 1.5rem;
+  margin-top: 0; /* 불필요한 상단 여백 제거하여 하단 정렬 유지 */
 }
 
 .hero-actions-inline {
@@ -762,8 +1119,9 @@ const changePassword = () => {
 /* 입력 필드 섹션 */
 .info-fields-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem 2rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem 2.5rem;
+  align-items: start;
 }
 
 .info-item {
@@ -897,20 +1255,21 @@ const changePassword = () => {
 
 /* 버튼 스타일 정밀화 */
 .btn-indigo-primary {
-  padding: 0.7rem 1.5rem;
-  background: #4f46e5;
+  padding: 0.8rem 1.75rem;
+  background: #0f172a;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-indigo-primary:hover {
-  background: #4338ca;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+  background: #1e293b;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn-indigo-primary.full { width: 100%; }
@@ -982,7 +1341,7 @@ const changePassword = () => {
   to { opacity: 1; transform: scale(1); }
 }
 
-.modal-compact { width: 400px; }
+.modal-compact { width: 480px; } /* 400px -> 480px */
 .modal-fancy { width: 600px; }
 
 .modal-header {
@@ -1037,7 +1396,16 @@ const changePassword = () => {
 
 .modal-body {
   padding: 2rem;
+  padding-bottom: 4rem; /* 조회 모드에서는 시원하게 */
   overflow-y: auto;
+}
+
+.modal-body.editing-mode {
+  padding-bottom: 2rem; /* 수정 모드에서는 버튼 공간 확보를 위해 패딩 축소 */
+}
+
+.modal-compact .modal-body {
+  padding-bottom: 2rem; /* 비밀번호 모달 등 컴팩트 모달 하단 여백 축소 */
 }
 
 .fancy-scroll::-webkit-scrollbar {
@@ -1115,6 +1483,15 @@ const changePassword = () => {
   grid-column: 1 / -1;
 }
 
+.info-group-row {
+  display: flex;
+  gap: 1.5rem;
+  grid-column: 1 / -1;
+}
+
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+
 .info-group label {
   font-size: 0.85rem;
   font-weight: 700;
@@ -1154,14 +1531,163 @@ const changePassword = () => {
   display: none;
 }
 
+/* 가맹점 사진 관리 스타일 */
+.org-photo-manage-container {
+  background: white;
+  border-radius: 16px;
+  padding: 0.5rem 0;
+}
+
+.org-photo-preview-scroll {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding: 1rem 0.25rem 0.5rem 0.25rem;
+}
+
+.org-photo-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 12px;
+  overflow: visible;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.org-photo-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.org-photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 11px;
+}
+
+.clickable-image {
+  cursor: pointer;
+}
+
+.btn-remove-mini {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 26px;
+  height: 26px;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  z-index: 10;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.btn-remove-mini:hover {
+  background: #fff1f2;
+  color: #ef4444;
+  border-color: #fecaca;
+  transform: scale(1.1);
+}
+
+.btn-add-org-photo {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-add-org-photo:hover {
+  border-color: #0f172a;
+  color: #0f172a;
+  background: white;
+}
+
+/* 이미지 확대 모달 */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.image-modal-content img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  object-fit: contain;
+}
+
+.btn-close-modal-round {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-close-modal-round:hover {
+  transform: scale(1.1);
+  background: #f1f5f9;
+}
+
 .modal-footer-sticky {
-  margin-top: 2rem;
+  margin-top: 1rem; /* 간격을 더 좁게 */
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding-top: 1.5rem;
   border-top: 1px solid #f1f5f9;
-  padding-bottom: 1.5rem; /* Added padding */
+  padding-bottom: 0.5rem;
 }
 
 .modal-footer-actions {
@@ -1293,19 +1819,20 @@ const changePassword = () => {
 }
 
 .btn-indigo-primary-sm {
-  padding: 0.5rem 1rem;
-  background: #4f46e5;
+  padding: 0.55rem 1.25rem;
+  background: #0f172a;
   border: none;
   border-radius: 8px;
   color: white;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-indigo-primary-sm:hover {
-  background: #4338ca;
+  background: #1e293b;
+  transform: translateY(-1px);
 }
 
 .btn-slate-ghost-sm {
@@ -1325,7 +1852,21 @@ const changePassword = () => {
   color: #1e293b;
 }
 
-/* 히어로 스타일 정리 */
-.hero-user-info .user-main { gap: 1rem; }
-.hero-user-info .user-id { margin-top: 0.25rem; font-size: 0.95rem; opacity: 0.8; }
+/* 유효성 검사 스타일 */
+.validation-msg {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+.validation-msg.error { color: #ef4444; }
+.validation-msg.success { color: #10b981; }
+
+.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
 </style>

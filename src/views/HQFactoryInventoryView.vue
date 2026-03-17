@@ -25,21 +25,72 @@
             <option value="DANGER">위험</option>
             </select>
         </div>
+        <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          초기화
+        </button>
         </div>
 
         <!-- Safety Stock Alert Section -->
         <div v-if="lowStockItems.length > 0" class="alert-section">
-        <div class="alert-title">⚠ 안전재고 부족 알림</div>
-        <ul>
-            <li v-for="item in lowStockItems" :key="item.productCode">
-            <strong>{{ item.productName }} ({{ item.productCode }})</strong>의 재고가 
-            <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. 
-            (안전재고: {{ item.safeStock }})
-            </li>
-        </ul>
+            <div class="alert-header">
+                <div class="alert-title">⚠️ 안전재고 부족 알림</div>
+                <button class="toggle-alert-btn" @click="isSafeStockExpanded = !isSafeStockExpanded">
+                    {{ isSafeStockExpanded ? '접기 ▲' : '더보기 ▼' }}
+                </button>
+            </div>
+            
+            <!-- Summary Header when Collapsed -->
+            <div v-if="!isSafeStockExpanded" class="alert-summary pl-2">
+                <span>안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
+            </div>
+
+            <!-- Detailed List -->
+            <template v-else>
+                <div class="mt-3 pt-3 border-top-dashed">
+                    <ul>
+                        <li v-for="item in lowStockItems" :key="item.productCode">
+                            <strong>{{ item.productName }} ({{ item.productCode }})</strong>의 재고가 
+                            <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. 
+                            (안전재고: {{ item.safeStock }})
+                        </li>
+                    </ul>
+                </div>
+            </template>
         </div>
         <div v-else class="alert-section safe">
-        <div class="alert-title">✅ 모든 재고가 안전합니다.</div>
+            <div class="alert-title">✅ 모든 제품의 안전재고가 충분합니다.</div>
+        </div>
+
+        <!-- Expiration Alert Section -->
+        <div v-if="expirationItems.length > 0" class="alert-section expiration">
+            <div class="alert-header">
+                <div class="alert-title">⏳ 유통기한 임박 알림</div>
+                <button class="toggle-alert-btn" @click="isExpirationExpanded = !isExpirationExpanded">
+                    {{ isExpirationExpanded ? '접기 ▲' : '더보기 ▼' }}
+                </button>
+            </div>
+            
+            <!-- Summary Header when Collapsed -->
+            <div v-if="!isExpirationExpanded" class="alert-summary pl-2">
+                <span>유통기한 임박 <strong>{{ expirationItems.length }}건</strong></span>
+            </div>
+
+            <!-- Detailed List -->
+            <template v-else>
+                <div class="mt-3 pt-3 border-top-dashed">
+                    <ul>
+                        <li v-for="item in expirationItems" :key="item.manufactureDate + item.productName">
+                            <strong>{{ item.productName }}</strong> 제조일 {{ item.manufactureDate }} 배치
+                            (<span class="danger-text">{{ item.quantity }}</span>개)
+                            — 유통기한까지 <span class="danger-text">{{ item.daysUntilExpiration }}일</span> 남음
+                        </li>
+                    </ul>
+                </div>
+            </template>
         </div>
 
         <!-- Data Table -->
@@ -94,12 +145,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="batch in sortedBatches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
+                    <tr v-for="batch in batches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
                         <td>{{ batch.productionDate }}</td>
                         <td class="number-cell">{{ batch.quantity }}</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 2 Pagination -->
+            <div class="pagination" v-if="batchTotalPages > 1">
+                <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in batchTotalPages" 
+                        :key="p" 
+                        @click="changeBatchPage(p - 1)" 
+                        :class="{ active: batchPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+            </div>
         </div>
     </template>
 
@@ -119,10 +187,6 @@
                 <input type="text" v-model="step3Filter.serialCode" placeholder="코드 입력" />
             </div>
             <div class="filter-group">
-                <label>제조일자</label>
-                <input type="date" v-model="step3Filter.productionDate" />
-            </div>
-            <div class="filter-group">
                 <label>배송완료 일자</label>
                 <input type="date" v-model="step3Filter.shippingDate" />
             </div>
@@ -136,23 +200,47 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th style="width: 50px;"><input type="checkbox" :checked="isAllSelected" @change="toggleAll" /></th>
                         <th>제품 식별 코드</th>
                         <th>박스 코드</th>
-                        <th>제조일자</th>
+                        <th>상태</th>
                         <th>배송완료 일자</th>
                         <th>입고 완료 일자</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="item in granularItems" :key="item.serialCode">
+                        <td><input type="checkbox" :checked="selectedItems.includes(item.serialCode)" @change="toggleItemSelection(item)" /></td>
                         <td class="sku-cell">{{ item.serialCode }}</td>
-                        <td>-</td>
-                        <td>{{ item.productionDate }}</td>
+                        <td>{{ item.boxCode || '-' }}</td>
+                        <td><span :class="['status-badge', getItemStatusClass(item.status)]">{{ getStatusKor(item.status) }}</span></td>
                         <td>{{ item.shippingDate || '-' }}</td>
                         <td>{{ item.arrivalTime || '-' }}</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Step 3 Pagination -->
+            <div class="pagination" v-if="itemTotalPages > 1">
+                <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+                <div class="page-numbers">
+                    <button 
+                        v-for="p in itemTotalPages" 
+                        :key="p" 
+                        @click="changeItemPage(p - 1)" 
+                        :class="{ active: itemPage === p - 1 }"
+                        class="page-num-btn"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+            </div>
+        </div>
+
+        <!-- Step 3 Bottom Actions -->
+        <div class="bottom-actions" v-if="selectedItems.length > 0">
+            <button class="action-btn disposal" @click="requestDisposal" style="background-color: #e53e3e; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 1rem;">폐기 처리 ({{ selectedItems.length }}개)</button>
         </div>
     </template>
 
@@ -192,9 +280,18 @@
           <input type="number" v-model="settingForm.safeStock" min="0" />
         </div>
 
-        <div class="popup-actions">
-          <button @click="closeSettingsPopup">닫기</button>
-          <button class="primary" @click="saveSettings" :disabled="!foundProduct">저장</button>
+        <div class="popup-actions" style="justify-content: space-between; display: flex; width: 100%;">
+          <button class="btn-reset-filters" @click="resetSettings" :disabled="!foundProduct">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+            초기화
+          </button>
+          <div>
+            <button @click="closeSettingsPopup" style="margin-right: 0.5rem;">닫기</button>
+            <button class="primary" @click="saveSettings" :disabled="!foundProduct">저장</button>
+          </div>
         </div>
       </div>
     </div>
@@ -204,20 +301,30 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
+import api from '@/api/index'
 
 // Redesign State
 const currentStep = ref(1)
 const selectedProduct = ref(null)
 const selectedProductionDate = ref(null)
+const selectedItems = ref([])
+
+const isSafeStockExpanded = ref(false)
+const isExpirationExpanded = ref(false)
 
 const filter = ref({
   productCode: '',
   productName: '',
   status: ''
 })
+
+const resetFilters = () => {
+  filter.value = {
+    productCode: '',
+    productName: '',
+    status: ''
+  }
+}
 
 const step3Filter = ref({
   serialCode: '',
@@ -234,6 +341,276 @@ const adminPassword = ref('')
 const settingForm = ref({ productCode: '', safeStock: 50 })
 const foundProduct = ref(null)
 
+// API Data
+const products = ref([])
+const batches = ref([])
+const allItems = ref([])
+const expirationItems = ref([])
+
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
+
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
+
+// --- API Calls ---
+const fetchProducts = async () => {
+    try {
+        const res = await api.get('/hq/inventory')
+        products.value = (res.data.data || []).map(p => ({
+            productId: p.productId,
+            productCode: p.productCode,
+            productName: p.productName,
+            quantity: p.totalQuantity,
+            portion: p.sizeCode === '01' ? 1 : 3,
+            safeStock: p.safetyStock
+        }))
+    } catch (e) {
+        console.error('재고 조회 실패', e)
+    }
+}
+
+const fetchAlerts = async () => {
+    try {
+        const res = await api.get('/hq/inventory/alerts')
+        const data = res.data.data || {}
+        
+        // lowStockItems는 이제 프론트엔드 computed에서 직접 계산하므로(가맹점 화면과 통일)
+        // 백엔드 API에서 받아오는 safetyStockAlerts 부분 생략
+        
+        expirationItems.value = (data.expirationAlerts || []).map(e => ({
+            productName: e.productName,
+            manufactureDate: e.manufactureDate,
+            quantity: e.quantity,
+            daysUntilExpiration: e.daysUntilExpiration
+        }))
+    } catch (e) {
+        console.error('알림 조회 실패', e)
+    }
+}
+
+const fetchBatches = async (productId) => {
+  try {
+    const res = await api.get(`/hq/inventory/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
+    })
+    const pageData = res.data.data || {}
+    batches.value = (pageData.content || [])
+        .map(b => ({
+          productionDate: b.manufactureDate,
+          quantity: b.totalQuantity
+        }))
+        .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed', e)
+    batches.value = []
+    batchTotalPages.value = 0
+  }
+}
+
+const fetchItems = async (manufactureDate) => {
+  try {
+    const res = await api.get('/hq/inventory/items', {
+      params: {
+        productId: selectedProduct.value.productId,
+        manufactureDate,
+        page: itemPage.value,
+        size: itemSize.value
+      }
+    })
+    const pageData = res.data.data || {}
+    allItems.value = (pageData.content || []).map(item => {
+      const rawStatus = item.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        inventoryId: item.inventoryId,
+        serialCode: item.serialCode,
+        boxCode: item.boxCode,
+        productionDate: manufactureDate,
+        shippingDate: item.shippedAt ? item.shippedAt.substring(0, 10) : null,
+        arrivalTime: item.receivedAt ? item.receivedAt.substring(0, 10) : null,
+        status: parsedStatus
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed', e)
+    allItems.value = []
+    itemTotalPages.value = 0
+  }
+}
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems(selectedProductionDate.value)
+}
+
+onMounted(() => {
+    fetchProducts()
+    fetchAlerts()
+})
+
+// --- Status Helpers ---
+const getStatusKor = (status) => {
+    const s = (status || '').toUpperCase();
+    if (s.includes('AVAILABLE')) return '가용';
+    if (s.includes('EXPIRED')) return '만료';
+    if (s.includes('DISCARDED')) return '폐기';
+    if (s.includes('RESERVED')) return '예약';
+    if (s.includes('OUTBOUND')) return '출고';
+    if (s.includes('RETURN_WAIT')) return '반품대기';
+    if (s.includes('SHIPPING')) return '배송 중';
+    return status || '가용';
+}
+
+const getItemStatusClass = (status) => {
+    const s = (status || '').toUpperCase();
+    if (s.includes('AVAILABLE')) return 'safe';
+    if (s.includes('RESERVED')) return 'warning';
+    if (s.includes('EXPIRED')) return 'danger';
+    if (s.includes('DISCARDED')) return 'sold';
+    if (s.includes('OUTBOUND')) return 'sold';
+    if (s.includes('RETURN_WAIT')) return 'warning';
+    if (s.includes('SHIPPING')) return 'shipping';
+    return 'safe';
+}
+
+const getStatusLabel = (qty, safe) => {
+    if (qty <= 0) return '품절'
+    if (qty <= safe) return '위험'
+    if (qty <= safe + 20) return '부족'
+    return '안전'
+}
+
+const getStatusClass = (qty, safe) => {
+    if (qty <= 0) return 'sold'
+    if (qty <= safe) return 'danger'
+    if (qty <= safe + 20) return 'warning'
+    return 'safe'
+}
+
+// --- Computed ---
+
+const lowStockItems = computed(() => {
+    return products.value.filter(item => item.quantity <= item.safeStock)
+})
+
+const filteredProducts = computed(() => {
+    return products.value.filter(item => {
+        const matchCode = !filter.value.productCode || item.productCode.startsWith(filter.value.productCode)
+        const matchName = !filter.value.productName || item.productName.includes(filter.value.productName)
+        let statusMatch = true
+        if (filter.value.status) {
+            const lbl = getStatusLabel(item.quantity, item.safeStock)
+            if (filter.value.status === 'SAFE') statusMatch = lbl === '안전'
+            if (filter.value.status === 'WARNING') statusMatch = lbl === '부족'
+            if (filter.value.status === 'DANGER') statusMatch = lbl === '위험' || lbl === '품절'
+        }
+        return matchCode && matchName && statusMatch
+    })
+})
+
+const sortedBatches = computed(() => batches.value)
+
+const granularItems = computed(() => {
+    return allItems.value.filter(i => {
+        const matchSerial = !step3Filter.value.serialCode || i.serialCode.includes(step3Filter.value.serialCode)
+        const matchBox = !step3Filter.value.boxCode || (i.boxCode && i.boxCode.includes(step3Filter.value.boxCode))
+        const matchProdDate = !step3Filter.value.productionDate || i.productionDate === step3Filter.value.productionDate
+        const matchShipDate = !step3Filter.value.shippingDate || i.shippingDate === step3Filter.value.shippingDate
+        const matchInboundDate = !step3Filter.value.inboundDate || i.arrivalTime === step3Filter.value.inboundDate
+        return matchSerial && matchBox && matchProdDate && matchShipDate && matchInboundDate
+    })
+})
+
+// --- Actions ---
+const goToStep2 = async (product) => {
+  selectedProduct.value = product
+  selectedItems.value = []
+  batchPage.value = 0
+  currentStep.value = 2
+  await fetchBatches(product.productId)
+}
+
+const goToStep3 = async (batch) => {
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  currentStep.value = 3
+  await fetchItems(batch.productionDate)
+}
+
+
+const isAllSelected = computed(() => {
+    return granularItems.value.length > 0 && selectedItems.value.length === granularItems.value.length
+})
+
+const toggleAll = () => {
+    if (isAllSelected.value) {
+        selectedItems.value = []
+    } else {
+        selectedItems.value = granularItems.value.map(i => i.serialCode)
+    }
+}
+
+const toggleItemSelection = (item) => {
+    const isSelected = selectedItems.value.includes(item.serialCode)
+    // 박스 단위 선택 로직: 동일한 boxCode를 가진 상품들을 찾아서 처리
+    // 단, boxCode가 없는 경우는 개별 상품으로 처리
+    const sameBoxItems = item.boxCode 
+        ? granularItems.value.filter(i => i.boxCode === item.boxCode)
+        : [item]
+    
+    const boxSerials = sameBoxItems.map(i => i.serialCode)
+    
+    if (isSelected) {
+        // 이미 선택된 경우 박스 전체 해제
+        selectedItems.value = selectedItems.value.filter(s => !boxSerials.includes(s))
+    } else {
+        // 선택되지 않은 경우 박스 전체 추가
+        const newSelected = [...selectedItems.value]
+        boxSerials.forEach(s => {
+            if (!newSelected.includes(s)) {
+                newSelected.push(s)
+            }
+        })
+        selectedItems.value = newSelected
+    }
+}
+
+const requestDisposal = async () => {
+    const selectedIds = granularItems.value
+        .filter(i => selectedItems.value.includes(i.serialCode))
+        .map(i => i.inventoryId)
+    
+    if (selectedIds.length === 0) return
+    if (!confirm(`선택한 ${selectedIds.length}개 제품을 폐기 처리하시겠습니까?`)) return
+
+    try {
+        await api.post('/hq/inventory/disposal', {
+            actorType: 'FACTORY',
+            actorId: 1, // 공장 아이디 고정
+            inventoryIds: selectedIds
+        })
+        alert('폐기 처리가 완료되었습니다.')
+        selectedItems.value = []
+        await fetchItems(selectedProductionDate.value)
+        await fetchProducts()
+    } catch (e) {
+        console.error('폐기 처리 실패:', e)
+        alert('폐기 처리에 실패했습니다.')
+    }
+}
+
+// --- Popup Logic ---
 const lookupProduct = () => {
     foundProduct.value = products.value.find(p => p.productCode === settingForm.value.productCode)
     if (foundProduct.value) {
@@ -241,199 +618,68 @@ const lookupProduct = () => {
     }
 }
 
-// Mock Data
-const products = ref([])
-const inventoryItems = ref([]) // Granular items
-
-
-onMounted(() => {
-    generateMockInventory()
-})
-
-const generateMockInventory = () => {
-    const pList = []
-    const iList = []
-    const types = [
-        { code: 'OR', name: '오리지널 떡볶이 밀키트' },
-        { code: 'RO', name: '로제 떡볶이 밀키트' },
-        { code: 'MA', name: '마라 떡볶이 밀키트' }
-    ]
-    const spices = [
-        { code: '01', name: '순한맛' },
-        { code: '02', name: '기본맛' },
-        { code: '03', name: '매운맛' },
-        { code: '04', name: '아주 매운맛' }
-    ]
-    const sizes = [
-        { code: '01', name: '1~2인분', portion: 1 },
-        { code: '03', name: '3~4인분', portion: 3 }
-    ]
-
-    const dates = ['2026-02-01', '2026-02-05', '2026-02-08', '2026-02-10']
-
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
-                
-                const safe = 50
-                let totalQty = 0
-
-                // Generate item batches for each product
-                dates.forEach(d => {
-                    const batchQty = Math.floor(Math.random() * 50) + 20
-                    totalQty += batchQty
-
-                    const factoryCode = 'FA01'
-                    const line = 'A1'
-
-                    for(let i=0; i<batchQty; i++) {
-                        const boxIndex = Math.floor(i/20) + 1
-                        const itemIndex = (i % 20) + 1
-
-                        // Identification Code (Region based): [RegionCode + FactoryCode + ProductionLine + ProductCode + Box Index + Item Index]
-                        const serialCode = `UL01-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}-${itemIndex.toString().padStart(2, '0')}`
-
-                        iList.push({
-                            serialCode: serialCode,
-                            boxCode: `SE01-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}`,
-                            productCode: code,
-                            productionDate: d,
-                            shippingDate: '2026-02-11',
-                            arrivalTime: '2026-02-12'
-                        })
-                    }
-                })
-
-                pList.push({
-                    productCode: code,
-                    productName: name,
-                    quantity: totalQty,
-                    portion: sz.portion,
-                    safeStock: safe
-                })
-            })
-        })
-    })
-    products.value = pList
-    inventoryItems.value = iList
-}
-
-// Logic for Status Label
-const getStatusLabel = (qty, safe) => {
-  if (qty <= 0) return '품절'
-  if (qty <= safe - 10) return '위험'
-  if (qty <= safe) return '부족'
-  return '안전'
-}
-
-const getStatusClass = (qty, safe) => {
-  if (qty <= 0) return 'sold'
-  if (qty <= safe - 10) return 'danger'
-  if (qty <= safe) return 'warning'
-  return 'safe'
-}
-
-const filteredProducts = computed(() => {
-  return products.value.filter(item => {
-    const matchCode = !filter.value.productCode || item.productCode.startsWith(filter.value.productCode)
-    const matchName = !filter.value.productName || item.productName.includes(filter.value.productName)
-    
-    let statusMatch = true
-    if (filter.value.status) {
-      const currentStatusLabel = getStatusLabel(item.quantity, item.safeStock)
-      if (filter.value.status === 'SAFE') statusMatch = currentStatusLabel === '안전'
-      if (filter.value.status === 'WARNING') statusMatch = currentStatusLabel === '부족'
-      if (filter.value.status === 'DANGER') statusMatch = currentStatusLabel === '위험' || currentStatusLabel === '품절'
-    }
-    
-    return matchCode && matchName && statusMatch
-  })
-})
-
-const lowStockItems = computed(() => {
-  return products.value.filter(item => item.quantity <= item.safeStock)
-})
-
-const sortedBatches = computed(() => {
-    if (!selectedProduct.value) return []
-    const batches = {}
-    inventoryItems.value
-        .filter(i => i.productCode === selectedProduct.value.productCode)
-        .forEach(i => {
-            if (!batches[i.productionDate]) batches[i.productionDate] = 0
-            batches[i.productionDate]++
-        })
-    
-    return Object.entries(batches)
-        .map(([date, qty]) => ({ productionDate: date, quantity: qty }))
-        .sort((a, b) => a.productionDate.localeCompare(b.productionDate)) // FIFO logic
-})
-
-const granularItems = computed(() => {
-    if (!selectedProduct.value || !selectedProductionDate.value) return []
-    return inventoryItems.value.filter(i => {
-        const matchProduct = i.productCode === selectedProduct.value.productCode && i.productionDate === selectedProductionDate.value
-        
-        const matchSerial = !step3Filter.value.serialCode || i.serialCode.includes(step3Filter.value.serialCode)
-        const matchBox = !step3Filter.value.boxCode || i.boxCode.includes(step3Filter.value.boxCode)
-        const matchProdDate = !step3Filter.value.productionDate || i.productionDate === step3Filter.value.productionDate
-        const matchShipDate = !step3Filter.value.shippingDate || i.shippingDate === step3Filter.value.shippingDate
-        const matchInboundDate = !step3Filter.value.inboundDate || i.arrivalTime === step3Filter.value.inboundDate
-
-        return matchProduct && matchSerial && matchBox && matchProdDate && matchShipDate && matchInboundDate
-    })
-})
-
-// Actions
-const goToStep2 = (product) => {
-    selectedProduct.value = product
-    currentStep.value = 2
-}
-
-const goToStep3 = (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    currentStep.value = 3
-}
-
-const goToDetail = (code) => {
-  router.push(`/store/inventory/${code}`)
-}
-
-// Popup Logic
 const openPasswordPopup = (e) => {
-  e.stopPropagation() // Prevent row click
-  showPasswordPopup.value = true
-  adminPassword.value = ''
+    e.stopPropagation()
+    showPasswordPopup.value = true
+    adminPassword.value = ''
 }
 
 const closePopup = () => {
-  showPasswordPopup.value = false
+    showPasswordPopup.value = false
 }
 
-const checkPassword = () => {
-  if (adminPassword.value === '1234') {
-    showPasswordPopup.value = false
-    showSettingsPopup.value = true
-  } else {
-    alert('비밀번호가 틀렸습니다.')
-  }
+const checkPassword = async () => {
+    try {
+        const res = await api.post('/hq/inventory/verify-password', { password: adminPassword.value })
+        if (res.data.data) {
+            showPasswordPopup.value = false
+            showSettingsPopup.value = true
+        } else {
+            alert('비밀번호가 틀렸습니다.')
+        }
+    } catch (e) {
+        console.error('비밀번호 확인 실패:', e)
+        alert('비밀번호 확인 중 오류가 발생했습니다.')
+    }
 }
 
 const closeSettingsPopup = () => {
-  showSettingsPopup.value = false
-  settingForm.value = { productCode: '', safeStock: 50 }
-  foundProduct.value = null
+    showSettingsPopup.value = false
+    settingForm.value = { productCode: '', safeStock: 50 }
+    foundProduct.value = null
 }
 
-const saveSettings = () => {
-  const item = products.value.find(p => p.productCode === settingForm.value.productCode)
-  if (item) {
-      item.safeStock = settingForm.value.safeStock
-      alert('안전재고 설정이 변경되었습니다.')
-      closeSettingsPopup()
-  }
+const saveSettings = async () => {
+    if (!foundProduct.value) return
+    try {
+        await api.post('/hq/inventory/set/safety-stock', {
+            productId: foundProduct.value.productId,
+            safetyStock: settingForm.value.safeStock
+        })
+        alert('안전재고 설정이 변경되었습니다.')
+        await fetchProducts()
+        await fetchAlerts()
+        closeSettingsPopup()
+    } catch (e) {
+        alert('저장에 실패했습니다.')
+        console.error(e)
+    }
+}
+
+const resetSettings = async () => {
+    if (!foundProduct.value) return
+    if (!confirm('이 상품의 안전재고를 자동 계산 방식으로 초기화하시겠습니까?')) return
+
+    try {
+        await api.post(`/hq/inventory/reset/safety-stock/${foundProduct.value.productId}`)
+        alert('안전재고가 시스템 산식에 따라 초기화되었습니다.')
+        await fetchProducts()
+        await fetchAlerts()
+        closeSettingsPopup()
+    } catch (e) {
+        console.error('초기화 실패:', e)
+        alert('안전재고 초기화에 실패했습니다.')
+    }
 }
 
 </script>
@@ -474,6 +720,7 @@ const saveSettings = () => {
   font-weight: 600;
   height: 42px;
 }
+.filter-section > .btn-reset-filters { margin-left: auto; }
 
 /* Alert Section */
 .alert-section {
@@ -487,6 +734,12 @@ const saveSettings = () => {
   background: #f0fff4;
   border-color: #c6f6d5;
 }
+.alert-section.expiration {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.alert-section.expiration .alert-title { color: #92400e; }
+.alert-section.expiration li { color: #78350f; }
 .alert-title {
   font-weight: 700;
   font-size: 1.1rem;
@@ -497,6 +750,14 @@ const saveSettings = () => {
 .alert-section ul { margin: 0; padding-left: 1.5rem; }
 .alert-section li { margin-bottom: 0.25rem; color: #742a2a; }
 .danger-text { color: #e53e3e; font-weight: 800; }
+.alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.toggle-alert-btn { background: none; border: none; font-size: 0.85rem; color: #718096; cursor: pointer; text-decoration: underline; }
+.alert-summary { font-size: 0.95rem; color: #c53030; margin-bottom: 0.5rem; }
+.pl-2 { padding-left: 0.5rem; }
+
+.mt-3 { margin-top: 0.75rem; }
+.pt-3 { padding-top: 0.75rem; }
+.border-top-dashed { border-top: 1px dashed #fed7d7; }
 
 /* Data Table */
 .data-table-card { 
@@ -510,12 +771,29 @@ const saveSettings = () => {
     border-collapse: collapse; 
     min-width: 1000px; /* 창이 좁아져도 가로 형태 유지 */
 }
-.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); text-align: center; }
+.data-table th {
+  text-align: center;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  background: #f8fafc;
+  color: var(--text-light);
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table td {
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
+}
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { font-weight: 600; }
 
 .status-badge {
@@ -528,6 +806,7 @@ const saveSettings = () => {
 .status-badge.warning { background: #fffaf0; color: #dd6b20; }
 .status-badge.danger { background: #fff5f5; color: #e53e3e; }
 .status-badge.sold { background: #edf2f7; color: #4a5568; }
+.status-badge.shipping { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
 
 .icon-btn {
   background: none; border: none; cursor: pointer; font-size: 1rem; margin-left: 0.5rem;
@@ -594,5 +873,56 @@ const saveSettings = () => {
 }
 .data-table-card::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
 }
 </style>

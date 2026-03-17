@@ -5,19 +5,22 @@
     <div class="header-tools">
       <div class="notification" @click="$router.push('/notifications')">
         <img src="@/assets/notification.png" alt="알림" class="notif-img">
-        <span class="dot"></span>
+        <span v-if="notificationStore.unreadCount > 0" class="badge">
+          {{ notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount }}
+        </span>
       </div>
 
       <div class="user-card" @click="$router.push('/mypage')">
         <div class="user-avatar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <img v-if="authStore.userPhoto" :src="authStore.userPhoto" alt="Profile" class="avatar-img">
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
 
         <div class="user-detail">
-          <p class="u-name">유저</p>
+          <p class="u-name">{{ authStore.userName }}</p>
           <p class="u-role">{{ roleDisplayName }}</p>
         </div>
 
@@ -36,17 +39,25 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+import { useNotificationStore } from '../../stores/notification'
 
 defineProps(['modelValue'])
 defineEmits(['update:modelValue'])
 
 const router = useRouter()
+const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
-const userRole = sessionStorage.getItem('userRole')
+const userRole = computed(() => authStore.userRole)
 
 const roleMapping = {
+  ADMIN: { header: '통합 관리', display: '총관리자' },
+  HQ: { header: '본사', display: '본사 관리자' },
+  FACTORY: { header: '공장', display: '공장 관리자' },
+  FRANCHISE: { header: '가맹점', display: '가맹점주' },
   admin: { header: '통합 관리', display: '총관리자' },
   headOffice: { header: '본사', display: '본사 관리자' },
   factory: { header: '공장', display: '공장 관리자' },
@@ -54,20 +65,32 @@ const roleMapping = {
 }
 
 const headerTitle = computed(() => {
-  return roleMapping[userRole]?.header || '재고 관리 현황'
+  return roleMapping[userRole.value]?.header || '재고 관리 현황'
 })
 
 const roleDisplayName = computed(() => {
-  return roleMapping[userRole]?.display || '사용자'
+  return roleMapping[userRole.value]?.display || '사용자'
 })
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if(confirm('로그아웃 하시겠습니까?')) {
-    sessionStorage.removeItem('isLoggedIn')
-    sessionStorage.removeItem('userRole')
+    notificationStore.disconnectSSE()
+    await authStore.logout()
     router.push('/login')
   }
 }
+
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    notificationStore.fetchNotifications()
+    notificationStore.fetchUnreadCount()
+    notificationStore.connectSSE()
+  }
+})
+
+onUnmounted(() => {
+  notificationStore.disconnectSSE()
+})
 </script>
 
 <style scoped>
@@ -78,7 +101,23 @@ const handleLogout = () => {
 
 .notification { position: relative; cursor: pointer; display: flex; align-items: center; }
 .notif-img { height: 28px; width: auto; }
-.notification .dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background-color: #ef4444; border-radius: 50%; border: 2px solid white; }
+.notification .badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid white;
+}
 
 .user-card {
   padding: 0.5rem 0.8rem;
@@ -94,6 +133,7 @@ const handleLogout = () => {
   background-color: #f8fafc;
   border-color: #cbd5e1;
 }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .user-avatar {
   width: 38px;

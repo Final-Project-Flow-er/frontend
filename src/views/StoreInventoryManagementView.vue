@@ -27,46 +27,61 @@
         </div>
       </div>
 
-      <!-- Safety Stock Alert Section -->
-      <div v-if="lowStockItems.length > 0 || expiringItems.length > 0" class="alert-section">
-        <div class="alert-header">
-            <div class="alert-title">⚠ 재고 경고 알림</div>
-            <button v-if="hasMoreAlerts" class="toggle-alert-btn" @click="toggleAlertExpand">
-                {{ isAlertExpanded ? '접기 ▲' : '더보기 ▼' }}
-            </button>
-        </div>
-        <!-- Summary Header when Collapsed -->
-        <div v-if="!isAlertExpanded" class="alert-summary pl-2">
-            <span v-if="expiringItems.length > 0">유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
-            <span v-if="lowStockItems.length > 0 && expiringItems.length > 0" class="mx-2">|</span>
-            <span v-if="lowStockItems.length > 0">안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
-        </div>
+      <!-- Safety Stock Alert Section (Collapsible) -->
+      <div v-if="lowStockItems.length > 0" class="alert-section">
+          <div class="alert-header">
+              <div class="alert-title">⚠️ 안전재고 부족 알림</div>
+              <button class="toggle-alert-btn" @click="isSafeStockExpanded = !isSafeStockExpanded">
+                  {{ isSafeStockExpanded ? '접기 ▲' : '더보기 ▼' }}
+              </button>
+          </div>
+          
+          <!-- Summary Header when Collapsed -->
+          <div v-if="!isSafeStockExpanded" class="alert-summary pl-2">
+              <span>안전재고 부족 <strong>{{ lowStockItems.length }}건</strong></span>
+          </div>
 
-        <!-- Detailed Lists (Only when Expanded) -->
-        <template v-if="isAlertExpanded">
-            <!-- Expiration Alert -->
-            <div v-if="expiringItems.length > 0" class="expiration-warning" style="border-top: none; padding-top: 0; margin-top: 0; margin-bottom: 1rem;">
-                <div class="sub-alert-title">⏳ 유통기한 임박 (3일 이내)</div>
-                <ul>
-                    <li v-for="group in expiringItems" :key="group.key">
-                        <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Low Stock -->
-            <div v-if="lowStockItems.length > 0" :class="{ 'mt-3 pt-3 border-top-dashed': expiringItems.length > 0 }">
-                <div class="sub-alert-title">⚠️ 안전재고 부족</div>
-                <ul>
-                    <li v-for="item in lowStockItems" :key="item.productCode">
-                        <strong>{{ item.productName }}</strong>의 재고가 <span class="danger-text">{{ item.quantity }}</span>개 남았습니다. (안전재고 미달)
-                    </li>
-                </ul>
-            </div>
-        </template>
+          <!-- Detailed List -->
+          <template v-else>
+              <div class="mt-3 pt-3 border-top-dashed">
+                  <ul>
+                      <li v-for="item in lowStockItems" :key="item.productCode">
+                          <strong>{{ item.productName }}</strong> ({{item.productCode}}): 재고 <span class="danger-text">{{ item.quantity }}</span> (안전재고: {{item.safeStock}})
+                      </li>
+                  </ul>
+              </div>
+          </template>
       </div>
-      <div v-else class="alert-section safe">
-        <div class="alert-title">✅ 모든 재고가 안전합니다.</div>
+
+      <!-- Expiration Alert Section (Collapsible) -->
+      <div v-if="expiringItems.length > 0" class="alert-section expiration">
+          <div class="alert-header">
+              <div class="alert-title">⏳ 유통기한 임박 알림</div>
+              <button class="toggle-alert-btn" @click="isExpirationExpanded = !isExpirationExpanded">
+                  {{ isExpirationExpanded ? '접기 ▲' : '더보기 ▼' }}
+              </button>
+          </div>
+          
+          <!-- Summary Header when Collapsed -->
+          <div v-if="!isExpirationExpanded" class="alert-summary pl-2">
+              <span>유통기한 임박 <strong>{{ expiringItems.length }}건</strong></span>
+          </div>
+
+          <!-- Detailed List -->
+          <template v-else>
+              <div class="mt-3 pt-3 border-top-dashed">
+                  <ul>
+                      <li v-for="group in expiringItems" :key="group.key">
+                          <strong>{{ group.productName }}</strong> ({{ group.productionDate }} 제조) - <span class="danger-text">{{ group.count }}개</span>가 {{ group.daysLeft }}일 후 만료됩니다.
+                      </li>
+                  </ul>
+              </div>
+          </template>
+      </div>
+
+      <!-- No Alerts -->
+      <div v-if="lowStockItems.length === 0 && expiringItems.length === 0" class="alert-section safe">
+        <div class="alert-title">✅ 모든 재고가 안전하며, 임박한 상품이 없습니다.</div>
       </div>
 
       <!-- Data Table -->
@@ -136,6 +151,23 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Step 2 Pagination -->
+        <div class="pagination" v-if="batchTotalPages > 1">
+          <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
+          <div class="page-numbers">
+            <button 
+              v-for="p in batchTotalPages" 
+              :key="p" 
+              @click="changeBatchPage(p - 1)" 
+              :class="{ active: batchPage === p - 1 }"
+              class="page-num-btn"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+        </div>
       </div>
     </template>
 
@@ -190,8 +222,8 @@
               <td class="sku-cell">{{ item.serialCode }}</td>
               <td>{{ item.boxCode }}</td>
               <td>
-                <span :class="['status-item-badge', item.status.toLowerCase()]">
-                  {{ item.status === 'AVAILABLE' ? '가용' : '반품 대기' }}
+                <span :class="['status-item-badge', (item.status || '').toLowerCase().split('.').pop()]">
+                  {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
                 </span>
               </td>
               <td>{{ item.shippingDate || '-' }}</td>
@@ -202,11 +234,28 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Step 3 Pagination -->
+        <div class="pagination" v-if="itemTotalPages > 1">
+          <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+          <div class="page-numbers">
+            <button 
+              v-for="p in itemTotalPages" 
+              :key="p" 
+              @click="changeItemPage(p - 1)" 
+              :class="{ active: itemPage === p - 1 }"
+              class="page-num-btn"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+        </div>
       </div>
 
       <!-- Bottom Actions -->
       <div class="bottom-actions" v-if="selectedItems.length > 0">
-        <button class="action-btn danger" @click="requestReturn">반품 요청 ({{ selectedItems.length }}개)</button>
+        <button class="action-btn disposal" @click="requestDisposal">폐기 처리 ({{ selectedItems.length }}개)</button>
       </div>
     </template>
 
@@ -246,9 +295,12 @@
           <input type="number" v-model="settingForm.safeStock" min="0" />
         </div>
 
-        <div class="popup-actions">
-          <button @click="closeSettingsPopup">닫기</button>
-          <button class="primary" @click="saveSettings" :disabled="!foundProduct">저장</button>
+        <div class="popup-actions" style="justify-content: space-between; display: flex; width: 100%;">
+          <button class="warning" @click="resetSettings" :disabled="!foundProduct" style="background-color:#f0ad4e; color:white; border:none; border-radius:4px; padding:0.5rem 1rem;">초기화</button>
+          <div>
+            <button @click="closeSettingsPopup" style="margin-right: 0.5rem;">닫기</button>
+            <button class="primary" @click="saveSettings" :disabled="!foundProduct">저장</button>
+          </div>
         </div>
       </div>
     </div>
@@ -257,8 +309,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api/index'
 
 const router = useRouter()
 
@@ -267,11 +320,9 @@ const currentStep = ref(1)
 const selectedProduct = ref(null)
 const selectedProductionDate = ref(null)
 const selectedItems = ref([])
-const isAlertExpanded = ref(false)
 
-const toggleAlertExpand = () => {
-    isAlertExpanded.value = !isAlertExpanded.value
-}
+const isSafeStockExpanded = ref(false)
+const isExpirationExpanded = ref(false)
 
 const filter = ref({
   productCode: '',
@@ -304,91 +355,45 @@ const lookupProduct = () => {
 const products = ref([])
 const inventoryItems = ref([])
 
-onMounted(() => {
-    generateMockInventory()
+onMounted(async () => {
+    await fetchProducts()
 })
 
-const generateMockInventory = () => {
-    const pList = []
-    const iList = []
-    const types = [
-        { code: 'OR', name: '오리지널 떡볶이 밀키트' },
-        { code: 'RO', name: '로제 떡볶이 밀키트' },
-        { code: 'MA', name: '마라 떡볶이 밀키트' }
-    ]
-    const spices = [
-        { code: '01', name: '순한맛' },
-        { code: '02', name: '기본맛' },
-        { code: '03', name: '매운맛' },
-        { code: '04', name: '아주 매운맛' }
-    ]
-    const sizes = [
-        { code: '01', name: '1~2인분', portion: 1 },
-        { code: '03', name: '3~4인분', portion: 3 }
-    ]
+const fetchProducts = async () => {
+    try {
+        const res = await api.get('/franchise/inventory') // Principal 사용하므로 id 불필요
+        const data = res.data.data || []
+        products.value = data.map(p => ({
+            productId: p.productId,
+            productCode: p.productCode,
+            productName: p.productName,
+            quantity: p.totalQuantity,
+            portion: p.size === '01' ? 1 : 3,
+            safeStock: p.safetyStock || 0,
+            status: p.status
+        }))
+        await fetchAlerts()
+    } catch (e) {
+        console.error('가맹점 재고 데이터 조회 실패:', e)
+        products.value = []
+    }
+}
 
-    const dates = ['2026-02-01', '2026-02-05', '2026-02-08', '2026-02-10']
-    const storeCode = 'SE01' // Gangnam branch example
-    const factoryCode = 'FA01'
-    const productionLines = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9']
-
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}`
-                
-                const safe = 10
-                let totalQty = 0
-
-                dates.forEach(d => {
-                    // Pick a random line for this production batch
-                    const line = productionLines[Math.floor(Math.random() * productionLines.length)]
-                    
-                    const batchQty = 25 // Force 25 to show 2 boxes (20+5)
-                    totalQty += batchQty
-
-                    // Pre-determine status for each box in this batch
-                    const boxStatuses = {} // boxIndex -> status
-
-                    for(let i=0; i<batchQty; i++) {
-                        const boxIndex = Math.floor(i/20) + 1
-                        const itemIndex = (i % 20) + 1
-                        
-                        // Terminology: [StoreCode + FactoryCode + ProductionLine + ProductCode + Box Index]
-                        const boxCode = `${storeCode}-${factoryCode}-${line}-${code}-${boxIndex.toString().padStart(3, '0')}`
-                        
-                        // Terminology: [BoxCode + Item Index]
-                        const serialCode = `${boxCode}-${itemIndex.toString().padStart(2, '0')}`
-
-                        if (boxStatuses[boxIndex] === undefined) {
-                            boxStatuses[boxIndex] = Math.random() < 0.05 ? 'RETURN_PENDING' : 'AVAILABLE'
-                        }
-
-                        iList.push({
-                            serialCode: serialCode,
-                            boxCode: boxCode,
-                            productCode: code,
-                            productionDate: d,
-                            shippingDate: '2026-02-11',
-                            arrivalTime: '2026-02-12',
-                            status: boxStatuses[boxIndex]
-                        })
-                    }
-                })
-
-                pList.push({
-                    productCode: code,
-                    productName: name,
-                    quantity: totalQty,
-                    portion: sz.portion,
-                    safeStock: safe
-                })
-            })
-        })
-    })
-    products.value = pList
-    inventoryItems.value = iList
+const fetchAlerts = async () => {
+    try {
+        const res = await api.get('/franchise/inventory/alerts')
+        const data = res.data.data || {}
+        expiringItems.value = (data.expirationAlerts || []).map(e => ({
+            productName: e.productName,
+            productionDate: e.manufactureDate,
+            count: e.quantity,
+            daysLeft: e.daysUntilExpiration,
+            key: e.manufactureDate + e.productName
+        }))
+    } catch (e) {
+        console.error('가맹점 알림 조회 실패:', e)
+        expiringItems.value = []
+    }
 }
 
 // Logic for Status Label
@@ -428,93 +433,100 @@ const lowStockItems = computed(() => {
   return products.value.filter(item => item.quantity <= item.safeStock)
 })
 
-// Expiration Logic: Mfg Date + 14 Days
-const expiringItems = computed(() => {
-    const today = new Date()
-    const alertList = []
-
-    // Group by Product & MfgDate
-    const groups = {}
-
-    inventoryItems.value.forEach(item => {
-        if (item.status !== 'AVAILABLE') return
-
-        const mfg = new Date(item.productionDate)
-        const exp = new Date(mfg)
-        exp.setDate(mfg.getDate() + 14) // +14 Days Expiration policy
-        
-        const diffTime = exp - today
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-        if (diffDays <= 3 && diffDays >= 0) {
-            const key = `${item.productCode}-${item.productionDate}`
-            if (!groups[key]) {
-                const prod = products.value.find(p => p.productCode === item.productCode)
-                groups[key] = {
-                    key,
-                    productName: prod ? prod.productName : item.productCode,
-                    productionDate: item.productionDate,
-                    count: 0,
-                    daysLeft: diffDays
-                }
-            }
-            groups[key].count++
-        }
-    })
-    // 3개만 보이게 제한 (보여주기 식)
-    return Object.values(groups).slice(0, 3)
-})
-
-const visibleLowStockItems = computed(() => {
-    if (isAlertExpanded.value) return lowStockItems.value
-    return lowStockItems.value.slice(0, 3)
-})
-
-const visibleExpiringItems = computed(() => {
-    if (isAlertExpanded.value) return expiringItems.value
-    // If low stock took up all 3 slots, show 0 expiring. Or split usage?
-    // Let's allow max 3 total effectively or just max 3 per category for simplicity as requested "about 3 items"
-    return expiringItems.value.slice(0, 3) 
-})
+const expiringItems = ref([])
 
 const hasMoreAlerts = computed(() => {
     return lowStockItems.value.length > 0 || expiringItems.value.length > 0
 })
 
-// Step 2 Compute
-const sortedBatches = computed(() => {
-    if (!selectedProduct.value) return []
-    const dates = {}
-    inventoryItems.value
-        .filter(i => i.productCode === selectedProduct.value.productCode)
-        .forEach(i => {
-            if (!dates[i.productionDate]) {
-                dates[i.productionDate] = { total: 0, available: 0, pending: 0 }
-            }
-            dates[i.productionDate].total++
-            if (i.status === 'AVAILABLE') dates[i.productionDate].available++
-            else dates[i.productionDate].pending++
-        })
-    
-    return Object.entries(dates)
-        .map(([date, counts]) => ({ productionDate: date, ...counts }))
-        .sort((a, b) => a.productionDate.localeCompare(b.productionDate)) // FIFO
-})
+// Step 2 Compute -> API 연동
+const sortedBatches = ref([])
+const batchPage = ref(0)
+const batchSize = ref(20)
+const batchTotalPages = ref(0)
 
-// Step 3 Compute
-const granularItems = computed(() => {
-    if (!selectedProduct.value || !selectedProductionDate.value) return []
-    return inventoryItems.value.filter(i => {
-        const matchProduct = i.productCode === selectedProduct.value.productCode && i.productionDate === selectedProductionDate.value
-        
-        const matchSerial = !step3Filter.value.serialCode || i.serialCode.includes(step3Filter.value.serialCode)
-        const matchBox = !step3Filter.value.boxCode || i.boxCode.includes(step3Filter.value.boxCode)
-        const matchShipDate = !step3Filter.value.shippingDate || i.shippingDate === step3Filter.value.shippingDate
-        const matchArrivalDate = !step3Filter.value.arrivalTime || i.arrivalTime === step3Filter.value.arrivalTime
+const itemPage = ref(0)
+const itemSize = ref(20)
+const itemTotalPages = ref(0)
 
-        return matchProduct && matchSerial && matchBox && matchShipDate && matchArrivalDate
+
+const fetchBatches = async (productId) => {
+  try {
+    const res = await api.get(`/franchise/inventory/batches/${productId}`, {
+      params: { page: batchPage.value, size: batchSize.value }
     })
-})
+    const pageData = res.data.data || {}
+    sortedBatches.value = (pageData.content || [])
+      .map(b => ({
+        productionDate: b.manufactureDate,
+        total: b.totalQuantity,
+        available: b.availableQuantity,
+        pending: b.returnPending
+      }))
+      .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
+    batchTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('batch fetch failed:', e)
+    sortedBatches.value = []
+    batchTotalPages.value = 0
+  }
+}
+
+// Step 3 Compute -> API 연동
+const granularItems = ref([])
+
+const fetchItems = async () => {
+  if (!selectedProduct.value || !selectedProductionDate.value) return
+  try {
+    const requestBody = {
+      productId: selectedProduct.value.productId,
+      manufactureDate: selectedProductionDate.value
+    }
+    if (step3Filter.value.serialCode) requestBody.serialCode = step3Filter.value.serialCode
+    if (step3Filter.value.boxCode) requestBody.boxCode = step3Filter.value.boxCode
+    if (step3Filter.value.shippingDate) requestBody.shippedAt = step3Filter.value.shippingDate
+    if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
+
+    const res = await api.post('/franchise/inventory/items', requestBody, {
+      params: { page: itemPage.value, size: itemSize.value }
+    })
+    const pageData = res.data.data || {}
+    granularItems.value = (pageData.content || []).map(i => {
+      const rawStatus = i.status || ''
+      const parsedStatus = rawStatus.includes('.') ? rawStatus.split('.').pop() : rawStatus
+      return {
+        inventoryId: i.inventoryId,
+        serialCode: i.serialCode,
+        boxCode: i.boxCode,
+        status: parsedStatus,
+        shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
+        arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+      }
+    })
+    itemTotalPages.value = pageData.totalPages || 0
+  } catch (e) {
+    console.error('item fetch failed:', e)
+    granularItems.value = []
+    itemTotalPages.value = 0
+  }
+}
+
+const changeBatchPage = async (page) => {
+  batchPage.value = page
+  await fetchBatches(selectedProduct.value.productId)
+}
+
+const changeItemPage = async (page) => {
+  itemPage.value = page
+  await fetchItems()
+}
+
+
+watch(step3Filter, () => {
+    if (currentStep.value === 3) {
+        fetchItems()
+    }
+}, { deep: true })
 
 // Selection Logic
 const isAllSelectedInStep3 = computed(() => {
@@ -538,8 +550,11 @@ const toggleAllInStep3 = () => {
 
 const toggleItemSelection = (item) => {
     const isSelected = selectedItems.value.includes(item.serialCode)
-    // Business Rule: Return is BOX-based. Selecting one selects the whole box.
-    const boxItems = inventoryItems.value.filter(i => i.boxCode === item.boxCode)
+    // Business Rule: Return/Disposal is BOX-based. Selecting one selects the whole box.
+    // granularItems(현재 페이지/필터링된 목록) 내에서 동일한 boxCode를 가진 상품들을 찾아 처리
+    const boxItems = item.boxCode 
+        ? granularItems.value.filter(i => i.boxCode === item.boxCode)
+        : [item]
     const boxSerials = boxItems.map(i => i.serialCode)
     
     if (isSelected) {
@@ -559,46 +574,45 @@ const toggleItemSelection = (item) => {
 
 // Actions
 const createOrder = () => {
-  router.push({ name: 'franchise-order-create' })
+  router.push('/franchise/orders/create')
 }
 
-const goToStep2 = (product) => {
-    selectedProduct.value = product
-    currentStep.value = 2
-    selectedItems.value = [] // Reset selection when moving
+const goToStep2 = async (product) => {
+  selectedProduct.value = product
+  selectedItems.value = []
+  batchPage.value = 0
+  currentStep.value = 2
+  await fetchBatches(product.productId)
 }
 
-const goToStep3 = (batch) => {
-    selectedProductionDate.value = batch.productionDate
-    currentStep.value = 3
-    // We don't necessarily reset selectedItems here to allow complex selections, 
-    // but usually, it's safer to reset if context changes significantly.
+const goToStep3 = async (batch) => {
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  currentStep.value = 3
+  await fetchItems(batch.productionDate)
 }
 
-const requestReturn = () => {
-    const boxCodes = [...new Set(inventoryItems.value
-        .filter(i => selectedItems.value.includes(i.serialCode))
-        .map(i => i.boxCode))]
-    
-    // Simulate status change in local data for all items in the affected boxes
-    inventoryItems.value.forEach(item => {
-        if (boxCodes.includes(item.boxCode)) {
-            item.status = 'RETURN_PENDING'
-        }
-    })
-
-    alert(`${boxCodes.length}개의 박스가 반품 대기 상태로 전환되었습니다. 반품 신청 페이지로 이동합니다.`)
-    
-    router.push({ 
-        name: 'franchise-return-create',
-        query: { 
-            boxes: boxCodes.join(','),
-            productName: selectedProduct.value.productName
-        } 
-    })
-    
-    // Clear selection after action
-    selectedItems.value = []
+const requestDisposal = async () => {
+	const selectedIds = granularItems.value
+		.filter(i => selectedItems.value.includes(i.serialCode))
+		.map(i => i.inventoryId)
+	if (selectedIds.length === 0) return
+	if (!confirm(`선택한 ${selectedIds.length}개 제품을 폐기 처리하시겠습니까?`)) return
+	try {
+		await api.post('/franchise/inventory/disposal', {
+			actorType: 'FRANCHISE',
+			actorId: null,
+			inventoryIds: selectedIds
+		})
+		alert('폐기 처리가 완료되었습니다.')
+		selectedItems.value = []
+		await fetchItems()
+		await fetchProducts()
+	} catch (e) {
+		console.error('폐기 처리 실패:', e)
+		alert('폐기 처리에 실패했습니다.')
+	}
 }
 
 // Popup Logic
@@ -611,13 +625,19 @@ const closePopup = () => {
   showPasswordPopup.value = false
 }
 
-const checkPassword = () => {
-  if (adminPassword.value === '1234') {
-    showPasswordPopup.value = false
-    showSettingsPopup.value = true
-  } else {
-    alert('비밀번호가 틀렸습니다.')
-  }
+const checkPassword = async () => {
+	try {
+		const res = await api.post('/franchise/inventory/verify-password', { password: adminPassword.value })
+		if (res.data.data) {
+			showPasswordPopup.value = false
+			showSettingsPopup.value = true
+		} else {
+			alert('비밀번호가 틀렸습니다.')
+		}
+	} catch (e) {
+		console.error('비밀번호 확인 실패:', e)
+		alert('비밀번호 확인 중 오류가 발생했습니다.')
+	}
 }
 
 const closeSettingsPopup = () => {
@@ -626,12 +646,40 @@ const closeSettingsPopup = () => {
   foundProduct.value = null
 }
 
-const saveSettings = () => {
+const saveSettings = async () => {
   const item = products.value.find(p => p.productCode === settingForm.value.productCode)
   if (item) {
-      item.safeStock = settingForm.value.safeStock
-      alert('안전재고 설정이 저장되었습니다.')
-      closeSettingsPopup()
+      try {
+        await api.post('/franchise/inventory/set/safety-stock', {
+            productId: item.productId,
+            safetyStock: settingForm.value.safeStock
+        })
+        item.safeStock = settingForm.value.safeStock
+        alert('안전재고 설정이 저장되었습니다.')
+        closeSettingsPopup()
+      } catch (e) {
+        console.error('안전재고 변경 실패:', e)
+        alert('안전재고 변경에 실패했습니다.')
+      }
+  }
+}
+
+const resetSettings = async () => {
+  const item = products.value.find(p => p.productCode === settingForm.value.productCode)
+  if (item) {
+      if (!confirm('이 상품의 안전재고를 자동 계산 방식으로 초기화하시겠습니까?')) return
+      try {
+        await api.post(`/franchise/inventory/reset/safety-stock/${item.productId}`)
+        alert('안전재고가 시스템 산식에 따라 초기화되었습니다.')
+        
+        // 데이터 다시 불러오기
+        await fetchProducts()
+        await fetchAlerts()
+        closeSettingsPopup()
+      } catch (e) {
+        console.error('초기화 실패:', e)
+        alert('안전재고 초기화에 실패했습니다.')
+      }
   }
 }
 
@@ -676,6 +724,12 @@ const saveSettings = () => {
   background: #f0fff4;
   border-color: #c6f6d5;
 }
+.alert-section.expiration {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.alert-section.expiration .alert-title { color: #92400e; }
+.alert-section.expiration li { color: #78350f; }
 .alert-title {
   font-weight: 700;
   font-size: 1.1rem;
@@ -704,12 +758,12 @@ const saveSettings = () => {
 /* Data Table */
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: center; padding: 1.25rem 1.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.85rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-dark); text-align: center; }
+.data-table th { text-align: center; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); color: var(--text-dark); text-align: center; font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: #f1f5f9; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .name-cell { font-weight: 600; }
 .number-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
 
@@ -779,7 +833,59 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
 .status-item-badge.available { background: #dcfce7; color: #166534; }
-.status-item-badge.return_pending { background: #fee2e2; color: #991b1b; }
+.status-item-badge.return_wait { background: #fee2e2; color: #991b1b; }
+.status-item-badge.expired { background: #fef3c7; color: #92400e; }
 
 .empty-cell { text-align: center; color: #94a3b8; padding: 3rem !important; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.page-nav-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+.page-num-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-num-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.page-num-btn.active {
+  background: var(--text-dark);
+  color: white;
+  border-color: var(--text-dark);
+}
 </style>

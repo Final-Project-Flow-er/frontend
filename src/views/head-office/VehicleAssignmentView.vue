@@ -1,32 +1,52 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '@/components/common/Modal.vue'
+import { getAvailableVehicles, getUnassignedOrders, assignVehicle as assignVehicleAPI } from '@/api/internalTransport.js'
+import { updateOrderShippingPending } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
-// Mock Data - Vehicles
-const vehicles = ref([
-  { company: '우리통상', driver: '홍길동', phone: '010-1234-5678', type: '5톤 트럭', number: '서울 12가 3456', maxWeight: 5000, currentWeight: 1200 },
-  { company: '대한물류', driver: '김철수', phone: '010-2222-3333', type: '1톤 탑차', number: '경기 88나 9999', maxWeight: 1000, currentWeight: 0 },
-  { company: '에이원', driver: '이영희', phone: '010-5555-6666', type: '2.5톤 트럭', number: '인천 77다 1111', maxWeight: 2500, currentWeight: 500 },
-  { company: '우리통상', driver: '정지훈', phone: '010-8888-9999', type: '1톤 탑차', number: '서울 55라 1234', maxWeight: 1000, currentWeight: 0 },
-  { company: '대한물류', driver: '차유진', phone: '010-4444-5555', type: '5톤 트럭', number: '경기 22마 5678', maxWeight: 5000, currentWeight: 0 },
-])
+const vehicles = ref([])
+const unassignedOrders = ref([])
 
-// Mock Data - Unassigned Orders
-const unassignedOrders = ref([
-  { orderCode: 'HEAD20260210001', franchise: '강남점', address: '서울 강남구 역삼동 123-45', product: '오리지널 떡볶이 밀키트', recipient: '김철수', contact: '010-1111-2222', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 800, transportCost: 50000 },
-  { orderCode: 'HEAD20260210002', franchise: '홍대점', address: '서울 마포구 서교동 456-78', product: '마라 떡볶이 밀키트', recipient: '박영희', contact: '010-3333-4444', orderDate: '2026-02-10', arrivalDate: '2026-02-12', weight: 1200, transportCost: 65000 },
-  { orderCode: 'HEAD20260210003', franchise: '잠실점', address: '서울 송파구 신천동 789-01', product: '로제 떡볶이 밀키트', recipient: '이민수', contact: '010-5555-6666', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 400, transportCost: 45000 },
-  { orderCode: 'HEAD20260211001', franchise: '신촌점', address: '서울 서대문구 창천동 111-22', product: '오리지널 떡볶이 밀키트', recipient: '정수원', contact: '010-7777-8888', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 1500, transportCost: 75000 },
-  { orderCode: 'HEAD20260211002', franchise: '서초점', address: '서울 서초구 서초동 333-44', product: '마라 떡볶이 밀키트', recipient: '강현우', contact: '010-0000-0000', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 600, transportCost: 55000 },
-  { orderCode: 'HEAD20260211003', franchise: '명동점', address: '서울 중구 을지로 555-66', product: '로제 떡볶이 밀키트', recipient: '윤지하', contact: '010-2222-1111', orderDate: '2026-02-11', arrivalDate: '2026-02-13', weight: 2000, transportCost: 90000 },
-])
+onMounted(async () => {
+  try {
+    const data = await getAvailableVehicles()
+    vehicles.value = (data || []).map(v => ({
+      vehicleId: v.vehicleId,
+      company: v.transportName,
+      driver: v.driverName,
+      phone: v.driverPhoneNumber,
+      number: v.vehicleNumber,
+      maxWeight: v.maxLoad || 0,
+      currentWeight: v.currentLoad || 0
+    }))
+  } catch (error) {
+    console.error('차량 목록을 불러오는 중 오류 발생:', error)
+    vehicles.value = []
+  }
+
+  try {
+    const orderData = await getUnassignedOrders()
+    unassignedOrders.value = (orderData || []).map(o => ({
+      orderId: o.orderId,
+      orderCode: o.orderCode,
+      franchise: o.franchiseName,
+      address: o.address,
+      recipient: o.representativeName,
+      orderDate: o.orderCreatedAt ? o.orderCreatedAt.split('T')[0] : '',
+      arrivalDate: o.deliveryDate ? o.deliveryDate.split('T')[0] : '',
+      weight: o.weight || 0
+    }))
+  } catch (error) {
+    console.error('미배정 발주 목록을 불러오는 중 오류 발생:', error)
+    unassignedOrders.value = []
+  }
+})
 
 const vehicleFilter = ref({
   company: '',
-  type: '',
   maxWeight: '',
   number: ''
 })
@@ -35,14 +55,15 @@ const orderFilter = ref({
   search: ''
 })
 
-const companies = ['우리통상', '대한물류', '에이원']
-const vehicleTypes = ['1톤 탑차', '2.5톤 트럭', '5톤 트럭']
+const companies = computed(() => {
+  const companySet = new Set(vehicles.value.map(v => v.company).filter(Boolean))
+  return Array.from(companySet).sort()
+})
 const weightOptions = [1000, 2500, 5000]
 
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
     return (!vehicleFilter.value.company || v.company === vehicleFilter.value.company) &&
-           (!vehicleFilter.value.type || v.type === vehicleFilter.value.type) &&
            (!vehicleFilter.value.maxWeight || v.maxWeight >= parseInt(vehicleFilter.value.maxWeight)) &&
            (!vehicleFilter.value.number || v.number.includes(vehicleFilter.value.number))
   })
@@ -91,30 +112,57 @@ const canCheckOrder = (order) => {
   return (totalWeightInVehicle + order.weight) <= selectedVehicle.value.maxWeight
 }
 
-const assignVehicle = () => {
-  if (!selectedVehicle.value || selectedOrderCodes.value.size === 0) return
-  
-  // Calculate total weight to assign
-  let weightToAdd = 0
+const totalSelectedWeight = computed(() => {
+  let weight = 0
   unassignedOrders.value.forEach(o => {
     if (selectedOrderCodes.value.has(o.orderCode)) {
-      weightToAdd += o.weight
+      weight += o.weight
     }
   })
+  return weight
+})
 
-  openModal('배정 확인', `${selectedVehicle.value.number} 차량에 ${selectedOrderCodes.value.size}건의 발주를 배정하시겠습니까?`, () => {
-    // Update the vehicle's current weight (persistent)
-    const vehicleIdx = vehicles.value.findIndex(v => v.number === selectedVehicle.value.number)
-    if (vehicleIdx !== -1) {
-        vehicles.value[vehicleIdx].currentWeight += weightToAdd
-        // Re-sync selectedVehicle to show updated weight in UI
-        selectedVehicle.value = vehicles.value[vehicleIdx]
+const isOverloadBtn = computed(() => {
+  if (!selectedVehicle.value) return false
+  return (selectedVehicle.value.currentWeight + totalSelectedWeight.value) > selectedVehicle.value.maxWeight
+})
+
+const assignVehicle = () => {
+  if (!selectedVehicle.value || selectedOrderCodes.value.size === 0) return
+  if (isOverloadBtn.value) {
+    alert('차량의 최대 적재량을 초과하여 배정할 수 없습니다.')
+    return
+  }
+  
+  openModal('배정 확인', `${selectedVehicle.value.number} 차량에 ${selectedOrderCodes.value.size}건의 발주를 배정하시겠습니까?`, async () => {
+    try {
+      const orderIds = Array.from(selectedOrderCodes.value)
+        .map(code => unassignedOrders.value.find(o => o.orderCode === code)?.orderId)
+        .filter(id => id !== undefined)
+
+      const payload = {
+        vehicleId: selectedVehicle.value.vehicleId,
+        selectedIds: orderIds
+      }
+      await assignVehicleAPI(payload)
+      
+      // 차량 배정 후 발주 상태를 배송 대기로 업데이트
+      const shippingPendingPayload = Array.from(selectedOrderCodes.value).map(code => ({ orderCode: code }))
+      await updateOrderShippingPending(shippingPendingPayload)
+
+      openModal('알림', '배정이 완료되었습니다.', null, false)
+      
+      const vehicleIdx = vehicles.value.findIndex(v => v.number === selectedVehicle.value.number)
+      if (vehicleIdx !== -1) {
+          vehicles.value[vehicleIdx].currentWeight += totalSelectedWeight.value
+          selectedVehicle.value = vehicles.value[vehicleIdx]
+      }
+      unassignedOrders.value = unassignedOrders.value.filter(o => !selectedOrderCodes.value.has(o.orderCode))
+      selectedOrderCodes.value.clear()
+    } catch (e) {
+      console.error(e)
+      alert(e.response?.data?.message || '차량 배정에 실패했습니다.')
     }
-
-    // Remove assigned orders from the list
-    unassignedOrders.value = unassignedOrders.value.filter(o => !selectedOrderCodes.value.has(o.orderCode))
-    selectedOrderCodes.value.clear()
-    openModal('알림', '배정이 완료되었습니다.', null, false)
   })
 }
 
@@ -170,14 +218,7 @@ const goBack = () => router.back()
               </select>
             </div>
             <div class="filter-group">
-              <label>차량 종류</label>
-              <select v-model="vehicleFilter.type">
-                <option value="">전체</option>
-                <option v-for="t in vehicleTypes" :key="t" :value="t">{{ t }}</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>최대 적재량(≥)</label>
+              <label>적재 가능 중량(≥)</label>
               <select v-model="vehicleFilter.maxWeight">
                 <option value="">전체</option>
                 <option v-for="w in weightOptions" :key="w" :value="w">{{ w.toLocaleString() }}kg</option>
@@ -199,7 +240,6 @@ const goBack = () => router.back()
                   <th>운송 업체</th>
                   <th>운전자</th>
                   <th>운전자 번호</th>
-                  <th>차종</th>
                   <th>차량 번호</th>
                   <th>중량(적재/최대)</th>
                 </tr>
@@ -215,7 +255,6 @@ const goBack = () => router.back()
                   <td>{{ v.company }}</td>
                   <td>{{ v.driver }}</td>
                   <td>{{ v.phone }}</td>
-                  <td>{{ v.type }}</td>
                   <td class="code-cell">{{ v.number }}</td>
                   <td class="text-right weight-cell">
                     <span :class="{ 'overload': v.currentWeight >= v.maxWeight }">{{ v.currentWeight.toLocaleString() }}</span>
@@ -224,7 +263,7 @@ const goBack = () => router.back()
                   </td>
                 </tr>
                 <tr v-if="filteredVehicles.length === 0">
-                  <td colspan="6" class="empty-state">조건에 맞는 차량이 없습니다.</td>
+                  <td colspan="5" class="empty-state">조건에 맞는 차량이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -255,9 +294,7 @@ const goBack = () => router.back()
                   <th>가맹점</th>
                   <th>주소</th>
                   <th>수령인</th>
-                  <th>연락처</th>
                   <th>중량</th>
-                  <th>운송비</th>
                   <th>발주일</th>
                   <th>도착일</th>
                 </tr>
@@ -272,18 +309,16 @@ const goBack = () => router.back()
                       @change="toggleOrder(o.orderCode)"
                     />
                   </td>
-                  <td class="code-cell">{{ o.orderCode }}</td>
+                  <td class="code-cell code-order">{{ o.orderCode }}</td>
                   <td>{{ o.franchise }}</td>
                   <td class="address-cell" :title="o.address">{{ o.address }}</td>
                   <td>{{ o.recipient }}</td>
-                  <td>{{ o.contact }}</td>
                   <td class="text-right">{{ o.weight.toLocaleString() }}kg</td>
-                  <td class="text-right cost-cell">{{ o.transportCost.toLocaleString() }}원</td>
                   <td>{{ o.orderDate }}</td>
                   <td>{{ o.arrivalDate }}</td>
                 </tr>
                 <tr v-if="filteredOrders.length === 0">
-                   <td colspan="10" class="empty-state">미배정 발주 내역이 없습니다.</td>
+                   <td colspan="8" class="empty-state">미배정 발주 내역이 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -296,7 +331,7 @@ const goBack = () => router.back()
           </div>
           <button 
             class="action-btn assign-btn" 
-            :disabled="!selectedVehicle || selectedOrderCodes.size === 0"
+            :disabled="!selectedVehicle || selectedOrderCodes.size === 0 || isOverloadBtn"
             @click="assignVehicle"
           >
             차량 배정
@@ -449,9 +484,11 @@ const goBack = () => router.back()
   position: sticky;
   top: 0;
   background: #f8fafc;
-  padding: 0.75rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   text-align: left;
-  font-size: 0.8rem;
+  font-size: 0.9rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-weight: 600;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
@@ -459,9 +496,12 @@ const goBack = () => router.back()
 }
 
 .data-table td {
-  padding: 0.75rem;
+  padding: 1.05rem 0.8rem !important;
+  height: 58px !important;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.85rem;
+  font-size: 0.95rem !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1.35 !important;
   color: #334155;
 }
 
@@ -483,7 +523,7 @@ const goBack = () => router.back()
 }
 .weight-cell .max-weight {
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 .weight-cell .overload {
   color: #ef4444;
@@ -496,7 +536,7 @@ const goBack = () => router.back()
   text-overflow: ellipsis; 
   white-space: nowrap; 
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 .name-cell { font-weight: 500; }
 .cost-cell { font-weight: 600; color: #0f172a; }

@@ -1,63 +1,50 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { updateOrderStatus, getRequestedOrders } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
-// 1. Mock Central Inventory
-const centralStock = ref({
-  'OR0101': 50,
-  'RO0201': 20,
-  'MA0301': 30,
-  'OR0403': 10,
-  'RO0103': 100
-})
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
-// 2. Mock Orders
-const orders = ref([
-  {
-    id: 1,
-    orderCode: 'SE0120231026001',
-    franchiseCode: 'SE01',
-    recipientName: '김철수',
-    recipientPhone: '010-1111-2222',
-    orderDate: '2023-10-26',
-    arrivalDate: '2023-10-27',
-    status: '대기',
-    products: [
-      { productCode: 'OR0101', quantity: 20, amount: 10000, status: '대기' },
-      { productCode: 'OR0103', quantity: 30, amount: 18000, status: '대기' }
-    ]
-  },
-  {
-    id: 2,
-    orderCode: 'SE0220231025005',
-    franchiseCode: 'SE02',
-    recipientName: '이영희',
-    recipientPhone: '010-3333-4444',
-    orderDate: '2023-10-25',
-    arrivalDate: '2023-10-26',
-    status: '대기',
-    products: [
-      { productCode: 'RO0201', quantity: 15, amount: 12000, status: '대기' },
-      { productCode: 'MA0301', quantity: 10, amount: 12000, status: '대기' }
-    ]
-  },
-  {
-    id: 3,
-    orderCode: 'SE0320231024010',
-    franchiseCode: 'SE03',
-    recipientName: '박민수',
-    recipientPhone: '010-5555-6666',
-    orderDate: '2023-10-24',
-    arrivalDate: '2023-10-25',
-    status: '대기',
-    products: [
-      { productCode: 'OR0101', quantity: 100, amount: 10000, status: '대기' },
-      { productCode: 'RO0103', quantity: 50, amount: 22000, status: '대기' }
-    ]
+// 1. Central Inventory (재고 API 미연동 — 추후 연동 필요)
+const centralStock = ref({})
+
+// 2. Orders (실제 API 로드)
+const orders = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getRequestedOrders(true)
+    // 평탄화된 응답을 orderCode 기준으로 그룹화
+    const orderMap = {}
+    ;(data || []).forEach(item => {
+      if (!orderMap[item.orderCode]) {
+        orderMap[item.orderCode] = {
+          id: item.orderCode,
+          orderCode: item.orderCode,
+          franchiseCode: item.franchiseCode,
+          recipientName: item.receiver,
+          recipientPhone: '-',
+          orderDate: '-',
+          arrivalDate: formatDate(item.deliveryDate),
+          status: item.status,
+          products: []
+        }
+      }
+      orderMap[item.orderCode].products.push({
+        productCode: item.productCode,
+        quantity: item.quantity,
+        amount: 0,
+        status: item.status
+      })
+    })
+    orders.value = Object.values(orderMap)
+  } catch (e) {
+    orders.value = []
+    centralStock.value = {}
   }
-])
+})
 
 // 3. Filter
 const filter = ref({
@@ -113,7 +100,7 @@ const currentReservedStock = computed(() => {
 })
 
 const getRowAvailability = (row) => {
-  if (row.status !== '대기') return null
+  if (row.status !== 'PENDING') return null
   const stock = centralStock.value[row.productCode] || 0
   const reservedTotal = currentReservedStock.value[row.productCode] || 0
   const isSelected = selectedRowKeys.value.includes(row.rowKey)
@@ -129,13 +116,13 @@ const updateParentOrderStatus = (orderId) => {
   const order = orders.value.find(o => o.id === orderId)
   if (!order) return
   const statuses = order.products.map(p => p.status)
-  if (statuses.every(s => s === '접수 완료')) order.status = '접수 완료'
-  else if (statuses.every(s => s === '반려')) order.status = '반려'
-  else if (statuses.every(s => s === '대기')) order.status = '대기'
-  else order.status = '부분 접수'
+  if (statuses.every(s => s === 'ACCEPTED')) order.status = 'ACCEPTED'
+  else if (statuses.every(s => s === 'REJECTED')) order.status = 'REJECTED'
+  else if (statuses.every(s => s === 'PENDING')) order.status = 'PENDING'
+  else order.status = 'PARTIAL'
 }
 
-const confirmAccept = () => {
+const confirmAccept = async () => {
   if (selectedRowKeys.value.length === 0) {
     alert('접수할 항목을 선택해주세요.')
     return
@@ -149,42 +136,62 @@ const confirmAccept = () => {
     return
   }
 
-  selectedRowKeys.value.forEach(key => {
+  const orderCodes = [...new Set(selectedRowKeys.value.map(key => {
     const row = flattenedRows.value.find(r => r.rowKey === key)
-    if (row) {
-      if (centralStock.value[row.productCode] >= row.quantity) {
-        centralStock.value[row.productCode] -= row.quantity
+    return row?.orderCode
+  }).filter(Boolean))]
+
+  try {
+    await updateOrderStatus({ orderCodes, isAccepted: true })
+    selectedRowKeys.value.forEach(key => {
+      const row = flattenedRows.value.find(r => r.rowKey === key)
+      if (row) {
+        if (centralStock.value[row.productCode] >= row.quantity) {
+          centralStock.value[row.productCode] -= row.quantity
+        }
+        const order = orders.value.find(o => o.id === row.orderId)
+        if (order) {
+          order.products[row.productIndex].status = 'ACCEPTED'
+          updateParentOrderStatus(order.id)
+        }
       }
-      const order = orders.value.find(o => o.id === row.orderId)
-      if (order) {
-        order.products[row.productIndex].status = '접수 완료'
-        updateParentOrderStatus(order.id)
-      }
-    }
-  })
-  alert('선택한 항목이 접수되었습니다.')
-  cancelSelection()
+    })
+    alert('선택한 항목이 접수되었습니다.')
+    cancelSelection()
+  } catch (e) {
+    alert(e.message || '접수 처리에 실패했습니다.')
+  }
 }
 
-const confirmReject = () => {
+const confirmReject = async () => {
   if (selectedRowKeys.value.length === 0) {
     alert('반려할 항목을 선택해주세요.')
     return
   }
   if (!confirm('선택한 항목을 반려하시겠습니까?')) return
 
-  selectedRowKeys.value.forEach(key => {
+  const orderCodes = [...new Set(selectedRowKeys.value.map(key => {
     const row = flattenedRows.value.find(r => r.rowKey === key)
-    if (row) {
-      const order = orders.value.find(o => o.id === row.orderId)
-      if (order) {
-        order.products[row.productIndex].status = '반려'
-        updateParentOrderStatus(order.id)
+    return row?.orderCode
+  }).filter(Boolean))]
+
+  try {
+    await updateOrderStatus({ orderCodes, isAccepted: false })
+    selectedRowKeys.value.forEach(key => {
+      const row = flattenedRows.value.find(r => r.rowKey === key)
+      if (row) {
+        const order = orders.value.find(o => o.id === row.orderId)
+        if (order) {
+          order.products[row.productIndex].status = 'REJECTED'
+          updateParentOrderStatus(order.id)
+        }
       }
-    }
-  })
-  alert('선택한 항목이 반려되었습니다.')
-  cancelSelection()
+    })
+    alert('선택한 항목이 반려되었습니다.')
+    cancelSelection()
+  } catch (e) {
+    alert(e.message || '반려 처리에 실패했습니다.')
+  }
 }
 
 // UI Helpers
@@ -194,16 +201,28 @@ const enterRejectMode = () => { selectionMode.value = 'reject'; selectedRowKeys.
 const cancelSelection = () => { selectionMode.value = null; selectedRowKeys.value = [] }
 const toggleSelectAll = (e) => {
   if (e.target.checked) {
-    selectedRowKeys.value = filteredRows.value.filter(r => r.status === '대기').map(r => r.rowKey)
+    selectedRowKeys.value = filteredRows.value.filter(r => r.status === 'PENDING').map(r => r.rowKey)
   } else {
     selectedRowKeys.value = []
   }
 }
+const ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  PARTIAL: '부분 접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
+
 const getStatusClass = (status) => {
   switch (status) {
-    case '접수 완료': return 'status-ok'
-    case '부분 접수': return 'status-primary'
-    case '반려': return 'status-danger'
+    case 'ACCEPTED': return 'status-ok'
+    case 'PARTIAL': return 'status-primary'
+    case 'REJECTED': case 'CANCELED': return 'status-danger'
     default: return 'status-warning'
   }
 }
@@ -211,8 +230,7 @@ const getStatusClass = (status) => {
 // [NEW] 상세 페이지 이동
 const goToDetail = (row) => {
   router.push({
-    name: 'OrderReceptionDetail',
-    state: { rowData: row }
+    name: 'OrderReceptionDetail',params: { orderCode: row.orderCode }
   })
 }
 </script>
@@ -280,10 +298,10 @@ const goToDetail = (row) => {
             <input type="checkbox"
                    :value="row.rowKey"
                    v-model="selectedRowKeys"
-                   :disabled="row.status !== '대기'" />
+                   :disabled="row.status !== 'PENDING'" />
           </td>
 
-          <td class="sku-cell">{{ row.orderCode }}</td>
+          <td class="sku-cell code-order">{{ row.orderCode }}</td>
           <td>{{ row.franchiseCode }}</td>
           <td>{{ row.recipientName }}</td>
 
@@ -291,7 +309,7 @@ const goToDetail = (row) => {
           <td class="sku-cell">{{ row.productCode }}</td>
 
           <td>
-            <span :class="['status-tag', getStatusClass(row.status)]">{{ row.status }}</span>
+            <span :class="['status-tag', getStatusClass(row.status)]">{{ toStatusLabel(row.status) }}</span>
           </td>
           <td class="text-right">{{ row.quantity }}</td>
           <td class="text-right">
@@ -300,7 +318,7 @@ const goToDetail = (row) => {
               </span>
           </td>
           <td>
-            <template v-if="row.status === '대기'">
+            <template v-if="row.status === 'PENDING'">
               <span v-if="getRowAvailability(row) === 'possible'" class="status-tag status-ok">가능</span>
               <span v-else-if="getRowAvailability(row) === 'partial'" class="status-tag status-warning">부족</span>
               <span v-else class="status-tag status-danger">불가</span>
@@ -341,8 +359,8 @@ button:hover { opacity: 0.9; }
 /* Table */
 .data-table-card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.data-table th { background: #f9fafb; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; color: #1f2937; vertical-align: middle; }
+.data-table th { background: #f9fafb; padding: 1.05rem 0.8rem !important; height: 58px !important; text-align: left; font-weight: 600; color: #4b5563; font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid #e5e7eb; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid #e5e7eb; color: #1f2937; font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; vertical-align: middle; }
 .data-table tr:hover { background-color: #f9fafb; }
 
 .selected-row { background-color: #f0fdf4 !important; }
@@ -353,13 +371,17 @@ button:hover { opacity: 0.9; }
   color: #2563eb !important; /* 파란색 강제 적용 */
 }
 
+.sku-cell.code-order {
+  color: #0f766e !important;
+}
+
 .text-right { text-align: right; }
 .text-muted { color: #9ca3af; }
 .low-stock { color: #dc2626; font-weight: bold; }
 .empty-cell { text-align: center; padding: 2rem; color: #9ca3af; }
 
 /* Tags */
-.status-tag { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+.status-tag { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }
 .status-danger { background: #fee2e2; color: #991b1b; }

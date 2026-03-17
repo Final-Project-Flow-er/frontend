@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getReturnList } from '@/api/franchiseReturns.js'
 
 const router = useRouter()
 
@@ -8,76 +9,50 @@ const filter = ref({
   orderCode: '',
   returnCode: '',
   boxCode: '',
-  idCode: '', // 제품 식별코드
+  idCode: '',
   productCode: '',
   productName: '',
   quantity: '',
-  amount: '', // 제품 별 금액
-  totalAmount: '' // 총 금액
+  amount: '',
+  totalAmount: ''
 })
 
-const returns = ref([
-  { 
-    orderCode: 'SE0120231026001', 
-    returnCode: 'RESE0120231026001',
-    boxCode: 'SE01FA0120231026OR0101001', 
-    idCode: 'SE01FA01AOR0101B001', 
-    productCode: 'OR0101', 
-    productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-    quantity: 1, 
-    amount: 5000,
-    totalAmount: 5000,
-    recipientName: '김철수', 
-    recipientPhone: '010-1234-5678', 
-    franchiseCode: 'SE01', 
-    details: '박스 파손 심함',
-    reason: '상품 하자', 
-    date: '2023-10-26', 
-    status: '대기'
-  },
-  { 
-    orderCode: 'SE0120231025005', 
-    returnCode: 'RESE0120231025005',
-    boxCode: 'SE01FA0120231025RO0201005', 
-    idCode: 'SE01FA01ARO0201B005', 
-    productCode: 'RO0201', 
-    productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
-    quantity: 2, 
-    amount: 7000,
-    totalAmount: 14000,
-    recipientName: '이영희', 
-    recipientPhone: '010-9876-5432', 
-    franchiseCode: 'SE01', 
-    details: '고객 반품 요청',
-    reason: '오발주', 
-    date: '2023-10-25', 
-    status: '접수'
-  },
-  {
-    orderCode: 'SE0120231024010',
-    returnCode: 'RESE0120231024010',
-    boxCode: 'SE01FA0120231024MA0301010',
-    idCode: 'SE01FA01AMA0301B010',
-    productCode: 'MA0301',
-    productName: '마라 떡볶이 밀키트 매운맛 1,2인분',
-    quantity: 1,
-    amount: 7000,
-    totalAmount: 7000,
-    recipientName: '박민수',
-    recipientPhone: '010-5555-4444',
-    franchiseCode: 'SE01',
-    details: '오배송 확인됨',
-    reason: '오발주', 
-    date: '2023-10-24', 
-    status: '배송중'
+const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const rawReturns = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getReturnList()
+    rawReturns.value = data || []
+  } catch (e) {
+    alert(e.message)
   }
-])
+})
+
+const returns = computed(() =>
+  rawReturns.value.map(item => ({
+    orderCode: item.orderCode,
+    returnCode: item.returnCode,
+    boxCode: '',
+    idCode: '',
+    productCode: item.productCode,
+    productName: item.productName,
+    quantity: item.quantity,
+    amount: Number(item.unitPrice || 0),
+    totalAmount: Number(item.totalPrice || 0),
+    reason: TYPE_LABEL[item.type] || item.type,
+    date: formatDate(item.requestedDate),
+    status: item.status
+  }))
+)
 
 const filteredReturns = computed(() => {
   return returns.value.filter(item => {
     const matchOrder = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchReturn = !filter.value.returnCode || item.returnCode.includes(filter.value.returnCode)
-    const matchBox = !filter.value.boxCode || item.boxCode.includes(filter.value.boxCode)
+    const matchBox = !filter.value.boxCode || (item.boxCode || '').includes(filter.value.boxCode)
     const matchId = !filter.value.idCode || item.idCode.includes(filter.value.idCode)
     const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
     const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
@@ -90,16 +65,33 @@ const filteredReturns = computed(() => {
   })
 })
 
-const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '배송 대기': 'status-info',
-  '배송중': 'status-primary',
-  '배송 완료': 'status-ok',
-  '검수': 'status-primary',
-  '대금 차감 완료': 'status-ok',
-  '대금 차감 거절': 'status-danger'
-}[s] || '')
+const RETURN_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송완료',
+  INSPECTING: '검수중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+const toStatusLabel = (s) => RETURN_STATUS_LABEL[s] || s
+
+const getStatusClass = (s) => {
+  const label = RETURN_STATUS_LABEL[s] || s
+  return {
+    '대기': 'status-warning',
+    '접수': 'status-info',
+    '배송대기': 'status-info',
+    '배송중': 'status-primary',
+    '배송완료': 'status-ok',
+    '검수중': 'status-primary',
+    '대금 차감 완료': 'status-ok',
+    '대금 차감 거절': 'status-danger',
+    '취소': 'status-danger'
+  }[label] || ''
+}
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
@@ -183,7 +175,7 @@ const goToDetail = (item) => {
             <td class="sku-cell">{{ item.returnCode }}</td>
             <td>{{ item.boxCode }}</td>
             <td>{{ item.idCode }}</td>
-            <td>{{ item.productCode }}</td>
+            <td class="sku-cell small">{{ item.productCode }}</td>
             <td>{{ item.productName }}</td>
             <td>{{ item.quantity }}</td>
             <td>{{ item.amount }}</td>
@@ -194,7 +186,7 @@ const goToDetail = (item) => {
             <td>{{ item.details }}</td>
             <td>{{ item.reason }}</td>
             <td>{{ item.date }}</td>
-            <td><span :class="['status-tag', getStatusClass(item.status)]">{{ item.status }}</span></td>
+            <td><span :class="['status-tag', getStatusClass(item.status)]">{{ toStatusLabel(item.status) }}</span></td>
           </tr>
         </tbody>
       </table>
@@ -232,10 +224,10 @@ const goToDetail = (item) => {
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; white-space: nowrap; }
 .name-cell { color: var(--text-dark); }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .status-tag { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }

@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getOrderList } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
@@ -15,68 +16,38 @@ const filter = ref({
   arrivalTime: ''
 })
 
-const orders = ref([
-  { 
-    orderStatus: '대기', 
-    orderDate: '2023-10-25', 
-    orderCode: 'HEAD20231025001', 
-    products: [
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 50, amount: 10000 },
-      { productCode: 'OR0103', productName: '오리지널 떡볶이 밀키트 순한맛 3,4인분', quantity: 20, amount: 18000 }
-    ],
-    totalAmount: 860000, 
-    managerName: '김민기', 
-    managerPhone: '010-1111-2222', 
-    stockInDate: '2023-10-27', 
-    arrivalDate: '2023-10-27', 
-    arrivalTime: '10:00' 
-  },
-  { 
-    orderStatus: '배송중', 
-    orderDate: '2023-10-24', 
-    orderCode: 'HEAD20231024005', 
-    products: [
-      { productCode: 'RO0201', productName: '로제 떡볶이 밀키트 기본맛 1,2인분', quantity: 30, amount: 12000 },
-      { productCode: 'MA0301', productName: '마라 떡볶이 밀키트 매운맛 1,2인분', quantity: 10, amount: 12000 }
-    ],
-    totalAmount: 480000, 
-    managerName: '송지은', 
-    managerPhone: '010-3333-4444', 
-    stockInDate: '2023-10-26', 
-    arrivalDate: '2023-10-26', 
-    arrivalTime: '14:30' 
-  },
-  { 
-    orderStatus: '배송완료', 
-    orderDate: '2023-10-23', 
-    orderCode: 'HEAD20231023020', 
-    products: [
-      { productCode: 'MA0303', productName: '마라 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 200, amount: 22000 },
-      { productCode: 'RO0103', productName: '로제 떡볶이 밀키트 순한맛 3,4인분', quantity: 50, amount: 22000 }
-    ],
-    totalAmount: 5500000, 
-    managerName: '박원규', 
-    managerPhone: '010-5555-6666', 
-    stockInDate: '2023-10-25', 
-    arrivalDate: '2023-10-25', 
-    arrivalTime: '09:00' 
-  },
-  { 
-    orderStatus: '취소', 
-    orderDate: '2023-10-22', 
-    orderCode: 'HEAD20231022030', 
-    products: [
-      { productCode: 'OR0403', productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분', quantity: 30, amount: 18000 },
-      { productCode: 'OR0101', productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분', quantity: 10, amount: 10000 }
-    ],
-    totalAmount: 640000, 
-    managerName: '김민수', 
-    managerPhone: '010-7777-8888', 
-    stockInDate: '-', 
-    arrivalDate: '2023-10-24', 
-    arrivalTime: '11:00' 
-  },
-])
+const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
+
+const orders = ref([])
+
+onMounted(async () => {
+    const data = await getOrderList()
+    // Group by orderCode
+    const map = {}
+    ;(data || []).forEach(item => {
+      if (!map[item.orderCode]) {
+        map[item.orderCode] = {
+          orderCode: item.orderCode,
+          orderStatus: item.status,
+          orderDate: formatDate(item.requestedDate),
+          managerName: item.username || '',
+          managerPhone: item.phoneNumber || '',
+          stockInDate: item.storedDate || '',
+          arrivalDate: '',
+          arrivalTime: '',
+          totalAmount: 0,
+          products: []
+        }
+      }
+      map[item.orderCode].products.push({
+        productCode: item.productCode,
+        productName: '',
+        quantity: item.quantity,
+        amount: 0
+      })
+    })
+    orders.value = Object.values(map)
+})
 
 const filteredOrders = computed(() => {
   return orders.value.filter(item => {
@@ -108,14 +79,19 @@ const flattenedOrders = computed(() => {
   return flattened
 })
 
+const HQ_ORDER_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  CANCELED: '취소',
+  REJECTED: '반려'
+}
+const toStatusLabel = (s) => HQ_ORDER_STATUS_LABEL[s] || s
+
 const getStatusClass = (s) => ({
-  '대기': 'status-warning',
-  '접수': 'status-info',
-  '부분 접수': 'status-info',
-  '배송중': 'status-primary',
-  '배송완료': 'status-ok',
-  '취소': 'status-danger',
-  '반려': 'status-danger'
+  PENDING: 'status-warning',
+  ACCEPTED: 'status-info',
+  CANCELED: 'status-danger',
+  REJECTED: 'status-danger'
 }[s] || '')
 
 const goToDetail = (item) => {
@@ -146,13 +122,7 @@ const goToEdit = (item) => {
         <label>발주 상태</label>
         <select v-model="filter.status">
           <option value="">전체</option>
-          <option value="대기">대기</option>
-          <option value="접수">접수</option>
-          <option value="부분 접수">부분 접수</option>
-          <option value="배송중">배송중</option>
-          <option value="배송완료">배송완료</option>
-          <option value="취소">취소</option>
-          <option value="반려">반려</option>
+          <option v-for="(label, key) in HQ_ORDER_STATUS_LABEL" :key="key" :value="key">{{ label }}</option>
         </select>
       </div>
       <div class="filter-group">
@@ -198,8 +168,8 @@ const goToEdit = (item) => {
             @click="goToDetail(row)" 
             :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
           >
-            <td class="sku-cell">{{ row.orderCode }}</td>
-            <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ row.orderStatus }}</span></td>
+            <td class="sku-cell code-order">{{ row.orderCode }}</td>
+            <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
             <td class="sku-cell small">{{ row.product.productCode }}</td>
             <td>{{ row.product.quantity }}</td>
             <td>{{ row.orderDate }}</td>
@@ -253,9 +223,9 @@ const goToEdit = (item) => {
 
 .data-table-card { background: white; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 0.75rem 0.5rem; background: #f8fafc; color: var(--text-light); font-size: 0.8rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-.data-table td { padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; white-space: nowrap; }
-.sku-cell { color: var(--primary); font-weight: 600; }
+.data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; line-height: 1.35 !important; white-space: nowrap; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 .status-tag { padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .status-ok { background: #d1fae5; color: #065f46; }
 .status-warning { background: #fef3c7; color: #92400e; }
@@ -265,7 +235,7 @@ const goToEdit = (item) => {
 .action-btn { background: white; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
 
 .sku-cell.small {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 .clickable-row { cursor: pointer; transition: background-color 0.2s ease; }

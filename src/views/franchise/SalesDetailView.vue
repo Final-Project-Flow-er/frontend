@@ -1,113 +1,57 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getSalesDetail, cancelSale as cancelSaleApi } from '@/api/franchiseSales.js'
 
 const route = useRoute()
 const router = useRouter()
 const salesCode = route.params.salesCode
 
 const saleDetail = ref(null)
+const loading = ref(false)
+const error = ref(null)
 
-// Mock data — 판매 코드별 그룹핑된 데이터
-const allSales = [
-  {
-    salesCode: '2023102614300001',
-    date: '2023-10-26 14:30',
-    products: [
-      {
-        productCode: 'OR0101',
-        productName: '오리지널 떡볶이 밀키트 순한맛 1,2인분',
-        quantity: 5,
-        unitPrice: 5000,
-        totalPrice: 25000,
-        identificationCodes: [
-          'UL01FA01A1OR0101001',
-          'UL01FA01A1OR0101002',
-          'UL01FA01A2OR0101003',
-          'UL01FA01A2OR0101004',
-          'UL01FA01A3OR0101005'
-        ]
-      },
-      {
-        productCode: 'RO0201',
-        productName: '로제 떡볶이 밀키트 기본맛 1,2인분',
-        quantity: 2,
-        unitPrice: 7000,
-        totalPrice: 14000,
-        identificationCodes: [
-          'UL01FA01A1RO0201001',
-          'UL01FA01A1RO0201002'
-        ]
-      }
-    ]
-  },
-  {
-    salesCode: '2023102510150001',
-    date: '2023-10-25 10:15',
-    products: [
-      {
-        productCode: 'MA0301',
-        productName: '마라 떡볶이 밀키트 매운맛 1,2인분',
-        quantity: 3,
-        unitPrice: 7000,
-        totalPrice: 21000,
-        identificationCodes: [
-          'UL01FA01A2MA0301001',
-          'UL01FA01A2MA0301002',
-          'UL01FA01A3MA0301003'
-        ]
-      },
-      {
-        productCode: 'OR0403',
-        productName: '오리지널 떡볶이 밀키트 아주 매운맛 3,4인분',
-        quantity: 1,
-        unitPrice: 13000,
-        totalPrice: 13000,
-        identificationCodes: [
-          'UL01FA01A1OR0403001'
-        ]
-      }
-    ]
-  },
-  {
-    salesCode: '2023102409000001',
-    date: '2023-10-24 09:00',
-    products: [
-      {
-        productCode: 'RO0103',
-        productName: '로제 떡볶이 밀키트 순한맛 3,4인분',
-        quantity: 1,
-        unitPrice: 17000,
-        totalPrice: 17000,
-        identificationCodes: [
-          'UL01FA01A1RO0103001'
-        ]
-      },
-      {
-        productCode: 'MA0301',
-        productName: '마라 떡볶이 밀키트 매운맛 1,2인분',
-        quantity: 4,
-        unitPrice: 7000,
-        totalPrice: 28000,
-        identificationCodes: [
-          'UL01FA01A3MA0301004',
-          'UL01FA01A3MA0301005',
-          'UL01FA01A4MA0301006',
-          'UL01FA01A4MA0301007'
-        ]
-      }
-    ]
+onMounted(async () => {
+  loading.value = true
+  try {
+    saleDetail.value = await getSalesDetail(salesCode)
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
   }
-]
-
-onMounted(() => {
-  saleDetail.value = allSales.find(s => s.salesCode === salesCode)
 })
 
-const grandTotal = computed(() => {
-  if (!saleDetail.value) return 0
-  return saleDetail.value.products.reduce((sum, p) => sum + p.totalPrice, 0)
+const formatSalesDate = (isoStr) => {
+  if (!isoStr) return ''
+  return isoStr.replace('T', ' ').substring(0, 16)
+}
+
+// API는 SalesItem 단위(lot 하나씩) 반환 → productCode 기준으로 그룹핑
+const groupedProducts = computed(() => {
+  if (!saleDetail.value) return []
+  const map = {}
+  for (const p of saleDetail.value.products) {
+    if (!map[p.productCode]) {
+      map[p.productCode] = {
+        productCode: p.productCode,
+        productName: p.productName,
+        quantity: 0,
+        unitPrice: p.unitPrice,
+        totalPrice: 0,
+        lots: []
+      }
+    }
+    map[p.productCode].quantity += p.quantity
+    map[p.productCode].totalPrice += Number(p.totalPrice)
+    map[p.productCode].lots.push(p.lot)
+  }
+  return Object.values(map)
 })
+
+const grandTotal = computed(() =>
+  groupedProducts.value.reduce((sum, p) => sum + p.totalPrice, 0)
+)
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
@@ -122,16 +66,22 @@ const isExpanded = (productCode) => {
   return expandedProducts.value[productCode] || false
 }
 
-const cancelSale = () => {
-  if (confirm('해당 판매를 취소하시겠습니까?')) {
+const cancelSale = async () => {
+  if (!confirm('해당 판매를 취소하시겠습니까?')) return
+  try {
+    await cancelSaleApi(salesCode)
     alert('판매가 취소되었습니다.')
     router.push({ name: 'franchise-product-list' })
+  } catch (e) {
+    alert(e.message || '판매 취소에 실패했습니다.')
   }
 }
 </script>
 
 <template>
-  <div class="content-wrapper" v-if="saleDetail">
+  <div v-if="loading" class="loading">불러오는 중...</div>
+  <div v-else-if="error" class="loading error-message">{{ error }}</div>
+  <div class="content-wrapper" v-else-if="saleDetail">
     <div class="header-row">
       <h2>판매 상세 정보</h2>
       <div class="header-actions">
@@ -152,7 +102,7 @@ const cancelSale = () => {
         </div>
         <div class="info-item">
           <label>판매 일시</label>
-          <span>{{ saleDetail.date }}</span>
+          <span>{{ formatSalesDate(saleDetail.salesDate) }}</span>
         </div>
       </div>
 
@@ -170,7 +120,7 @@ const cancelSale = () => {
           <span class="text-right">단가</span>
           <span class="text-right">총 금액</span>
         </div>
-        <div v-for="(product, index) in saleDetail.products" :key="index" class="product-list-item">
+        <div v-for="(product, index) in groupedProducts" :key="index" class="product-list-item">
           <span class="sku-cell">{{ product.productCode }}</span>
           <span>{{ product.productName }}</span>
           <span class="text-right">{{ product.quantity }}개</span>
@@ -185,7 +135,7 @@ const cancelSale = () => {
 
       <div class="divider"></div>
 
-      <!-- 제품 식별 코드 -->
+      <!-- 제품 식별 코드 (lot) -->
       <div class="section-title">
         <h3>제품 식별 코드</h3>
       </div>
@@ -193,27 +143,25 @@ const cancelSale = () => {
         양식: <code>지역 + 공장 넘버링 + 생산 라인 + 제품 코드 + 박스 코드</code>
       </p>
 
-      <div v-for="(product, index) in saleDetail.products" :key="'id-' + index" class="id-code-section">
+      <div v-for="(product, index) in groupedProducts" :key="'id-' + index" class="id-code-section">
         <div class="id-code-header" @click="toggleExpand(product.productCode)">
           <span class="id-code-product">
             <span class="sku-cell">{{ product.productCode }}</span>
             {{ product.productName }}
-            <span class="count-badge">{{ product.identificationCodes.length }}건</span>
+            <span class="count-badge">{{ product.lots.length }}건</span>
           </span>
           <span class="expand-icon">{{ isExpanded(product.productCode) ? '▲' : '▼' }}</span>
         </div>
         <div v-if="isExpanded(product.productCode)" class="id-code-list">
-          <div v-for="(code, codeIdx) in product.identificationCodes" :key="codeIdx" class="id-code-item">
-            <span class="code-index">{{ codeIdx + 1 }}</span>
-            <code class="id-code-value">{{ code }}</code>
+          <div v-for="(lot, lotIdx) in product.lots" :key="lotIdx" class="id-code-item">
+            <span class="code-index">{{ lotIdx + 1 }}</span>
+            <code class="id-code-value">{{ lot }}</code>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div v-else class="loading">
-    Loading...
-  </div>
+  <div v-else class="loading">데이터를 찾을 수 없습니다.</div>
 </template>
 
 <style scoped>
@@ -239,7 +187,7 @@ const cancelSale = () => {
 .info-item span { font-size: 1rem; color: var(--text-dark); }
 .sales-code-value { color: var(--primary); font-weight: 600; }
 
-.sku-cell { color: var(--primary); font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; }
 
 /* 상품 목록 테이블 */
 .product-list-table {
@@ -379,4 +327,5 @@ const cancelSale = () => {
 }
 
 .loading { text-align: center; padding: 3rem; color: var(--text-light); }
+.error-message { color: #991b1b; }
 </style>

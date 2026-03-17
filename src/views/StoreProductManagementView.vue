@@ -19,9 +19,9 @@
         <select v-model="filter.status">
           <option value="">전체</option>
           <option value="ON_SALE">판매중</option>
-          <option value="SOLD_OUT">단종</option>
-          <option value="TEMPORARY_OUT">일시품절</option>
-          <option value="SALE_SCHEDULED">판매예정</option>
+          <option value="DISCONTINUED">단종</option>
+          <option value="TEMP_SOLD_OUT">일시품절</option>
+          <option value="COMING_SOON">판매예정</option>
         </select>
       </div>
       <div class="filter-group">
@@ -38,7 +38,7 @@
     <div class="product-grid">
       <div v-for="product in filteredProducts" :key="product.productCode" class="product-card">
         <div class="card-image">
-          <img :src="product.imageUrl || 'https://via.placeholder.com/300x200?text=Topokki'" alt="Product Image" />
+          <img v-if="product.imageUrl" :src="product.imageUrl" alt="Product Image" />
           <span :class="['status-badge', product.status.toLowerCase()]">{{ getStatusLabel(product.status) }}</span>
         </div>
         <div class="card-body">
@@ -59,7 +59,7 @@
             <span class="info-label">무게:</span> {{ product.weight }}g
           </div>
           <div class="card-info-row">
-            <span class="info-label">기준 안전재고:</span> {{ product.baseSafeStock }}개
+            <span class="info-label">구성용품:</span> {{ product.components ? product.components.join(', ') : '없음' }}
           </div>
 
             <div class="price-row">
@@ -121,6 +121,11 @@
           </div>
 
           <div class="form-group full-width">
+            <label>구성용품 (쉼표로 구분하여 입력)</label>
+            <input type="text" v-model="form.componentsInput" placeholder="예: 떡, 어묵, 소스, 파" />
+          </div>
+
+          <div class="form-group full-width">
             <label>상품 설명</label>
             <textarea v-model="form.description" rows="2"></textarea>
           </div>
@@ -178,6 +183,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import api from '@/api'
 
 const filter = ref({
   productCode: '',
@@ -200,65 +206,56 @@ const form = ref({
   price: 0,
   status: 'ON_SALE',
   servingSize: 1, // Derived from sizeCode for logic
-  weight: 0
+  weight: 0,
+  componentsInput: '' // Added for components
 })
 
 const products = ref([])
 
-// Generate 24 Products
-const generateMockProducts = () => {
-    const types = [
-        { code: 'OR', name: '오리지널 떡볶이 밀키트', price1: 10000, price2: 18000 },
-        { code: 'RO', name: '로제 떡볶이 밀키트', price1: 12000, price2: 22000 },
-        { code: 'MA', name: '마라 떡볶이 밀키트', price1: 12000, price2: 22000 }
-    ]
-    const spices = [
-        { code: '01', name: '순한맛' },
-        { code: '02', name: '기본맛' },
-        { code: '03', name: '매운맛' },
-        { code: '04', name: '아주 매운맛' }
-    ]
-    const sizes = [
-        { code: '01', name: '1~2인분', serving: 1 },
-        { code: '03', name: '3~4인분', serving: 3 }
-    ]
+const isLoading = ref(false)
 
-    const list = []
-    types.forEach(t => {
-        spices.forEach(s => {
-            sizes.forEach(sz => {
-                const code = `${t.code}${s.code}${sz.code}`
-                const name = `${t.name} ${s.name} ${sz.name.replace('~', ',')}` 
-                const price = sz.code === '01' ? t.price1 : t.price2
-                
-                const supplyPrice = price - 5000 
-                
-                list.push({
-                    productCode: code,
-                    name: name,
-                    description: `${t.name} ${s.name}입니다.`,
-                    imageUrl: `/images/${t.code}.png`, // Updated to .png
-                    price: price,
-                    supplyPrice: supplyPrice,
-                    status: 'ON_SALE',
-                    servingSize: sz.serving,
-                    spiceLevel: s.code,
-                    kcal: sz.serving === 1 ? 1400 : 2800, 
-                    weight: sz.code === '01' ? 500 : 1000,
-                    startDate: '2024-01-01', 
-                    endDate: '2025-12-31',
-                    baseSafeStock: 10,
-                    type: t.code,
-                    sizeCode: sz.code
-                })
+const fetchProducts = async () => {
+    isLoading.value = true
+    try {
+        const response = await api.get('/franchise/product')
+        if (response.data && response.data.success) {
+            
+            let fetchedProducts = []
+            const dataObj = response.data.data
+            if (dataObj && dataObj.franchiseProductList) {
+                fetchedProducts = dataObj.franchiseProductList
+            } else if (dataObj && dataObj.franchiseproductList) {
+               fetchedProducts = dataObj.franchiseproductList
+            } else if (dataObj && dataObj.FranchiseProductList) {
+                fetchedProducts = dataObj.FranchiseProductList
+            }
+
+            products.value = fetchedProducts.map(p => {
+                const type = p.productCode ? p.productCode.substring(0, 2) : ''
+                const spice = p.productCode ? p.productCode.substring(2, 4) : ''
+                const size = p.productCode ? p.productCode.substring(4, 6) : ''
+
+                return {
+                    ...p,
+                    imageUrl: p.imageUrl || '',
+                    servingSize: size === '01' ? 1 : 3,
+                    spiceLevel: spice,
+                    sizeCode: size,
+                    type: type,
+                    baseSafeStock: p.safetyStock,
+                    componentsInput: p.components ? p.components.join(', ') : ''
+                }
             })
-        })
-    })
-    products.value = list
+        }
+    } catch (error) {
+        console.error('Failed to fetch store products:', error)
+    } finally {
+        isLoading.value = false
+    }
 }
 
 onMounted(() => {
-    generateMockProducts()
+    fetchProducts()
 })
 
 const filteredProducts = computed(() => {
@@ -272,7 +269,7 @@ const filteredProducts = computed(() => {
 })
 
 const getStatusLabel = (status) => {
-  const map = { 'ON_SALE': '판매중', 'SOLD_OUT': '단종', 'TEMPORARY_OUT': '일시품절', 'SALE_SCHEDULED': '판매예정' }
+  const map = { 'ON_SALE': '판매중', 'DISCONTINUED': '단종', 'TEMP_SOLD_OUT': '일시품절', 'COMING_SOON': '판매예정' }
   return map[status] || status
 }
 
@@ -309,7 +306,7 @@ const openAddModal = () => {
   isEditMode.value = false
   form.value = {
       type: 'OR', spiceLevel: '01', sizeCode: '01',
-      productCode: '', name: '', description: '', imageUrl: '', price: 0, weight: 0, status: 'ON_SALE', servingSize: 1
+      productCode: '', name: '', description: '', imageUrl: '', price: 0, weight: 0, status: 'ON_SALE', servingSize: 1, componentsInput: ''
   }
   updateCodeAndName()
   showModal.value = true
@@ -321,10 +318,12 @@ const openEditModal = (product) => {
   const type = product.productCode.substring(0, 2)
   const spice = product.productCode.substring(2, 4)
   const size = product.productCode.substring(4, 6)
+  
+  const componentsInput = product.components ? product.components.join(', ') : ''
 
   form.value = { 
       ...JSON.parse(JSON.stringify(product)),
-      type, spiceLevel: spice, sizeCode: size
+      type, spiceLevel: spice, sizeCode: size, componentsInput
   }
   showModal.value = true
 }
@@ -335,11 +334,14 @@ const closeModal = () => {
 
 const saveProduct = () => {
     // In real app, validate existence
+    const components = form.value.componentsInput.split(',').map(s => s.trim()).filter(Boolean)
+    const productData = { ...form.value, components }
+    
     if (isEditMode.value) {
         const index = products.value.findIndex(p => p.productCode === form.value.productCode)
-        if (index !== -1) products.value[index] = { ...form.value }
+        if (index !== -1) products.value[index] = productData
     } else {
-        products.value.push({ ...form.value })
+        products.value.push(productData)
     }
     closeModal()
 }
@@ -382,10 +384,10 @@ const handleImageUpload = (event) => {
 .card-image { height: 200px; background: #f1f5f9; position: relative; overflow: hidden; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
 .status-badge { position: absolute; top: 10px; right: 10px; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.status-badge.on_sale { background: #e6fffa; color: #2c7a7b; }
-.status-badge.sold_out { background: #fee2e2; color: #991b1b; }
-.status-badge.temporary_out { background: #fffaf0; color: #9c4221; }
-.status-badge.sale_scheduled { background: #e0e7ff; color: #3730a3; }
+.status-badge.on_sale { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.status-badge.discontinued { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.status-badge.temp_sold_out { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+.status-badge.coming_soon { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
 .card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
 .card-header h3 { margin: 0; font-size: 1.1rem; font-weight: normal; color: var(--text-dark); margin-bottom: 0.25rem; }
 .product-code { font-size: 0.8rem; color: var(--text-light); }

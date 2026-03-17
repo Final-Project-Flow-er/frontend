@@ -65,8 +65,8 @@
             <!-- 사진 업로드 -->
             <div class="photo-upload-section">
               <div class="photo-preview-container">
-                <img v-if="formData.photoUrl" :src="formData.photoUrl" class="photo-preview circular">
-                <div v-else class="photo-placeholder circular">
+                <img v-if="formData.photoUrl" :src="formData.photoUrl" class="photo-preview rectangular">
+                <div v-else class="photo-placeholder rectangular">
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -86,12 +86,19 @@
 
               <div class="form-group">
                 <label>이메일 <span class="required">*</span></label>
-                <input type="email" v-model="formData.email" placeholder="example@email.com" required>
+                <input type="email" v-model="formData.email" placeholder="이메일을 입력하세요." required>
               </div>
 
               <div class="form-group">
                 <label>연락처 <span class="required">*</span></label>
-                <input type="tel" v-model="formData.phone" placeholder="010-0000-0000" required>
+                <input 
+                  type="text" 
+                  v-model="formData.phone" 
+                  @input="handlePhoneInput"
+                  placeholder="전화번호를 입력하세요."
+                  maxlength="13"
+                  required
+                >
               </div>
 
               <div class="form-group">
@@ -99,16 +106,49 @@
                 <input type="date" v-model="formData.birthdate" required>
               </div>
 
+              <!-- 본사 전용 -->
+              <template v-if="selectedRole === 'HQ'">
+                <div class="form-group">
+                  <label>본사 소속 <span class="required">*</span></label>
+                  <div class="search-select-group">
+                    <input 
+                      type="text" 
+                      v-model="formData.orgName" 
+                      placeholder="본사를 검색하여 선택하세요" 
+                      readonly 
+                      @click="openUnitModal"
+                      required
+                    >
+                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      검색
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>본사 코드</label>
+                  <input type="text" v-model="formData.orgCode" placeholder="자동 입력됨" disabled class="input-disabled">
+                </div>
+              </template>
+
               <!-- 가맹점 전용 -->
-              <template v-if="selectedRole === 'franchise'">
+              <template v-if="selectedRole === 'FRANCHISE'">
                 <div class="form-group">
                   <label>가맹점명 <span class="required">*</span></label>
-                  <select v-model="formData.orgName" required>
-                    <option value="" disabled>가맹점을 선택하세요</option>
-                    <option v-for="org in franchiseOptions" :key="org.code" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </select>
+                  <div class="search-select-group">
+                    <input 
+                      type="text" 
+                      v-model="formData.orgName" 
+                      placeholder="가맹점을 검색하여 선택하세요" 
+                      readonly 
+                      @click="openUnitModal"
+                      required
+                    >
+                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      검색
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>가맹점 코드</label>
@@ -117,15 +157,23 @@
               </template>
 
               <!-- 공장 전용 -->
-              <template v-if="selectedRole === 'factory'">
+              <template v-if="selectedRole === 'FACTORY'">
                 <div class="form-group">
                   <label>공장 이름 <span class="required">*</span></label>
-                  <select v-model="formData.orgName" required>
-                    <option value="" disabled>공장을 선택하세요</option>
-                    <option v-for="org in factoryOptions" :key="org.code" :value="org.name">
-                      {{ org.name }}
-                    </option>
-                  </select>
+                  <div class="search-select-group">
+                    <input 
+                      type="text" 
+                      v-model="formData.orgName" 
+                      placeholder="공장을 검색하여 선택하세요" 
+                      readonly 
+                      @click="openUnitModal"
+                      required
+                    >
+                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      검색
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>공장 코드</label>
@@ -161,116 +209,125 @@
           
           <div class="result-details">
             <div class="result-item">
-              <span class="label">사원번호:</span>
-              <span class="valueHighlight">{{ resultData.employeeNumber }}</span>
-            </div>
-            <div class="result-item">
               <span class="label">아이디:</span>
-              <span class="value">{{ resultData.id }}</span>
+              <span class="valueHighlight">{{ resultData.loginId }}</span>
             </div>
             <div class="result-item">
-              <span class="label">임시 비밀번호:</span>
-              <span class="value">{{ resultData.tempPassword }}</span>
+              <span class="label">사원번호:</span>
+              <span class="value">{{ resultData.employeeNumber }}</span>
             </div>
           </div>
+          <p class="modal-info-text text-center mt-3" style="color: #64748b; font-size: 0.9rem;">
+            * 임시 비밀번호가 사용자의 이메일로 안전하게 발송되었습니다.
+          </p>
         </div>
         <div class="modal-footer">
           <button @click="closeModal" class="btn-confirm">확인</button>
         </div>
       </div>
     </div>
+
+    <!-- 사업장 선택 모달 -->
+    <BusinessUnitSelectionModal 
+      :is-open="isUnitModalOpen"
+      :title="selectedRole === 'HQ' ? '본사' : (selectedRole === 'FRANCHISE' ? '가맹점' : '공장')"
+      :units="selectedRole === 'HQ' ? hqOptions : (selectedRole === 'FRANCHISE' ? franchiseOptions : factoryOptions)"
+      @close="isUnitModalOpen = false"
+      @select="handleUnitSelect"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed } from 'vue'
+import { ref, reactive, watch, computed, onMounted } from 'vue'
+import { useUserManagementStore } from '../stores/userManagement'
+import BusinessUnitSelectionModal from './BusinessUnitSelectionModal.vue'
+
+const userManagementStore = useUserManagementStore()
 
 const roles = [
-  { label: '본사', value: 'hq' },
-  { label: '가맹점', value: 'franchise' },
-  { label: '공장', value: 'factory' }
+  { label: '본사', value: 'HQ' },
+  { label: '가맹점', value: 'FRANCHISE' },
+  { label: '공장', value: 'FACTORY' }
 ]
 
-// 권한별 세부 역할
+// 권한별 세부 역할 (백엔드 UserPosition 매핑)
 const roleDetailsByType = {
-  hq: [
-    { value: 'hq_hr', label: '인사 관리자' },
-    { value: 'hq_settlement', label: '정산 관리자' },
-    { value: 'hq_logistics', label: '물류 관리자' },
-    { value: 'hq_system', label: '시스템 관리자' }
+  HQ: [
+    { value: 'HR_MANAGER', label: '인사 관리자' },
+    { value: 'FINANCE_MANAGER', label: '정산 관리자' },
+    { value: 'LOGISTICS_MANAGER', label: '물류 관리자' },
+    { value: 'SYSTEM_MANAGER', label: '시스템 관리자' }
   ],
-  franchise: [
-    { value: 'fr_owner', label: '점주' },
-    { value: 'fr_manager', label: '매니저' },
-    { value: 'fr_staff', label: '직원' }
+  FRANCHISE: [
+    { value: 'OWNER', label: '점주' },
+    { value: 'STORE_MANAGER', label: '매니저' },
+    { value: 'STAFF', label: '직원' }
   ],
-  factory: [
-    { value: 'fa_production', label: '생산 관리자' },
-    { value: 'fa_logistics', label: '물류 관리자' },
-    { value: 'fa_factory', label: '공장 관리자' }
+  FACTORY: [
+    { value: 'PRODUCTION_MANAGER', label: '생산 관리자' },
+    { value: 'FACTORY_LOGISTICS_MANAGER', label: '공장 물류 관리자' },
+    { value: 'FACTORY_MANAGER', label: '공장 관리자' }
   ]
 }
 
 const roleDetailOptions = computed(() => roleDetailsByType[selectedRole.value] || [])
 
-const selectedRole = ref('hq')
+const selectedRole = ref('HQ')
 const isSubmitting = ref(false)
 const showResultModal = ref(false)
 const photoInput = ref(null)
+const selectedPhotoFile = ref(null)
 
 const formData = reactive({
   name: '',
   email: '',
   phone: '',
   birthdate: '',
-  orgName: '',
+  businessUnitId: null,
+  orgName: '', // UI 표시용
   orgCode: '',
-  region: '',
-  photoUrl: '',
+  photoUrl: '', // 미리보기용
   roleDetail: ''
 })
 
 const resultData = reactive({
   employeeNumber: '',
-  id: '',
-  tempPassword: ''
+  loginId: '',
+  tempPassword: '' // 임시 비번은 백엔드 응답에 없을 수 있으니 메일 확인 문구로 대체 가능
 })
 
-// 사원번호 카운터 (실제는 DB 시퀀스 사용)
-const counters = reactive({
-  hq: 10001,
-  franchise: 20001,
-  factory: 30001
+// 사업장 옵션 (백엔드 연동)
+const hqOptions = computed(() => userManagementStore.businessUnits.hq)
+const franchiseOptions = computed(() => userManagementStore.businessUnits.franchise)
+const factoryOptions = computed(() => userManagementStore.businessUnits.factory)
+
+const isUnitModalOpen = ref(false)
+
+const openUnitModal = () => {
+  isUnitModalOpen.value = true
+}
+
+const handleUnitSelect = (unit) => {
+  formData.orgName = unit.name
+  formData.orgCode = unit.businessNumber || unit.code || ''
+  formData.businessUnitId = unit.id
+}
+
+onMounted(async () => {
+  await Promise.all([
+    userManagementStore.fetchBusinessUnits('hq'),
+    userManagementStore.fetchBusinessUnits('franchise'),
+    userManagementStore.fetchBusinessUnits('factory')
+  ])
 })
 
-// 옵션 데이터
-const franchiseOptions = [
-  { name: '서울본점', code: 'SE01' },
-  { name: '경기분점', code: 'GE01' },
-  { name: '부산분점', code: 'BU01' }
-]
-
-const factoryOptions = [
-  { name: '경기공장', code: 'FA01' },
-  { name: '충청공장', code: 'FA02' }
-]
-
-// 조직 선택 시 코드 자동 입력
-watch(() => formData.orgName, (newVal) => {
-  if (selectedRole.value === 'franchise') {
-    const org = franchiseOptions.find(o => o.name === newVal)
-    formData.orgCode = org ? org.code : ''
-  } else if (selectedRole.value === 'factory') {
-    const org = factoryOptions.find(o => o.name === newVal)
-    formData.orgCode = org ? org.code : ''
-  }
-})
-
-// 권한 타입 변경 시 세부 역할·소속 초기화
+// 권한 타입 변경 시 초기화
 watch(selectedRole, () => {
   formData.roleDetail = ''
   formData.orgName = ''
   formData.orgCode = ''
+  formData.businessUnitId = null
 })
 
 const triggerPhotoUpload = () => {
@@ -280,6 +337,7 @@ const triggerPhotoUpload = () => {
 const onPhotoChange = (e) => {
   const file = e.target.files[0]
   if (file) {
+    selectedPhotoFile.value = file
     const reader = new FileReader()
     reader.onload = (event) => {
       formData.photoUrl = event.target.result
@@ -288,35 +346,69 @@ const onPhotoChange = (e) => {
   }
 }
 
+// 전화번호 자동 하이픈
+const handlePhoneInput = (e) => {
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length > 3 && val.length <= 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  } else if (val.length > 7) {
+    val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7, 11);
+  }
+  formData.phone = val;
+}
+
 const handleRegister = async () => {
   if (!formData.roleDetail) {
     alert('역할을 선택해주세요.')
     return
   }
+
+  if (formData.phone.replace(/-/g, '').length !== 11) {
+    alert('연락처는 11자리 숫자로 입력해주세요.')
+    return
+  }
+
+  if (!formData.businessUnitId) {
+    alert('소속 사업장을 선택해주세요.')
+    return
+  }
+  
   isSubmitting.value = true
   
-  // API 지연 시뮬레이션
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  try {
+    const requestData = {
+      username: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      birthDate: formData.birthdate,
+      role: selectedRole.value,
+      position: formData.roleDetail,
+      businessUnitId: formData.businessUnitId
+    }
 
-  // 자동 생성 로직 (Mock)
-  const serial = String(counters[selectedRole.value] % 10000).padStart(4, '0')
-  const prefix = selectedRole.value === 'hq' ? 'hq' : (selectedRole.value === 'franchise' ? 'fr' : 'fc')
-  
-  resultData.employeeNumber = counters[selectedRole.value].toString()
-  resultData.id = prefix + serial
-  resultData.tempPassword = Math.random().toString(36).substring(2, 10).toUpperCase() + '!'
-
-  // 카운터 증가 (프론트 레벨 시뮬레이션)
-  counters[selectedRole.value]++
-
-  isSubmitting.value = false
-  showResultModal.value = true
+    const response = await userManagementStore.createUser(requestData, selectedPhotoFile.value)
+    
+    if (response.success) {
+      resultData.employeeNumber = response.data.employeeNumber
+      resultData.loginId = response.data.loginId
+      // 백엔드 CreateUserResponse에 tempPassword가 따로 없다면 안내 문구만
+      showResultModal.value = true
+    }
+  } catch (error) {
+    alert('회원 등록에 실패했습니다. 입력 정보를 확인해주세요.')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 const closeModal = () => {
   showResultModal.value = false
   // 폼 초기화
-  Object.keys(formData).forEach(key => formData[key] = '')
+  Object.keys(formData).forEach(key => {
+    if (key === 'businessUnitId') formData[key] = null
+    else formData[key] = ''
+  })
+  selectedPhotoFile.value = null
 }
 </script>
 
@@ -403,12 +495,16 @@ const closeModal = () => {
   border-radius: 50%;
 }
 
+.rectangular {
+  border-radius: 8px; /* Slightly rounded square */
+}
+
 .photo-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
   color: #cbd5e1;
-  border: 2px dashed #cbd5e1;
+  border: 2px solid #cbd5e1; /* Changed from dashed to solid */
   background: #f8fafc;
 }
 
@@ -446,6 +542,18 @@ const closeModal = () => {
   height: 42px;
   box-sizing: border-box;
 }
+
+.search-select-group { display: flex; gap: 0.5rem; }
+.search-select-group input { flex: 1; cursor: pointer; background: #f8fafc; }
+
+.btn-search-trigger {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0 1rem; background: #0f172a; border: none;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  color: white; cursor: pointer; transition: all 0.2s;
+}
+.btn-search-trigger:hover { background: #1e293b; transform: translateY(-1px); }
+
 .form-group input:focus,
 .form-group select:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1); }
 
