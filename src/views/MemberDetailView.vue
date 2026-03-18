@@ -840,6 +840,7 @@ const handlePhoneInput = (e) => {
   font-weight: 600;
   color: white;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s;
 }
 

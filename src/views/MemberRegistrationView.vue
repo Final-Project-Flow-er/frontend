@@ -549,7 +549,7 @@ const closeModal = () => {
   display: flex; align-items: center; gap: 0.4rem;
   padding: 0 1rem; background: #0f172a; border: none;
   border-radius: 8px; font-size: 0.85rem; font-weight: 600;
-  color: white; cursor: pointer; transition: all 0.2s;
+  color: white; cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
 .btn-search-trigger:hover { background: #1e293b; transform: translateY(-1px); }
 
