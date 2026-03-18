@@ -249,17 +249,21 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import TransportSelectionModal from './TransportSelectionModal.vue'
 import api from '@/api/index'
 
 const router = useRouter()
+const route = useRoute()
 const registrationType = ref('company')
 const dateError = ref('')
 
 const companies = ref([])
 
 onMounted(async () => {
+  if (route.query.type) {
+    registrationType.value = route.query.type
+  }
   await fetchCompanies()
 })
 

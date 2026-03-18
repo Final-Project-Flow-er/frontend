@@ -22,7 +22,7 @@
           배송 차량 ({{ vehicles.length }})
         </button>
       </div>
-      <button @click="$router.push('/admin/logistics-registration')" class="btn-register-link">
+      <button @click="router.push({ name: 'logistics-registration', query: { type: activeTab === 'companies' ? 'company' : 'vehicle' } })" class="btn-register-link">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12h14"></path>
           <path d="M12 5v14"></path>
@@ -327,11 +327,12 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import LogisticsDetailModal from './LogisticsDetailModal.vue'
 import api from '@/api/index'
 
 const router = useRouter()
+const route = useRoute()
 const activeTab = ref('companies')
 
 // 업체 검색 필드
