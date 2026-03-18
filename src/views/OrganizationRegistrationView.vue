@@ -51,8 +51,7 @@
               <input 
                 type="text" 
                 v-model="storeData.address" 
-                placeholder="주소를 검색하세요"
-                readonly
+                placeholder="주소를 직접 입력하거나 검색하세요"
                 @click="openPostcode('store')"
               >
               <button type="button" @click="openPostcode('store')" class="btn-address-search">주소 검색</button>
@@ -231,8 +230,7 @@
               <input 
                 type="text" 
                 v-model="factoryData.address" 
-                placeholder="주소를 검색하세요"
-                readonly
+                placeholder="주소를 직접 입력하거나 검색하세요"
                 @click="openPostcode('factory')"
               >
               <button type="button" @click="openPostcode('factory')" class="btn-address-search">주소 검색</button>

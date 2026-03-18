@@ -50,8 +50,7 @@
                   <input
                     type="text"
                     v-model="companyData.address"
-                    placeholder="주소를 검색하세요"
-                    readonly
+                    placeholder="주소를 검색하거나 직접 입력하세요"
                     @click="openPostcode"
                   >
                   <button type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>

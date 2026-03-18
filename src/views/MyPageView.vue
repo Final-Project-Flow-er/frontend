@@ -208,7 +208,7 @@
                   :disabled="!isEditingOrg" 
                   :class="{ 'input-locked': !isEditingOrg }" 
                   class="premium-input-small"
-                  readonly
+                  placeholder="주소를 직접 입력하거나 검색하세요"
                   @click="isEditingOrg && openPostcode()"
                 >
                 <button v-if="isEditingOrg" @click="openPostcode" class="btn-address-search-mini">조회</button>

@@ -106,7 +106,7 @@
             <div class="form-group full-width">
               <label>사업장 주소 <span class="required">*</span></label>
               <div class="address-input-group">
-                <input type="text" v-model="formData.address" required readonly @click="isEditMode && openPostcode()">
+                <input type="text" v-model="formData.address" required placeholder="주소를 직접 입력하거나 검색하세요" @click="isEditMode && openPostcode()">
                 <button v-if="isEditMode" type="button" @click="openPostcode" class="btn-address">주소 검색</button>
               </div>
               <input 

@@ -136,7 +136,7 @@
                 <div class="hq-field full">
                   <label>본사 소재지</label>
                   <div class="hq-address-group">
-                    <input type="text" v-model="organization.address" :disabled="!isEditing" :class="{ 'editing': isEditing }" readonly @click="isEditing && openPostcode()">
+                    <input type="text" v-model="organization.address" :disabled="!isEditing" :class="{ 'editing': isEditing }" placeholder="주소를 직접 입력하거나 검색하세요" @click="isEditing && openPostcode()">
                     <button v-if="isEditing" @click="openPostcode" class="hq-search-btn">주소 검색</button>
                   </div>
                   <input 
@@ -209,8 +209,6 @@
                 disabled 
                 class="input-disabled"
               >
-            </div>
-
             <div class="info-field full-width">
               <label>주소</label>
               <div class="address-input-group">
@@ -219,8 +217,7 @@
                   v-model="organization.address" 
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
-                  placeholder="주소를 검색하세요"
-                  readonly
+                  placeholder="주소를 직접 입력하거나 검색하세요"
                   @click="isEditing && openPostcode()"
                 >
                 <button v-if="isEditing" type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>
