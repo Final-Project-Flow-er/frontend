@@ -100,9 +100,8 @@ const menuGroups = ref([
         name: '로그 관리',
         isOpen: false,
         children: [
-          { name: '본사 로그', path: '/hq/inventory/logs/hq' },
-          { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
           { name: '공장 로그', path: '/hq/inventory/logs/factory' },
+          { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
           { name: '운송 로그', path: '/head-office/logs/logistics' }
         ]
       },
