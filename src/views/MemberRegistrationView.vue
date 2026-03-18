@@ -102,7 +102,7 @@
 
               <div class="form-group">
                 <label>생년월일 <span class="required">*</span></label>
-                <input type="date" v-model="formData.birthdate" required>
+                <input type="date" v-model="formData.birthdate" :max="today" required>
               </div>
 
               <!-- 본사 전용 -->
@@ -230,6 +230,7 @@ import { useUserManagementStore } from '../stores/userManagement'
 import BusinessUnitSelectionModal from './BusinessUnitSelectionModal.vue'
 
 const userManagementStore = useUserManagementStore()
+const today = new Date().toISOString().split('T')[0]
 
 const roles = [
   { label: '본사', value: 'HQ' },
