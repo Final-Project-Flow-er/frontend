@@ -1,34 +1,22 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Modal from '@/components/common/Modal.vue'
+import api from '@/api'
 
 const outboundBoxes = ref([])
 
 const fetchOutboundBoxes = async () => {
   try {
-    const token = localStorage.getItem('accessToken')
-    const headers = { 'Content-Type': 'application/json' }
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
+    const response = await api.get('/outbounds/boxes')
+    const result = response.data
 
-    const response = await fetch('/api/v1/outbounds/boxes', {
-      headers: headers
-    })
-    let result = null;
-    try {
-      result = await response.json()
-    } catch(e) {
-      console.warn("Non-JSON response received:", e)
-    }
-    // 백엔드의 getBoxDetail과 매핑.
-    if (response.ok && result?.success && result?.data) {
+    if (result?.success && result?.data) {
       console.log("API returned raw boxes:", result.data)
       outboundBoxes.value = result.data.map(box => ({
         boxCode: box.boxCode,
         orderCode: box.orderCode,
-        productCode: box.productCode,
-        name: box.productName,
+        productCode: box.productName, // 백엔드 필드 역전 현상 대응: productName -> productCode
+        name: box.productCode,      // 백엔드 필드 역전 현상 대응: productCode -> name
         destination: box.franchiseName || '-',
         quantity: box.countItem || 0
       }))
@@ -37,12 +25,43 @@ const fetchOutboundBoxes = async () => {
     }
   } catch(error) {
     console.error('Error fetching outbound boxes:', error)
-    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+    outboundBoxes.value = []
+  }
+}
+
+const refreshAll = async () => {
+  await fetchOutboundBoxes()
+  if (selectedBoxCode.value) {
+    // 선택된 박스가 있으면 해당 박스의 상세 항목도 최신화
+    // (기존 fetchBoxDetails는 스킵 로직이 있으므로 강제 갱신용으로 따로 호출)
+    refreshBoxDetails(selectedBoxCode.value)
+  }
+}
+
+const refreshBoxDetails = async (boxCode) => {
+  try {
+    const response = await api.get(`/outbounds/boxes/items?boxCode=${boxCode}`)
+    const result = response.data
+    
+    if (result?.success && result?.data) {
+      allBoxDetails.value[boxCode] = result.data.map(item => ({
+        id: item.serialCode,
+        productCode: item.productId,
+        name: item.productName,
+        productionDate: item.manufactureDate,
+        picking: item.isPicking
+      }))
+    }
+  } catch(e) {
+    console.error('Error refreshing box details:', e)
   }
 }
 
 onMounted(() => {
-  fetchOutboundBoxes()
+  refreshAll()
+  // 3초마다 목록 자동 갱신
+  const interval = setInterval(refreshAll, 3000)
+  onUnmounted(() => clearInterval(interval))
 })
 
 // Data for Right List (Details per box)
@@ -52,27 +71,14 @@ const fetchBoxDetails = async (boxCode) => {
   if (allBoxDetails.value[boxCode]) return // 이미 불러온 경우 스킵
 
   try {
-    const token = localStorage.getItem('accessToken')
-    const headers = { 'Content-Type': 'application/json' }
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    const response = await fetch(`/api/v1/outbounds/boxes/items?boxCode=${boxCode}`, {
-      headers: headers
-    })
-    let result = null;
-    try {
-      result = await response.json()
-    } catch(e) {
-      console.warn("Non-JSON response received:", e)
-    }
+    const response = await api.get(`/outbounds/boxes/items?boxCode=${boxCode}`)
+    const result = response.data
     
-    if (response.ok && result?.success && result?.data) {
+    if (result?.success && result?.data) {
       console.log(`API returned items for boxCode ${boxCode}:`, result.data)
       allBoxDetails.value[boxCode] = result.data.map(item => ({
         id: item.serialCode,
-        productCode: item.productId, // API에는 productId가 있음
+        productCode: item.productId,
         name: item.productName,
         productionDate: item.manufactureDate,
         picking: item.isPicking
@@ -82,7 +88,6 @@ const fetchBoxDetails = async (boxCode) => {
     }
   } catch(error) {
     console.error('Error fetching box details:', error)
-    openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
     allBoxDetails.value[boxCode] = []
   }
 }
@@ -169,17 +174,12 @@ const performDelete = async () => {
 
     // 박스별로 삭제 API 요청 병렬 통신
     const promises = Object.entries(itemsByBox).map(async ([boxCode, serialCodes]) => {
-      const res = await fetch('/api/v1/outbounds/cancels', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({ boxCode, serialCodes })
-      })
-      let json = null
-      try { json = await res.json() } catch(e) {}
-      return {  success: res.ok && json?.success !== false }
+      try {
+        const res = await api.patch('/outbounds/cancels', { boxCode, serialCodes })
+        return { success: res.data?.success !== false }
+      } catch (e) {
+        return { success: false }
+      }
     })
 
     const results = await Promise.all(promises)
@@ -229,18 +229,13 @@ const deleteSelected = () => {
 const performPicking = async () => {
   try {
     const serialCodes = Array.from(selectedItemIds.value)
-    const response = await fetch('/api/v1/outbounds/pickings', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      },
-      body: JSON.stringify({ serialCodes })
-    })
-    
-    const result = await response.json()
-    
-    if (response.ok && result.success) {
+    if (serialCodes.length === 0) return
+
+    // 단일 요청으로 시리얼 코드 리스트 전송
+    const response = await api.patch('/outbounds/pickings', { serialCodes })
+    const result = response.data
+
+    if (result.success) {
       // Update picking status to true for selected items in UI
       Object.keys(allBoxDetails.value).forEach(boxCode => {
         allBoxDetails.value[boxCode].forEach(item => {
@@ -342,32 +337,19 @@ const approveOutbound = () => {
     })
 
     try {
-      // 1. 기존 출고 승인 API 호출 (재고 상태 변경)
-      const response = await fetch('/api/v1/outbounds/confirms', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({
-          serialCodes: Array.from(selectedItemIds.value)
-        })
-      })
+      const serialCodes = Array.from(selectedItemIds.value)
+      if (serialCodes.length === 0) return
 
-      let result = null
-      try { result = await response.json() } catch(e) {}
+      // 1. 기존 출고 승인 API 호출 (재고 상태 변경 - 단일 요청)
+      const response = await api.patch('/outbounds/confirms', { serialCodes })
+      const result = response.data
 
-      if (response.ok && result?.success) {
+      if (result?.success) {
         // 2. 배송 상태 변경 API 호출 (Internal Transport: PENDING -> IN_TRANSIT)
         if (approvedOrderCodes.length > 0) {
           try {
-            await fetch('/api/v1/transport/internal/updated-deliver-status', {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-              },
-              body: JSON.stringify({ orderCodes: approvedOrderCodes })
+            await api.patch('/transport/internal/updated-deliver-status', { 
+              orderCodes: approvedOrderCodes 
             })
             console.log('[운송 시스템] 배송 상태 변경 완료:', approvedOrderCodes)
           } catch (e) {
@@ -376,13 +358,8 @@ const approveOutbound = () => {
 
           // 3. 외부 운송 모듈 스케줄링 API 호출 (External Transport: 10초 뒤 배송 완료 예약)
           try {
-            await fetch('/api/v1/external/transport/schedule', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-              },
-              body: JSON.stringify({ orderCodes: approvedOrderCodes })
+            await api.post('/external/transport/schedule', { 
+              orderCodes: approvedOrderCodes 
             })
             console.log('[외부 운송 시스템] 배송 완료 예약 완료:', approvedOrderCodes)
           } catch (e) {
@@ -466,7 +443,10 @@ const handleModalClose = () => {
       <section class="top-panel">
         <h3 class="panel-title">박스 목록</h3>
         <div class="data-table-card">
-          <div class="data-table-scroll-wrapper">
+          <div v-if="outboundBoxes.length === 0" class="empty-state box-empty">
+            <p>출고 대기 항목이 없습니다.</p>
+          </div>
+          <div v-else class="data-table-scroll-wrapper">
             <table class="data-table">
               <thead>
                 <tr>
@@ -728,6 +708,9 @@ const handleModalClose = () => {
   justify-content: center;
   height: 100%;
   color: #94a3b8;
+}
+.box-empty {
+  min-height: 200px;
 }
 
 .text-right { text-align: right; }

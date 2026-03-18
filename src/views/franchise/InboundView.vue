@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Modal from '@/components/common/Modal.vue'
 
@@ -45,8 +45,51 @@ const fetchInboundBoxes = async () => {
   }
 }
 
+const refreshAll = async () => {
+  await fetchInboundBoxes()
+  if (selectedBoxCode.value) {
+    refreshBoxDetails(selectedBoxCode.value)
+  }
+}
+
+const refreshBoxDetails = async (boxCode) => {
+  try {
+    const token = localStorage.getItem('accessToken')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const response = await fetch(`/api/v1/inbounds/boxes/${boxCode}`, { headers })
+    let result = null
+    try { result = await response.json() } catch (e) {}
+
+    if (response.ok && result?.success && result?.data) {
+      allBoxDetails.value[boxCode] = result.data.map(item => {
+        let expiry = '-'
+        if (item.manufactureDate) {
+          const d = new Date(item.manufactureDate)
+          d.setDate(d.getDate() + 14)
+          expiry = d.toISOString().split('T')[0]
+        }
+        return {
+          id: item.serialCode,
+          productCode: item.productCode || item.productId,
+          name: item.productName,
+          productionDate: item.manufactureDate,
+          expiryDate: expiry,
+          unitPrice: 12000
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error refreshing box details:', error)
+  }
+}
+
 onMounted(() => {
-  fetchInboundBoxes()
+  refreshAll()
+  // 3초마다 자동 갱신
+  const interval = setInterval(refreshAll, 3000)
+  onUnmounted(() => clearInterval(interval))
 })
 
 const allBoxDetails = ref({})
