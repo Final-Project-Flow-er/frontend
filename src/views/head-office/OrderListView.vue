@@ -139,12 +139,6 @@ const goToEdit = (item) => {
       <button class="add-btn" @click="router.push({ name: 'head-office-order-create' })">발주 생성</button>
     </div>
 
-    <section class="summary-section">
-      <div class="summary-card"><span class="s-label">금일 발주 건수</span><p class="s-value">1건</p></div>
-      <div class="summary-card"><span class="s-label">배송 준비중</span><p class="s-value">1건</p></div>
-      
-    </section>
-
     <!-- Filter Section -->
     <div class="filter-section">
       <div class="filter-group">
@@ -227,11 +221,6 @@ const goToEdit = (item) => {
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
 .content-wrapper { max-width: 1400px; margin: 0 auto; }
-.summary-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-.summary-card { background: white; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); }
-.s-label { font-size: 0.9rem; color: var(--text-light); }
-.s-value { font-size: 1.75rem; font-weight: 700; margin: 0.5rem 0; }
-.summary-card.warn .s-value { color: #ef4444; }
 .add-btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
 
 /* Filter Styles */

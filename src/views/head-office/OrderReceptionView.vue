@@ -1,14 +1,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { updateOrderStatus, getRequestedOrders } from '@/api/hqOrders.js'
+import { updateOrderStatus, getRequestedOrders, checkIsPossible } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
-// 1. Central Inventory (재고 API 미연동 — 추후 연동 필요)
-const centralStock = ref({})
+// 1. 가불 여부 판정 맵 { [orderCode]: boolean }
+const possibleMap = ref({})
 
 // 2. Orders (실제 API 로드)
 const orders = ref([])
@@ -47,9 +47,16 @@ const fetchOrders = async () => {
       })
     })
     orders.value = Object.values(orderMap)
+
+    // 가불 여부 판정
+    const orderCodes = Object.keys(orderMap)
+    if (orderCodes.length > 0) {
+      const result = await checkIsPossible(orderCodes)
+      result.forEach(r => { possibleMap.value[r.orderCode] = r.isPossible })
+    }
   } catch (e) {
     orders.value = []
-    centralStock.value = {}
+    possibleMap.value = {}
   }
 }
 
@@ -107,7 +114,8 @@ const filteredRows = computed(() => {
 // Core Logic 3: Stock Reservation (placeholder)
 const getRowAvailability = (row) => {
   if (row.status !== 'PENDING') return null
-  return 'possible'
+  const isPossible = possibleMap.value[row.orderCode]
+  return isPossible ? 'possible' : 'impossible'
 }
 
 // Core Logic 4: Actions

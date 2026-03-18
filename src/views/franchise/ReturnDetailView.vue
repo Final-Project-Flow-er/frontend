@@ -21,12 +21,10 @@ onMounted(async () => {
     const data = await getReturnDetail(returnId)
     const products = (data.items || []).map(item => ({
       boxCode: item.boxCode,
-      idCode: item.boxCode, // use boxCode as idCode for selection
+      idCode: item.boxCode,
       productCode: item.productCode,
-      productName: item.productName,
-      quantity: 1,
       amount: Number(item.unitPrice || 0),
-      totalAmount: Number(item.unitPrice || 0)
+      totalAmount: Number(item.unitPrice || 0) * 20
     }))
     returnItem.value = {
       returnCode: data.returnCode,
@@ -217,20 +215,14 @@ const saveChanges = async () => {
         <div class="product-list-header">
           <span v-if="isEditing" class="check-col">선택</span>
           <span class="box-col">박스 코드</span>
-          <span class="id-col">제품 식별코드</span>
           <span class="sku-col">제품 코드</span>
-          <span class="name-header">제품명</span>
-          <span class="qty-col">수량</span>
           <span class="price-col">금액</span>
           <span class="total-col">총 금액</span>
         </div>
         <template v-if="!isEditing">
           <div v-for="(product, index) in returnItem.products" :key="index" class="product-list-item">
             <span class="box-col">{{ product.boxCode }}</span>
-            <span class="id-code id-col">{{ product.idCode }}</span>
             <span class="sku-col sku-cell">{{ product.productCode }}</span>
-            <span class="name-cell">{{ product.productName }}</span>
-            <span class="qty-col">{{ product.quantity }}개</span>
             <span class="price-col">{{ formatPrice(product.amount) }}</span>
             <span class="item-total total-col">{{ formatPrice(product.totalAmount) }}</span>
           </div>
@@ -239,10 +231,7 @@ const saveChanges = async () => {
           <div v-for="(product, index) in availableProducts" :key="index" class="product-list-item">
             <span class="check-col"><input type="checkbox" :value="product.idCode" v-model="selectedProducts" /></span>
             <span class="box-col">{{ product.boxCode }}</span>
-            <span class="id-code id-col">{{ product.idCode }}</span>
             <span class="sku-col sku-cell">{{ product.productCode }}</span>
-            <span class="name-cell">{{ product.productName }}</span>
-            <span class="qty-col">{{ product.quantity }}개</span>
             <span class="price-col">{{ formatPrice(product.amount) }}</span>
             <span class="item-total total-col">{{ formatPrice(product.totalAmount) }}</span>
           </div>
@@ -305,13 +294,12 @@ const saveChanges = async () => {
 }
 .product-list-header, .product-list-item { 
   display: grid; 
-  /* Wider columns for long codes */
-  grid-template-columns: 280px 280px 120px 250px 80px 120px 120px; 
-  padding: 0.8rem 1rem; 
-  align-items: center; 
-  border-bottom: 1px solid var(--border-color); 
+  grid-template-columns: 1fr 1fr 120px 150px;
+  padding: 0.8rem 1rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
   font-size: 0.9rem;
-  min-width: 1300px;
+  min-width: 600px;
   white-space: nowrap;
 }
 .product-list-header { background: #f8fafc; font-weight: 600; color: var(--text-light); text-align: center; }

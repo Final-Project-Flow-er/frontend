@@ -168,28 +168,28 @@ const filteredFlatOrders = computed(() => {
 const rawReturns = ref([])
 
 const filteredReturns = computed(() => {
-  return rawReturns.value.map(item => ({
-    returnCode: item.returnCode,
-    status: item.status,
-    orderCode: item.orderCode,
-    productCode: item.productCode,
-    productName: item.productName,
-    amount: Number(item.unitPrice || 0),
-    quantity: item.quantity,
-    totalAmount: Number(item.totalPrice || 0),
-    reason: TYPE_LABEL[item.type] || item.type,
-    date: formatDate(item.requestedDate),
-    boxCode: '',
-    idCode: ''
-  })).filter(item => {
+  // 같은 returnCode를 하나의 행으로 그룹화
+  const grouped = new Map()
+  rawReturns.value.forEach(item => {
+    if (!grouped.has(item.returnCode)) {
+      grouped.set(item.returnCode, {
+        returnCode: item.returnCode,
+        status: item.status,
+        orderCode: item.orderCode,
+        quantity: 0,
+        totalAmount: 0,
+        reason: TYPE_LABEL[item.type] || item.type,
+        date: formatDate(item.requestedDate)
+      })
+    }
+    const group = grouped.get(item.returnCode)
+    group.quantity += Number(item.quantity || 0)
+    group.totalAmount += 20 * Number(item.unitPrice || 0) * Number(item.quantity || 0)
+  })
+  return Array.from(grouped.values()).filter(item => {
     const matchOrder = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchReturn = !filter.value.returnCode || item.returnCode.includes(filter.value.returnCode)
-    const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
-    const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
-    const matchQty = !filter.value.quantity || String(item.quantity).includes(filter.value.quantity)
-    const matchAmount = !filter.value.amount || String(item.amount).includes(filter.value.amount)
-    const matchTotal = !filter.value.totalAmount || String(item.totalAmount).includes(filter.value.totalAmount)
-    return matchOrder && matchReturn && matchProductCode && matchProductName && matchQty && matchAmount && matchTotal
+    return matchOrder && matchReturn
   })
 })
 

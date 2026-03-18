@@ -7,9 +7,7 @@ const router = useRouter()
 
 const filter = ref({
   salesCode: '',
-  date: '',
-  productCode: '',
-  productName: ''
+  date: ''
 })
 
 const sales = ref([])
@@ -58,15 +56,31 @@ const formatSalesDate = (isoStr) => {
   return isoStr.replace('T', ' ').substring(0, 16)
 }
 
+// salesCode 기준으로 그룹핑: 수량 합산, 총 금액 = 각 상품별 단가*수량 합산
+const groupedSales = computed(() => {
+  const map = {}
+  for (const item of sales.value) {
+    if (!map[item.salesCode]) {
+      map[item.salesCode] = {
+        salesCode: item.salesCode,
+        salesDate: item.salesDate,
+        quantity: 0,
+        totalPrice: 0
+      }
+    }
+    map[item.salesCode].quantity += item.quantity
+    map[item.salesCode].totalPrice += item.unitPrice * item.quantity
+  }
+  return Object.values(map)
+})
+
 const filteredSales = computed(() => {
-  return sales.value.filter(item => {
+  return groupedSales.value.filter(item => {
     const formattedDate = formatSalesDate(item.salesDate)
     const matchSalesCode = !filter.value.salesCode || item.salesCode.includes(filter.value.salesCode)
     const matchDate = !filter.value.date || formattedDate.startsWith(filter.value.date)
-    const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
-    const matchProductName = !filter.value.productName || item.productName.includes(filter.value.productName)
 
-    return matchSalesCode && matchDate && matchProductCode && matchProductName
+    return matchSalesCode && matchDate
   })
 })
 
@@ -93,14 +107,6 @@ const goToSalesDetail = (salesCode) => {
         <label>판매 일시</label>
         <input type="date" v-model="filter.date" />
       </div>
-      <div class="filter-group">
-        <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="Code..." />
-      </div>
-      <div class="filter-group grow-2">
-        <label>제품 이름</label>
-        <input type="text" v-model="filter.productName" placeholder="Product Name..." />
-      </div>
     </div>
 
     <div v-if="error" class="error-message">{{ error }}</div>
@@ -112,27 +118,21 @@ const goToSalesDetail = (salesCode) => {
           <tr>
             <th>판매 코드</th>
             <th>판매 일시</th>
-            <th>제품 코드</th>
-            <th>제품 이름</th>
             <th class="text-right">수량</th>
-            <th class="text-right">단가</th>
             <th class="text-right">총 금액</th>
           </tr>
           </thead>
           <tbody>
           <tr v-if="loading">
-            <td colspan="7" class="text-center loading-row">불러오는 중...</td>
+            <td colspan="4" class="text-center loading-row">불러오는 중...</td>
           </tr>
           <tr v-else-if="filteredSales.length === 0">
-            <td colspan="7" class="text-center loading-row">판매 내역이 없습니다.</td>
+            <td colspan="4" class="text-center loading-row">판매 내역이 없습니다.</td>
           </tr>
           <tr v-else v-for="(item, index) in filteredSales" :key="index" class="clickable-row" @click="goToSalesDetail(item.salesCode)">
             <td class="sales-code">{{ item.salesCode }}</td>
             <td>{{ formatSalesDate(item.salesDate) }}</td>
-            <td class="sku-cell">{{ item.productCode }}</td>
-            <td class="name-cell">{{ item.productName }}</td>
             <td class="text-right">{{ item.quantity }}</td>
-            <td class="text-right">{{ formatPrice(item.unitPrice) }}</td>
             <td class="text-right total-cell">{{ formatPrice(item.totalPrice) }}</td>
           </tr>
           </tbody>
