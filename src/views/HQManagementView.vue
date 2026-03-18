@@ -265,12 +265,13 @@ const getRegionLabel = (region) => {
 .btn-premium-edit {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1.8rem;
+  gap: 0.5rem;
+  padding: 0.6rem 1.4rem;
   background: #0f172a;
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -289,11 +290,12 @@ const getRegionLabel = (region) => {
 }
 
 .btn-premium-save {
-  padding: 0.8rem 1.8rem;
+  padding: 0.6rem 1.4rem;
   background: #0f172a;
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -307,11 +309,12 @@ const getRegionLabel = (region) => {
 }
 
 .btn-premium-cancel {
-  padding: 0.8rem 1.2rem;
+  padding: 0.6rem 1.2rem;
   background: #f1f5f9;
   color: #64748b;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -320,13 +323,13 @@ const getRegionLabel = (region) => {
 .hq-profile-banner {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  padding: 2.5rem;
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .profile-main-info {
@@ -344,7 +347,7 @@ const getRegionLabel = (region) => {
 
 .logo-barcode-mini {
   font-family: 'Libre Barcode 39 Text', system-ui;
-  font-size: 52px;
+  font-size: 42px;
   color: #0f172a;
   margin: 0;
   font-weight: 100;
@@ -355,10 +358,10 @@ const getRegionLabel = (region) => {
 
 
 .hq-display-name {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
 }
 
 .hq-meta-row {
@@ -369,15 +372,15 @@ const getRegionLabel = (region) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1.25rem;
+  padding: 0.4rem 1rem;
   background: #eff6ff;
   color: #3b82f6;
   border-radius: 100px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   border: 2px solid #dbeafe;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
 }
 
 .profile-status-stats {
@@ -399,7 +402,7 @@ const getRegionLabel = (region) => {
 }
 
 .stat-value {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1e293b;
 }
@@ -422,9 +425,9 @@ const getRegionLabel = (region) => {
 .hq-card-section {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .hq-card-section.full-width {
@@ -435,11 +438,11 @@ const getRegionLabel = (region) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #0f172a;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid #f8fafc;
 }
 
@@ -467,10 +470,10 @@ const getRegionLabel = (region) => {
 }
 
 .hq-form-group input, .hq-form-group select {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 1.05rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #1e293b;
   background: #f8fafc;
@@ -520,7 +523,7 @@ const getRegionLabel = (region) => {
 }
 
 .map-container {
-  height: 400px;
+  height: 300px;
   margin-top: 0.5rem;
   border-radius: 12px;
   overflow: hidden;
