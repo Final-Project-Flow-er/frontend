@@ -24,7 +24,8 @@ const hqSummary = ref({
   commissionFee: 0,
   deliveryFee: 0,
   refundAmount: 0,
-  lossAmount: 0
+  lossAmount: 0,
+  adjustmentAmount: 0
 })
 const franchiseList = ref([])
 const trendDataList = ref([])
@@ -83,6 +84,7 @@ const totals = computed(() => ({
   commission: hqSummary.value.commissionFee || 0,
   refund: hqSummary.value.refundAmount || 0,
   loss: hqSummary.value.lossAmount || 0,
+  adjustment: hqSummary.value.adjustmentAmount || 0,
 }))
 const totalFinal = computed(() => hqSummary.value.finalAmount || 0)
 
@@ -157,10 +159,19 @@ const getStatusClass = (status) => {
 
 /* ── 추이 그래프 데이터 ── */
 const trendData = computed(() => {
-  return trendDataList.value.map(item => ({
-    label: item.periodLabel || item.label || '',
-    value: item.amount || 0
-  }))
+  if (activeTab.value === 'daily') {
+    // 일별 탭: 가맹점별 매출 비교
+    return franchiseList.value.map(s => ({
+      label: s.franchiseName,
+      value: s.totalSaleAmount || 0
+    }))
+  } else {
+    // 월별 탭: 날짜별 추이
+    return trendDataList.value.map(item => ({
+      label: item.periodLabel || item.label || '',
+      value: item.amount || 0
+    }))
+  }
 })
 
 /* ── 엑셀 다운로드 ── */
@@ -225,7 +236,7 @@ const downloadExcel = async () => {
     <div class="final-card" v-if="!isLoading">
       <div class="fc-left">
         <span class="fc-label">최종 정산 금액</span>
-        <span class="fc-formula">발주 대금 + 수수료 + 배송비 - 반품 차감액 - 본사 부담 손실</span>
+        <span class="fc-formula">발주 대금 + 수수료 + 배송비 - 반품 차감액 - 본사 부담 손실 + 기타 조정</span>
       </div>
       <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
     </div>
@@ -251,6 +262,10 @@ const downloadExcel = async () => {
         <span class="s-label">본사 손실</span>
         <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
       </div>
+      <div class="summary-card clickable">
+        <span class="s-label">기타 조정</span>
+        <p class="s-value" :class="totals.adjustment >= 0 ? 'positive' : 'negative'">₩ {{ fmt(totals.adjustment) }}</p>
+      </div>
     </section>
 
     <!-- 가맹점별 정산 테이블 -->
@@ -275,6 +290,7 @@ const downloadExcel = async () => {
             <th class="text-right">수수료</th>
             <th class="text-right">반품 환급</th>
             <th class="text-right">손실</th>
+            <th class="text-right">조정</th>
             <th class="text-right">최종 정산</th>
             <th class="text-center">상태</th>
             <th class="text-center">영수증</th>
@@ -296,6 +312,7 @@ const downloadExcel = async () => {
             <td class="text-right negative">₩ {{ fmt(s.commissionFee) }}</td>
             <td class="text-right primary-color">₩ {{ fmt(s.refundAmount) }}</td>
             <td class="text-right negative">₩ {{ fmt(s.lossAmount) }}</td>
+            <td class="text-right" :class="s.adjustmentAmount >= 0 ? 'primary-color' : 'negative'">₩ {{ (s.adjustmentAmount >= 0 ? '+' : '') + fmt(s.adjustmentAmount) }}</td>
             <td class="text-right primary-color final-cell">₩ {{ fmt(s.finalAmount) }}</td>
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ getStatusLabel(s.status) }}</span></td>
             <td class="text-center">
@@ -309,13 +326,16 @@ const downloadExcel = async () => {
       </table>
     </div>
 
-    <!-- 추이 그래프 -->
-    <div class="trend-section">
+    <div class="trend-section" v-if="!isLoading">
       <div class="section-header">
-        <h3>전체 가맹점 정산 추이</h3>
+        <h3>{{ activeTab === 'daily' ? '가맹점별 매출 비교' : '전체 가맹점 정산 추이' }}</h3>
       </div>
       <div class="chart-wrapper">
-        <SettlementTrendChart :data="trendData" :height="240" />
+        <SettlementTrendChart 
+          :data="trendData" 
+          :height="240" 
+          :type="activeTab === 'daily' ? 'bar' : 'line'" 
+        />
       </div>
     </div>
   </div>
@@ -350,8 +370,7 @@ const downloadExcel = async () => {
 .search-input { border: none; outline: none; font-size: 0.9rem; width: 100%; color: var(--text-dark); }
 
 .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-bottom: 1rem; }
-.summary-grid .summary-card:nth-child(-n+3) { grid-column: span 2; }
-.summary-grid .summary-card:nth-child(n+4) { grid-column: span 3; }
+.summary-grid .summary-card { grid-column: span 2; }
 .summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); transition: transform 0.15s, box-shadow 0.15s; }
 .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .summary-card.clickable { cursor: pointer; }
