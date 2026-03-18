@@ -81,7 +81,6 @@ const goToSalesDetail = (salesCode) => {
   <div class="content-wrapper">
     <div class="header-row">
       <h2>가맹점 판매 관리</h2>
-      <router-link :to="{ name: 'franchise-product-sales-form' }" class="add-btn">상품 판매</router-link>
     </div>
 
     <!-- Filter Section -->

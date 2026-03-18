@@ -43,7 +43,7 @@ const fetchOrders = async () => {
           stockInDate: item.storedDate || '',
           arrivalDate: '',
           arrivalTime: '',
-          totalAmount: 0,
+          totalAmount: Number(item.totalPrice || 0),
           products: []
         }
       }
@@ -182,12 +182,10 @@ const goToEdit = (item) => {
           <tr>
             <th>발주 코드</th>
             <th>발주 상태</th>
-            <th>제품 코드</th>
             <th>수량</th>
-            <th>발주일</th>
+            <th>금액</th>
+            <th>발주 생성일</th>
             <th>담당자 이름</th>
-            <th>담당자 전화번호</th>
-            <th>입고 날짜</th>
           </tr>
         </thead>
         <tbody>
@@ -199,12 +197,10 @@ const goToEdit = (item) => {
           >
             <td class="sku-cell code-order">{{ row.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
-            <td class="sku-cell small">{{ row.product.productCode }}</td>
             <td>{{ row.product.quantity }}</td>
+            <td>{{ new Intl.NumberFormat('ko-KR').format(row.totalAmount) }}</td>
             <td>{{ row.orderDate }}</td>
             <td>{{ row.managerName }}</td>
-            <td>{{ row.managerPhone }}</td>
-            <td>{{ row.stockInDate }}</td>
           </tr>
         </tbody>
       </table>

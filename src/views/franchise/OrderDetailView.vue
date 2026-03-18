@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getOrderDetail, cancelOrder as cancelOrderApi } from '@/api/franchiseOrders.js'
+import { getOrderDetail, cancelOrder as cancelOrderApi, updateOrder } from '@/api/franchiseOrders.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,25 +25,7 @@ const toStatusLabel = (s) => ORDER_STATUS_LABEL[s] || s
 
 onMounted(async () => {
   try {
-    const data = await getOrderDetail(orderId)
-    orderItem.value = {
-      orderCode: data.orderCode,
-      orderStatus: data.status,
-      orderDate: formatDate(data.requestedDate),
-      recipientName: data.receiver,
-      recipientPhone: data.phoneNumber,
-      address: data.address,
-      arrivalDate: formatDate(data.deliveryDate),
-      arrivalTime: data.deliveryTime || formatTime(data.deliveryDate),
-      products: (data.items || []).map(p => ({
-        productCode: p.productCode,
-        productName: p.productName,
-        quantity: p.quantity,
-        amount: Number(p.unitPrice || 0)
-      })),
-      totalAmount: (data.items || []).reduce((sum, p) => sum + (p.quantity * Number(p.unitPrice || 0)), 0),
-      canceledReason: data.canceledReason || null
-    }
+    await fetchDetail()
   } catch (e) {
     alert(e.message)
   }
@@ -80,8 +62,58 @@ const cancelOrder = async () => {
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
-const goToEdit = () => {
-  router.push({ name: 'head-office-order-edit', params: { id: orderId } })
+const isEditing = ref(false)
+const editQuantities = ref([])
+
+const startEdit = () => {
+  editQuantities.value = orderItem.value.products.map(p => p.quantity)
+  isEditing.value = true
+}
+
+const cancelEdit = () => {
+  isEditing.value = false
+}
+
+const editTotalAmount = computed(() => {
+  if (!orderItem.value) return 0
+  return orderItem.value.products.reduce((sum, p, i) => sum + (editQuantities.value[i] || 0) * p.amount, 0)
+})
+
+const fetchDetail = async () => {
+  const data = await getOrderDetail(orderId)
+  orderItem.value = {
+    orderCode: data.orderCode,
+    orderStatus: data.status,
+    orderDate: formatDate(data.requestedDate),
+    recipientName: data.receiver,
+    recipientPhone: data.phoneNumber,
+    address: data.address,
+    arrivalDate: formatDate(data.deliveryDate),
+    arrivalTime: data.deliveryTime || formatTime(data.deliveryDate),
+    products: (data.items || []).map(p => ({
+      productCode: p.productCode,
+      productName: p.productName,
+      quantity: p.quantity,
+      amount: Number(p.unitPrice || 0)
+    })),
+    totalAmount: (data.items || []).reduce((sum, p) => sum + (p.quantity * Number(p.unitPrice || 0)), 0),
+    canceledReason: data.canceledReason || null
+  }
+}
+
+const saveEdit = async () => {
+  const data = orderItem.value.products.map((p, i) => ({
+    productCode: p.productCode,
+    quantity: editQuantities.value[i]
+  }))
+  try {
+    await updateOrder(orderId, data)
+    alert('수정이 완료되었습니다.')
+    await fetchDetail()
+    isEditing.value = false
+  } catch (e) {
+    alert(e.message || '수정에 실패했습니다.')
+  }
 }
 </script>
 
@@ -90,9 +122,15 @@ const goToEdit = () => {
     <div class="header-row">
       <h2>발주 상세 정보</h2>
       <div class="header-actions">
-        <button v-if="orderItem.orderStatus === 'PENDING'" @click="cancelOrder" class="delete-btn">발주 취소</button>
-        <button v-if="orderItem.orderStatus === 'PENDING'" @click="goToEdit" class="edit-btn">수정</button>
-        <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
+        <template v-if="isEditing">
+          <button @click="saveEdit" class="edit-btn">수정 완료</button>
+          <button @click="cancelEdit" class="back-btn">취소</button>
+        </template>
+        <template v-else>
+          <button v-if="orderItem.orderStatus === 'PENDING'" @click="cancelOrder" class="delete-btn">발주 취소</button>
+          <button v-if="orderItem.orderStatus === 'PENDING'" @click="startEdit" class="edit-btn">수정</button>
+          <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
+        </template>
       </div>
     </div>
 
@@ -155,13 +193,15 @@ const goToEdit = () => {
         <div v-for="(product, index) in orderItem.products" :key="index" class="product-list-item">
           <span class="sku-cell">{{ product.productCode }}</span>
           <span>{{ product.productName }}</span>
-          <span>{{ product.quantity }}개</span>
+          <span v-if="isEditing"><input type="number" v-model.number="editQuantities[index]" min="1" class="qty-input" /></span>
+          <span v-else>{{ product.quantity }}개</span>
           <span>{{ formatPrice(product.amount) }}</span>
-          <span>{{ formatPrice(product.quantity * product.amount) }}</span>
+          <span v-if="isEditing">{{ formatPrice((editQuantities[index] || 0) * product.amount) }}</span>
+          <span v-else>{{ formatPrice(product.quantity * product.amount) }}</span>
         </div>
         <div class="product-list-total">
           <label>총 발주 금액</label>
-          <span class="total-price">{{ formatPrice(orderItem.totalAmount) }}</span>
+          <span class="total-price">{{ formatPrice(isEditing ? editTotalAmount : orderItem.totalAmount) }}</span>
         </div>
       </div>
 
@@ -230,8 +270,9 @@ const goToEdit = () => {
   grid-template-columns: repeat(5, 1fr);
   padding: 0.8rem 1.5rem;
   align-items: center;
+  justify-items: center;
+  text-align: center;
   border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
 }
 
 .product-list-header {
@@ -239,13 +280,11 @@ const goToEdit = () => {
   font-weight: 600;
   color: var(--text-light);
   font-size: 0.9rem;
-  text-align: center;
 }
 
 .product-list-item {
   font-size: 0.9rem;
   color: var(--text-dark);
-  text-align: center;
 }
 
 .product-list-item .sku-cell { color: var(--primary); font-weight: 600; }
@@ -267,13 +306,21 @@ const goToEdit = () => {
 
 .product-list-total label {
   grid-column: 1 / 5;
-  text-align: right;
-  padding-right: 1rem;
+  text-align: center;
 }
 
 .product-list-total .total-price {
   color: var(--primary);
   font-size: 1.1rem;
+}
+
+.qty-input {
+  width: 70px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .cancel-reason-box {

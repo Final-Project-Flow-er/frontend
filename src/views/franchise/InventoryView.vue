@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const props = defineProps({
   searchQuery: { type: String, default: '' }
@@ -35,7 +38,7 @@ const getStatusClass = (s) => ({ '정상': 'status-ok', '품절임박': 'status-
       <div class="filter-tabs">
         <button v-for="cat in categories" :key="cat" :class="{ active: selectedCategory === cat }" @click="selectedCategory = cat">{{ cat }}</button>
       </div>
-      <button class="add-btn">+ 신규 품목 등록</button>
+      <button class="add-btn" @click="router.push({ name: 'franchise-order-create' })">+ 발주 생성</button>
     </div>
 
     <div class="data-table-card">

@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getOrderDetail, cancelOrder as cancelOrderApi } from '@/api/hqOrders.js'
+import { getOrderDetail, cancelOrder as cancelOrderApi, updateOrder } from '@/api/hqOrders.js'
 
 const route = useRoute()
 const router = useRouter()
 const orderId = route.params.id
 const orderItem = ref(null)
+const isEditing = ref(false)
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
@@ -19,7 +20,7 @@ onMounted(async () => {
       orderCode: info.orderCode,
       orderStatus: info.status,
       orderDate: formatDate(info.requestedDate),
-      franchiseCode: '',
+      manufacturedDate: info.manufacturedDate,
       managerName: info.username || '',
       managerPhone: info.phoneNumber || '',
       stockInDate: info.storedDate || '',
@@ -46,19 +47,47 @@ const HQ_ORDER_STATUS_LABEL = {
 const toStatusLabel = (s) => HQ_ORDER_STATUS_LABEL[s] || s
 
 const getStatusClass = (s) => {
-  const label = HQ_ORDER_STATUS_LABEL[s] || s
   return {
-    '대기': 'status-warning',
-    '접수': 'status-ok',
-    '취소': 'status-danger',
-    '반려': 'status-danger'
-  }[label] || ''
+    PENDING: 'status-warning',
+    ACCEPTED: 'status-ok',
+    CANCELED: 'status-danger',
+    REJECTED: 'status-danger'
+  }[s] || ''
 }
 
 const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
-const goToEdit = () => {
-  router.push({ name: 'head-office-order-edit', params: { id: orderItem.value.orderCode } })
+const startEdit = () => {
+  isEditing.value = true
+}
+
+const cancelEdit = () => {
+  // 원래 값으로 복원 — 다시 로드
+  isEditing.value = false
+  location.reload()
+}
+
+const recalcTotal = (product) => {
+  product.totalPrice = product.quantity * product.unitPrice
+  orderItem.value.totalAmount = orderItem.value.products.reduce((sum, p) => sum + p.totalPrice, 0)
+}
+
+const saveEdit = async () => {
+  try {
+    const payload = {
+      manufactureDate: orderItem.value.manufacturedDate,
+      items: orderItem.value.products.map(p => ({
+        productCode: p.productCode,
+        quantity: p.quantity
+      }))
+    }
+    await updateOrder(orderItem.value.orderCode, payload)
+    alert('발주가 수정되었습니다.')
+    isEditing.value = false
+    location.reload()
+  } catch (e) {
+    alert(e.message || '발주 수정에 실패했습니다.')
+  }
 }
 
 const cancelOrder = async () => {
@@ -78,8 +107,16 @@ const cancelOrder = async () => {
     <div class="header-row">
       <h2>본사 발주 상세 내역</h2>
       <div class="header-actions">
-        <button v-if="orderItem.orderStatus === 'PENDING'" @click="goToEdit" class="edit-btn">수정</button>
-        <button v-if="orderItem.orderStatus === 'PENDING'" @click="cancelOrder" class="cancel-btn-outline">발주 취소</button>
+        <template v-if="orderItem.orderStatus === 'PENDING'">
+          <template v-if="isEditing">
+            <button @click="saveEdit" class="edit-btn">수정 완료</button>
+            <button @click="cancelEdit" class="cancel-btn-outline">취소</button>
+          </template>
+          <template v-else>
+            <button @click="startEdit" class="edit-btn">수정</button>
+            <button @click="cancelOrder" class="cancel-btn-outline">발주 취소</button>
+          </template>
+        </template>
         <button @click="$router.back()" class="back-btn">목록으로 돌아가기</button>
       </div>
     </div>
@@ -93,10 +130,6 @@ const cancelOrder = async () => {
         <div class="info-item">
           <label>발주 코드</label>
           <span>{{ orderItem.orderCode }}</span>
-        </div>
-        <div class="info-item">
-          <label>가맹점 코드</label>
-          <span>{{ orderItem.franchiseCode }}</span>
         </div>
         <div class="info-item">
           <label>발주 일자</label>
@@ -128,19 +161,28 @@ const cancelOrder = async () => {
       <div class="product-list-table">
         <div class="product-list-header">
           <span>제품 코드</span>
-          <span class="text-right">수량</span>
-          <span class="text-right">단가</span>
-          <span class="text-right">총 금액</span>
+          <span>수량</span>
+          <span>단가</span>
+          <span>총 금액</span>
         </div>
         <div v-for="(product, index) in orderItem.products" :key="index" class="product-list-item">
           <span>{{ product.productCode }}</span>
-          <span class="text-right">{{ product.quantity }}개</span>
-          <span class="text-right">{{ formatPrice(product.unitPrice) }}원</span>
-          <span class="text-right">{{ formatPrice(product.totalPrice) }}원</span>
+          <span v-if="isEditing">
+            <input
+              type="number"
+              v-model.number="product.quantity"
+              @input="recalcTotal(product)"
+              min="1"
+              class="quantity-input"
+            />
+          </span>
+          <span v-else>{{ product.quantity }}개</span>
+          <span>{{ formatPrice(product.unitPrice) }}원</span>
+          <span>{{ formatPrice(product.totalPrice) }}원</span>
         </div>
         <div class="product-list-total">
           <label>총 발주 금액</label>
-          <span class="total-price">{{ formatPrice(orderItem.totalAmount) }}</span>
+          <span class="total-price">{{ formatPrice(orderItem.totalAmount) }}원</span>
         </div>
       </div>
     </div>
@@ -153,8 +195,8 @@ const cancelOrder = async () => {
 .header-row h2 { font-size: 1.5rem; color: var(--text-dark); margin: 0; }
 .header-actions { display: flex; gap: 1rem; }
 
-.edit-btn { background: var(--text-dark); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.2s; }
-.edit-btn:hover { background: #000; }
+.edit-btn { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+.edit-btn:hover { background: #c7d2fe; }
 .cancel-btn-outline { background: white; color: #ef4444; border: 1px solid #fecaca; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.2s; }
 .cancel-btn-outline:hover { background: #fee2e2; }
 .back-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-light); }
@@ -175,12 +217,71 @@ const cancelOrder = async () => {
 .status-primary { background: #e0e7ff; color: #3730a3; }
 .status-danger { background: #fee2e2; color: #991b1b; }
 
-.product-list-table { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-top: 1.5rem; }
-.product-list-header, .product-list-item { display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr; padding: 0.8rem 1.5rem; align-items: center; border-bottom: 1px solid var(--border-color); }
-.text-right { text-align: right; }
-.product-list-header { background: #f8fafc; font-weight: 600; color: var(--text-light); font-size: 0.9rem; }
-.product-list-item { font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
-.product-list-item:last-child { border-bottom: none; }
-.product-list-total { display: flex; justify-content: flex-end; align-items: center; padding: 1rem 1.5rem; background: #f8fafc; font-weight: 700; gap: 1rem; border-top: 1px solid var(--border-color); }
-.total-price { color: var(--primary); font-size: 1.2rem; }
+.product-list-table {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+.product-list-header, .product-list-item {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 0.8rem 1.5rem;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.product-list-header {
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.product-list-item {
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.product-list-item:last-child {
+  border-bottom: none;
+}
+
+.product-list-total {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 0.8rem 1.5rem;
+  align-items: center;
+  background: #f8fafc;
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.product-list-total label {
+  grid-column: 1 / 4;
+  text-align: center;
+}
+
+.product-list-total .total-price {
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.quantity-input {
+  width: 70px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  text-align: center;
+  outline: none;
+}
+.quantity-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
 </style>

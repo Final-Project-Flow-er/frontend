@@ -138,38 +138,29 @@ watch(viewMode, (mode) => {
 // 초기 로드: 발주 내역
 onMounted(() => fetchOrders())
 
-// Build order total per orderCode
-const orderTotalMap = computed(() => {
-  const map = {}
-  rawOrders.value.forEach(item => {
-    if (!map[item.orderCode]) map[item.orderCode] = 0
-    map[item.orderCode] += Number(item.totalPrice || 0)
-  })
-  return map
-})
-
 const filteredFlatOrders = computed(() => {
-  return rawOrders.value.map(item => ({
-    orderCode: item.orderCode,
-    orderStatus: item.orderStatus,
-    orderDate: formatDate(item.requestedDate),
-    recipientName: item.receiver || '',
-    recipientPhone: '',
-    arrivalDate: formatDate(item.deliveryDate),
-    arrivalTime: formatTime(item.deliveryDate),
-    orderTotalAmount: orderTotalMap.value[item.orderCode] || 0,
-    productCode: item.productCode,
-    quantity: item.quantity ?? '-',
-    unitPrice: item.unitPrice,
-    lineTotalAmount: Number(item.totalPrice || 0)
-  })).filter(item => {
+  // 같은 orderCode를 하나의 행으로 그룹화
+  const grouped = new Map()
+  rawOrders.value.forEach(item => {
+    if (!grouped.has(item.orderCode)) {
+      grouped.set(item.orderCode, {
+        orderCode: item.orderCode,
+        orderStatus: item.orderStatus,
+        orderDate: formatDate(item.requestedDate),
+        requestedDate: formatDate(item.requestedDate),
+        totalQuantity: 0,
+        orderTotalAmount: Number(item.totalPrice || 0),
+        deliveryDate: formatDate(item.deliveryDate)
+      })
+    }
+    const group = grouped.get(item.orderCode)
+    group.totalQuantity += Number(item.quantity || 0)
+  })
+  return Array.from(grouped.values()).filter(item => {
     const matchStatus = !filter.value.status || item.orderStatus === filter.value.status
     const matchOrderDate = !filter.value.orderDate || item.orderDate.includes(filter.value.orderDate)
     const matchOrderCode = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
-    const matchRecipientName = !filter.value.recipientName || item.recipientName.includes(filter.value.recipientName)
-    const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
-    const matchProductCode = !filter.value.productCode || item.productCode.includes(filter.value.productCode)
-    return matchStatus && matchOrderDate && matchOrderCode && matchRecipientName && matchArrivalDate && matchProductCode
+    return matchStatus && matchOrderDate && matchOrderCode
   })
 })
 
@@ -291,10 +282,6 @@ const goToDetail = (item) => {
           <label>발주일</label>
           <input type="date" v-model="filter.orderDate" />
         </div>
-        <div class="filter-group">
-          <label>도착 날짜</label>
-          <input type="date" v-model="filter.arrivalDate" />
-        </div>
       </template>
 
       <template v-else>
@@ -317,15 +304,17 @@ const goToDetail = (item) => {
         </div>
       </template>
 
-      <!-- [공통] 제품/수량 등 -->
-      <div class="filter-group">
-        <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="OR0101" />
-      </div>
-      <div class="filter-group">
-        <label>{{ viewMode === 'order' ? '수령인' : '요청자' }}</label>
-        <input type="text" v-model="filter.recipientName" placeholder="홍길동" />
-      </div>
+      <!-- [반품 전용] 제품 코드 / 요청자 -->
+      <template v-if="viewMode === 'return'">
+        <div class="filter-group">
+          <label>제품 코드</label>
+          <input type="text" v-model="filter.productCode" placeholder="OR0101" />
+        </div>
+        <div class="filter-group">
+          <label>요청자</label>
+          <input type="text" v-model="filter.recipientName" placeholder="홍길동" />
+        </div>
+      </template>
     </div>
 
     <!-- 로딩/에러 표시 -->
@@ -339,33 +328,25 @@ const goToDetail = (item) => {
         <tr>
           <th>발주 코드</th>
           <th>상태</th>
-          <th>제품 코드</th>
-          <th class="text-right">단가</th>
           <th class="text-right">수량</th>
           <th class="text-right">금액</th>
-          <th class="text-right">발주 총액</th>
-          <th>발주일</th>
-          <th>수령인</th>
-          <th>도착일시</th>
+          <th>발주 생성일</th>
+          <th>배송 요청일</th>
         </tr>
         </thead>
         <tbody>
         <tr
             v-for="(item, index) in filteredFlatOrders"
-            :key="item.orderCode + item.productCode + index"
+            :key="item.orderCode + index"
             @click="goToDetail(item)"
             class="clickable-row"
         >
           <td class="sku-cell code-order">{{ item.orderCode }}</td>
           <td><span :class="['status-tag', getStatusClass(item.orderStatus)]">{{ toOrderStatusLabel(item.orderStatus) }}</span></td>
-          <td class="sku-cell small">{{ item.productCode }}</td>
-          <td class="text-right">{{ formatNumber(item.unitPrice) }}</td>
-          <td class="text-right">{{ formatNumber(item.quantity) }}</td>
-          <td class="text-right font-bold-slate">{{ formatNumber(item.lineTotalAmount) }}</td>
-          <td class="text-right">{{ formatNumber(item.orderTotalAmount) }}</td>
-          <td>{{ item.orderDate }}</td>
-          <td class="name-cell">{{ item.recipientName }}</td>
-          <td>{{ item.arrivalDate }} {{ item.arrivalTime }}</td>
+          <td class="text-right">{{ formatNumber(item.totalQuantity) }}</td>
+          <td class="text-right font-bold-slate">{{ formatNumber(item.orderTotalAmount) }}</td>
+          <td>{{ item.requestedDate }}</td>
+          <td>{{ item.deliveryDate }}</td>
         </tr>
         </tbody>
       </table>
@@ -386,20 +367,16 @@ const goToDetail = (item) => {
       </div>
 
       <!-- 2. 반품 테이블 -->
-      <table v-else class="data-table">
+      <table v-if="viewMode === 'return'" class="data-table">
         <thead>
         <tr>
           <th>반품 코드</th>
-          <th>상태</th>
           <th>발주 코드</th>
-          <th>제품 코드</th>
-          <th>제품명</th>
-          <th class="text-right">단가</th>
+          <th>상태</th>
           <th class="text-right">수량</th>
           <th class="text-right">총 금액</th>
           <th>반품 사유</th>
-          <th>요청일자</th>
-          <th>박스/식별코드</th>
+          <th>요청 일자</th>
         </tr>
         </thead>
         <tbody>
@@ -410,19 +387,12 @@ const goToDetail = (item) => {
             class="clickable-row"
         >
           <td class="sku-cell">{{ item.returnCode }}</td>
-          <td><span :class="['status-tag', getStatusClass(item.status)]">{{ toReturnStatusLabel(item.status) }}</span></td>
           <td>{{ item.orderCode }}</td>
-          <td class="sku-cell small">{{ item.productCode }}</td>
-          <td style="min-width: 150px; white-space: normal;">{{ item.productName }}</td>
-          <td class="text-right">{{ formatNumber(item.amount) }}</td>
+          <td><span :class="['status-tag', getStatusClass(item.status)]">{{ toReturnStatusLabel(item.status) }}</span></td>
           <td class="text-right">{{ formatNumber(item.quantity) }}</td>
           <td class="text-right font-bold-slate">{{ formatNumber(item.totalAmount) }}</td>
           <td>{{ item.reason }}</td>
           <td>{{ item.date }}</td>
-          <td style="font-size: 0.8rem; color: #64748b;">
-            <div>{{ item.boxCode }}</div>
-            <div>{{ item.idCode }}</div>
-          </td>
         </tr>
         </tbody>
       </table>
@@ -508,11 +478,11 @@ const goToDetail = (item) => {
   border: 1px solid var(--border-color);
   overflow-x: auto;
 }
-.data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+.data-table { width: 100%; border-collapse: collapse; }
 .data-table th { text-align: left; padding: 1.05rem 0.8rem !important; height: 58px !important; background: #f8fafc; color: var(--text-light); font-size: 0.9rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
 .data-table td { padding: 1.05rem 0.8rem !important; height: 58px !important; border-bottom: 1px solid var(--border-color); font-size: 0.95rem !important; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; white-space: nowrap; vertical-align: middle; }
 
-.sku-cell { color: #1d4ed8; font-weight: 600; }
+.sku-cell { color: #1d4ed8; font-weight: 600; white-space: nowrap; min-width: 200px; }
 .sku-cell.small { font-size: 0.9rem; }
 .name-cell { font-weight: 500; }
 .text-right { text-align: center; }
