@@ -194,6 +194,8 @@ const filter = ref({
 
 const showModal = ref(false)
 const isEditMode = ref(false)
+const MAX_IMAGE_SIZE_MB = 10
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
 const form = ref({
   type: 'OR',
@@ -349,8 +351,8 @@ const saveProduct = () => {
 const handleImageUpload = (event) => {
     const file = event.target.files[0]
     if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-            alert('이미지 크기는 2MB를 초과할 수 없습니다.')
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+            alert(`이미지 크기는 ${MAX_IMAGE_SIZE_MB}MB를 초과할 수 없습니다.`)
             return
         }
         const reader = new FileReader()
