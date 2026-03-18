@@ -2,7 +2,6 @@
   <div class="org-list-container">
     <div class="org-list-header">
       <h1>가맹점 조회</h1>
-      <p class="subtitle">전체 가맹점의 운영 현황 및 정보를 조회합니다</p>
     </div>
 
     <!-- 필터 및 검색 -->

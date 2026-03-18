@@ -18,7 +18,18 @@ const productsFilter = ref({
 })
 
 const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
-const STATUS_LABEL = { PENDING: '검수 전', INSPECTED: '검수 완료', NORMAL: '정상', DEFECT: '하자' }
+const RETURN_STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  INSPECTING: '검수 중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
+const STATUS_LABEL = { BEFORE_INSPECTION: '검수 전', PENDING: '검수 전', INSPECTED: '검수 완료', NORMAL: '정상', DEFECTIVE: '하자' }
 const inspectionStatuses = ['검수 전', '검수 완료']
 const productConditions = ['검수 전', '정상', '하자']
 
@@ -31,7 +42,7 @@ onMounted(async () => {
       returnCode: data.returnCode,
       franchiseCode: data.franchiseCode,
       requestDate: formatDate(data.requestedDate),
-      status: data.status,
+      status: RETURN_STATUS_LABEL[data.status] || data.status,
       orderCode: data.orderCode,
       productCode: '',
       productName: '',
@@ -93,21 +104,24 @@ const getStatusClass = (s) => ({
   '배송중': 'status-primary',
   '배송 완료': 'status-ok',
   '검수 중': 'status-primary',
-  '반품 승인': 'status-ok',
-  '반품 거절': 'status-danger'
+  '대금 차감 완료': 'status-ok',
+  '대금 차감 거절': 'status-danger'
 }[s] || 'status-default')
 
-const CONDITION_API = { '검수 전': 'PENDING', '정상': 'NORMAL', '하자': 'DEFECT' }
+const CONDITION_API = { '검수 전': 'BEFORE_INSPECTION', '정상': 'NORMAL', '하자': 'DEFECTIVE' }
 
-const saveInspections = async () => {
+const saveInspections = async (returnStatus) => {
   try {
     const updates = inspectionProducts.value.map(p => ({
       boxCode: p.boxCode,
       serialCode: p.productIdCode,
       isInspected: p.inspectionStatus === '검수 완료',
-      status: CONDITION_API[p.productCondition] || 'PENDING'
+      status: CONDITION_API[p.productCondition] || 'BEFORE_INSPECTION'
     }))
-    await updateReturn(route.params.id, updates)
+    await updateReturn(route.params.id, {
+      returnStatus,
+      items: updates
+    })
   } catch (e) {
     throw e
   }
@@ -116,13 +130,13 @@ const saveInspections = async () => {
 // Decision Actions
 const finishWithDeduction = async () => {
   try {
-    await saveInspections()
+    await saveInspections('DEDUCTION_COMPLETED')
     if (returnItem.value.reason === '오발주') {
       alert('경고를 부여하며 대금 차감 승인 처리를 진행합니다.')
     } else {
       alert('대금 차감 승인 처리를 진행합니다.')
     }
-    returnItem.value.status = '반품 승인'
+    returnItem.value.status = '대금 차감 완료'
   } catch (e) {
     alert(e.message || '처리에 실패했습니다.')
   }
@@ -130,13 +144,13 @@ const finishWithDeduction = async () => {
 
 const finishWithRejection = async () => {
   try {
-    await saveInspections()
+    await saveInspections('DEDUCTION_REJECTED')
     if (returnItem.value.reason === '오발주') {
       alert('경고를 부여하며 반품 거절 처리를 진행합니다.')
     } else {
       alert('반품 거절 처리를 진행합니다.')
     }
-    returnItem.value.status = '반품 거절'
+    returnItem.value.status = '대금 차감 거절'
   } catch (e) {
     alert(e.message || '처리에 실패했습니다.')
   }

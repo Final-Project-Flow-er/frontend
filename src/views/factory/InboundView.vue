@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Modal from '@/components/common/Modal.vue'
 
 const inboundItems = ref([])
@@ -42,6 +42,9 @@ const fetchInboundItems = async () => {
 
 onMounted(() => {
   fetchInboundItems()
+  // 3초마다 목록 자동 갱신 (안드로이드 스캔 시 실시간 반영 위함)
+  const interval = setInterval(fetchInboundItems, 3000)
+  onUnmounted(() => clearInterval(interval))
 })
 
 const selectedItemIds = ref(new Set())

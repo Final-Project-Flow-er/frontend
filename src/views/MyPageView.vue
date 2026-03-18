@@ -202,7 +202,23 @@
             </div>
             <div class="info-group">
               <label>주소</label>
-              <input v-model="myOrgInfo.address" disabled class="premium-input-small input-locked">
+              <div class="address-input-wrapper">
+                <input 
+                  v-model="myOrgInfo.address" 
+                  :disabled="!isEditingOrg" 
+                  :class="{ 'input-locked': !isEditingOrg }" 
+                  class="premium-input-small"
+                  readonly
+                  @click="isEditingOrg && openPostcode()"
+                >
+                <button v-if="isEditingOrg" @click="openPostcode" class="btn-address-search-mini">조회</button>
+              </div>
+              <input 
+                v-if="isEditingOrg"
+                v-model="myOrgInfo.detailAddress" 
+                placeholder="상세 주소를 입력하세요" 
+                class="premium-input-small"
+              >
             </div>
 
             <!-- 가맹점 전용 -->
@@ -503,7 +519,8 @@ const myOrgInfo = reactive({
   region: '',
   lineCount: 0,
   warningCount: 0,
-  penaltyEndDate: null
+  penaltyEndDate: null,
+  detailAddress: ''
 })
 
 const orgPhotoFiles = ref([])
@@ -576,7 +593,7 @@ const fetchWorkplaceInfo = async () => {
       myOrgInfo.code = data.code
       myOrgInfo.name = data.name
       myOrgInfo.address = data.address
-      myOrgInfo.phone = data.phone
+      myOrgInfo.detailAddress = ''
       myOrgInfo.businessNumber = data.businessNumber
       
       // unitType에 따른 내 사업장 타입 매핑
@@ -755,6 +772,7 @@ const saveOrgInfo = async () => {
 
   try {
     const updateData = {
+      address: myOrgInfo.detailAddress ? `${myOrgInfo.address} ${myOrgInfo.detailAddress}` : myOrgInfo.address,
       phone: myOrgInfo.phone,
       operatingDays: (myOrgInfo.operatingDays || []).join(','),
       openTime: myOrgInfo.openTime && myOrgInfo.openTime !== '' ? myOrgInfo.openTime + (myOrgInfo.openTime.length === 5 ? ':00' : '') : null,
@@ -816,6 +834,19 @@ const uploadOrgPhoto = () => {
     })
   }
   input.click()
+}
+
+const openPostcode = () => {
+  const width = 500
+  const height = 600
+  new window.daum.Postcode({
+    oncomplete: (data) => {
+      myOrgInfo.address = data.address
+    }
+  }).open({
+    left: (window.screen.width / 2) - (width / 2),
+    top: (window.screen.height / 2) - (height / 2)
+  })
 }
 
 // 모달 닫기
@@ -1868,5 +1899,26 @@ const changePassword = async () => {
 
 .input-error:focus {
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
+
+.address-input-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.address-input-wrapper + .premium-input-small {
+  margin-top: -0.2rem;
+}
+
+.btn-address-search-mini {
+  padding: 0 0.75rem;
+  background: #0f172a;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>

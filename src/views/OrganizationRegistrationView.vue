@@ -2,7 +2,6 @@
   <div class="registration-container">
     <div class="registration-header">
       <h1>사업장 등록</h1>
-      <p class="subtitle">새로운 가맹점 또는 공장을 등록하세요</p>
     </div>
 
     <!-- 타입 선택 -->
@@ -46,17 +45,6 @@
             >
           </div>
 
-          <div class="form-group">
-            <label>가맹점 코드</label>
-            <input 
-              type="text" 
-              :value="generatedStoreCode" 
-              disabled 
-              class="input-disabled"
-              placeholder="자동 생성됩니다"
-            >
-          </div>
-
           <div class="form-group full-width">
             <label>주소 <span class="required">*</span></label>
             <div class="address-input-group">
@@ -69,6 +57,12 @@
               >
               <button type="button" @click="openPostcode('store')" class="btn-address-search">주소 검색</button>
             </div>
+            <input 
+              type="text" 
+              v-model="storeData.detailAddress" 
+              placeholder="상세 주소를 입력하세요" 
+              class="detail-address-input"
+            >
             <!-- 지도 표시 -->
             <div v-if="storeData.address" class="map-container">
               <iframe
@@ -88,7 +82,7 @@
               type="tel" 
               v-model="storeData.phone" 
               @input="handlePhoneInput($event, 'store')"
-              placeholder="02-1234-5678"
+              placeholder="전화번호를 입력하세요"
               maxlength="13"
               required
             >
@@ -99,7 +93,8 @@
             <input 
               type="text" 
               v-model="storeData.representativeName" 
-              placeholder="점주님 성함을 입력하세요"
+              @input="storeData.representativeName = storeData.representativeName.replace(/[0-9]/g, '')"
+              placeholder="대표자명을 입력하세요"
               required
             >
           </div>
@@ -110,7 +105,7 @@
               type="text" 
               v-model="storeData.businessNumber" 
               @input="handleBizNumInput($event, 'store')"
-              placeholder="000-00-00000"
+              placeholder="사업자 등록 번호를 입력하세요"
               maxlength="12"
               required
             >
@@ -230,17 +225,6 @@
             >
           </div>
 
-          <div class="form-group">
-            <label>공장 코드</label>
-            <input 
-              type="text" 
-              :value="generatedFactoryCode" 
-              disabled 
-              class="input-disabled"
-              placeholder="자동 생성됩니다"
-            >
-          </div>
-
           <div class="form-group full-width">
             <label>주소 <span class="required">*</span></label>
             <div class="address-input-group">
@@ -253,6 +237,12 @@
               >
               <button type="button" @click="openPostcode('factory')" class="btn-address-search">주소 검색</button>
             </div>
+            <input 
+              type="text" 
+              v-model="factoryData.detailAddress" 
+              placeholder="상세 주소를 입력하세요" 
+              class="detail-address-input"
+            >
             <!-- 지도 표시 -->
             <div v-if="factoryData.address" class="map-container">
               <iframe
@@ -272,7 +262,7 @@
               type="tel" 
               v-model="factoryData.phone" 
               @input="handlePhoneInput($event, 'factory')"
-              placeholder="02-1234-5678"
+              placeholder="전화번호를 입력하세요"
               maxlength="13"
               required
             >
@@ -283,7 +273,8 @@
             <input 
               type="text" 
               v-model="factoryData.representativeName" 
-              placeholder="대표자 성함을 입력하세요"
+              @input="factoryData.representativeName = factoryData.representativeName.replace(/[0-9]/g, '')"
+              placeholder="대표자명을 입력하세요"
               required
             >
           </div>
@@ -294,7 +285,7 @@
               type="text" 
               v-model="factoryData.businessNumber" 
               @input="handleBizNumInput($event, 'factory')"
-              placeholder="000-00-00000"
+              placeholder="사업자 등록 번호를 입력하세요"
               maxlength="12"
               required
             >
@@ -413,6 +404,7 @@ const weekDays = [
 const storeData = reactive({
   name: '',
   address: '',
+  detailAddress: '',
   phone: '',
   representativeName: '',
   businessNumber: '',
@@ -429,6 +421,7 @@ const storeData = reactive({
 const factoryData = reactive({
   name: '',
   address: '',
+  detailAddress: '',
   phone: '',
   representativeName: '',
   businessNumber: '',
@@ -526,7 +519,7 @@ const registerStore = async () => {
   try {
     const payload = {
       name: storeData.name,
-      address: storeData.address,
+      address: storeData.detailAddress ? `${storeData.address} ${storeData.detailAddress}` : storeData.address,
       phone: storeData.phone,
       representativeName: storeData.representativeName,
       businessNumber: storeData.businessNumber,
@@ -603,7 +596,7 @@ const registerFactory = async () => {
   try {
     const payload = {
       name: factoryData.name,
-      address: factoryData.address,
+      address: factoryData.detailAddress ? `${factoryData.address} ${factoryData.detailAddress}` : factoryData.address,
       phone: factoryData.phone,
       representativeName: factoryData.representativeName,
       businessNumber: factoryData.businessNumber,
@@ -739,6 +732,7 @@ const updateRegionByAddress = (sido, type) => {
 const resetStoreForm = () => {
   storeData.name = ''
   storeData.address = ''
+  storeData.detailAddress = ''
   storeData.phone = ''
   storeData.representativeName = ''
   storeData.businessNumber = ''
@@ -754,6 +748,7 @@ const resetStoreForm = () => {
 const resetFactoryForm = () => {
   factoryData.name = ''
   factoryData.address = ''
+  factoryData.detailAddress = ''
   factoryData.phone = ''
   factoryData.representativeName = ''
   factoryData.businessNumber = ''
@@ -1223,4 +1218,14 @@ const resetFactoryForm = () => {
 }
 .btn-confirm:hover { background: #1e293b; }
 
+.address-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.detail-address-input {
+  width: 100% !important;
+  margin-top: 0;
+}
 </style>
