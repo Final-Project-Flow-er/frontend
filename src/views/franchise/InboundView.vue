@@ -15,8 +15,9 @@ const fetchInboundBoxes = async () => {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch('/api/v1/inbounds/boxes', {
-      headers: headers
+    const response = await fetch(`/api/v1/inbounds/boxes?_t=${Date.now()}`, {
+      headers: headers,
+      cache: 'no-store'
     })
     
     let result = null
@@ -26,22 +27,26 @@ const fetchInboundBoxes = async () => {
       console.warn("Non-JSON response received:", e)
     }
 
-    if (response.ok && result?.success && result?.data) {
-      console.log("Inbound Box API raw data:", result.data)
-      inboundBoxes.value = result.data.map(box => ({
+    if (response.ok && result?.success) {
+      const serverData = result.data || []
+      const mappedData = serverData.map(box => ({
         boxCode: box.boxCode,
         orderCode: box.orderCode,
-        recipient: '', // API가 제공하지 않으므로 공백
+        recipient: '',
         productCode: box.productCode,
         name: box.productName,
         quantity: box.countItem
       }))
-    } else {
+
+      // 복잡한 비교 없이 즉시 업데이트하여 정합성 보장
+      inboundBoxes.value = mappedData
+    } else if (response.status === 401 || response.status === 403) {
+      // 인증 오류 시에는 폴링 중단 혹은 처리 필요 (여기서는 리스트만 비움)
       inboundBoxes.value = []
     }
   } catch (error) {
     console.error('Error fetching inbound boxes:', error)
-    inboundBoxes.value = [] // 팝업 안 띄우고 무조건 빈 배열로 랜더링
+    // 에러 시 기존 데이터를 유지하여 사용자 경험 저해 방지 (전체 비우지 않음)
   }
 }
 
@@ -58,12 +63,15 @@ const refreshBoxDetails = async (boxCode) => {
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
 
-    const response = await fetch(`/api/v1/inbounds/boxes/${boxCode}`, { headers })
+    const response = await fetch(`/api/v1/inbounds/boxes/${boxCode}?_t=${Date.now()}`, {
+      headers: headers,
+      cache: 'no-store'
+    })
     let result = null
     try { result = await response.json() } catch (e) {}
 
     if (response.ok && result?.success && result?.data) {
-      allBoxDetails.value[boxCode] = result.data.map(item => {
+      const mappedItems = result.data.map(item => {
         let expiry = '-'
         if (item.manufactureDate) {
           const d = new Date(item.manufactureDate)
@@ -79,17 +87,32 @@ const refreshBoxDetails = async (boxCode) => {
           unitPrice: 12000
         }
       })
+
+      if (JSON.stringify(mappedItems) !== JSON.stringify(allBoxDetails.value[boxCode])) {
+        allBoxDetails.value[boxCode] = mappedItems
+      }
     }
   } catch (error) {
     console.error('Error refreshing box details:', error)
   }
 }
 
+let pollingTimer = null
+
+const startPolling = async () => {
+  await refreshAll()
+  // 1초 주기로 폴링 (상태 변화를 더 빠르게 감지)
+  pollingTimer = setTimeout(startPolling, 1000)
+}
+
 onMounted(() => {
-  refreshAll()
-  // 3초마다 자동 갱신
-  const interval = setInterval(refreshAll, 3000)
-  onUnmounted(() => clearInterval(interval))
+  startPolling()
+})
+
+onUnmounted(() => {
+  if (pollingTimer) {
+    clearTimeout(pollingTimer)
+  }
 })
 
 const allBoxDetails = ref({})
@@ -104,7 +127,10 @@ const fetchBoxDetails = async (boxCode) => {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`/api/v1/inbounds/boxes/${boxCode}`, { headers })
+    const response = await fetch(`/api/v1/inbounds/boxes/${boxCode}?_t=${Date.now()}`, {
+      headers: headers,
+      cache: 'no-store'
+    })
     let result = null
     try {
       result = await response.json()
@@ -259,6 +285,12 @@ const approveInbound = () => {
 }
 
 const performApprove = async () => {
+  // 중복 갱신 및 레이스 컨디션 방지를 위해 폴링 일시 중단
+  if (pollingTimer) {
+    clearTimeout(pollingTimer)
+    pollingTimer = null
+  }
+
   try {
     const token = localStorage.getItem('accessToken')
     const headers = { 'Content-Type': 'application/json' }
@@ -275,6 +307,7 @@ const performApprove = async () => {
 
     if (response.status === 401 || response.status === 403) {
       openModal('오류', '권한이 없습니다 (액세스 토큰 확인 필요).', null, false)
+      startPolling() // 권한 오류 시에도 폴링 재개
       return
     }
 
@@ -284,7 +317,10 @@ const performApprove = async () => {
     } catch (e) {}
 
     if (response.ok && result?.success) {
-      await fetchInboundBoxes()
+      // 성공 시 즉시 목록 비우기 및 전체 새로고침
+      inboundBoxes.value = []
+      await refreshAll()
+      
       selectedBoxCode.value = null
       selectedBoxIds.value.clear()
       selectedItemIds.value.clear()
@@ -295,6 +331,11 @@ const performApprove = async () => {
   } catch (error) {
     console.error('Error confirming inbound:', error)
     openModal('오류', '서버 통신 오류가 발생했습니다.', null, false)
+  } finally {
+    // 처리가 끝난 후 폴링 재시작
+    if (!pollingTimer) {
+      startPolling()
+    }
   }
 }
 
@@ -352,7 +393,15 @@ const handleModalClose = () => {
                 </tr>
               </thead>
               <tbody>
+                <tr v-if="inboundBoxes.length === 0">
+                  <td colspan="8">
+                    <div class="empty-state" style="padding: 2.5rem 0;">
+                      현재 입고 대기 상태인 목록이 존재하지 않습니다.
+                    </div>
+                  </td>
+                </tr>
                 <tr 
+                  v-else
                   v-for="box in inboundBoxes" 
                   :key="box.boxCode" 
                   @click="selectBox(box.boxCode)"
