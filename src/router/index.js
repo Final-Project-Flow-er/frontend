@@ -410,21 +410,37 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     const accessToken = localStorage.getItem('accessToken')
 
-    // If attempting to go to Login or Account Support while not logged in, allow it
-    if (!accessToken && (to.name === 'Login' || to.name === 'AccountSupport')) {
-        next()
+    // Check if token exists and is not a "null"/"undefined" string
+    const isAuthenticated = accessToken && accessToken !== 'null' && accessToken !== 'undefined'
+
+    // If it's an invalid string, clear it automatically to prevent "cache" issues
+    if (accessToken && !isAuthenticated) {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('userRole')
     }
-    // If attempting to go to any other page while not logged in, redirect to Login
-    else if (!accessToken) {
-        next({ name: 'Login' })
+
+    // 1. If not authenticated
+    if (!isAuthenticated) {
+        // Allow access to Login and Account Support pages
+        if (to.name === 'Login' || to.name === 'AccountSupport') {
+            next()
+        }
+        // Redirect any other attempt to Login
+        else {
+            next({ name: 'Login' })
+        }
     }
-    // If logged in and attempting to go to Login, redirect to Home
-    else if (accessToken && to.name === 'Login') {
-        next({ name: 'Home' })
-    }
-    // Otherwise allow navigation
+    // 2. If authenticated
     else {
-        next()
+        // If logged in and trying to go to Login, redirect to Home
+        if (to.name === 'Login') {
+            next({ name: 'Home' })
+        }
+        // Otherwise allow navigation
+        else {
+            next()
+        }
     }
 })
 
