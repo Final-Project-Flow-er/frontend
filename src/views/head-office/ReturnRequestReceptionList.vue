@@ -9,10 +9,10 @@ const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
 const STATUS_LABEL = {
   PENDING: '대기',
   ACCEPTED: '접수',
-  SHIPPING_PENDING: '배송대기',
+  SHIPPING_PENDING: '배송 대기',
   SHIPPING: '배송중',
-  COMPLETED: '배송완료',
-  INSPECTING: '검수중',
+  COMPLETED: '배송 완료',
+  INSPECTING: '검수 중',
   DEDUCTION_COMPLETED: '대금 차감 완료',
   DEDUCTION_REJECTED: '대금 차감 거절',
   CANCELED: '취소'
@@ -84,7 +84,7 @@ const filter = ref({
 })
 
 const statuses = [
-  '대기', '접수', '배송 대기', '배송중', '배송 완료', '검수', '대금 차감 완료', '대금 차감 거절'
+  '대기', '접수', '배송 대기', '배송중', '배송 완료', '검수 중', '대금 차감 완료', '대금 차감 거절'
 ]
 
 // [RESTORED] Selection State

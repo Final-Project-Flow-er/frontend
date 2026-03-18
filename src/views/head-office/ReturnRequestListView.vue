@@ -6,6 +6,17 @@ import { getReturnList, acceptReturns } from '@/api/hqReturns.js'
 const router = useRouter()
 
 const TYPE_LABEL = { MISORDER: '오발주', PRODUCT_DEFECT: '상품 하자' }
+const STATUS_LABEL = {
+  PENDING: '대기',
+  ACCEPTED: '접수',
+  SHIPPING_PENDING: '배송 대기',
+  SHIPPING: '배송중',
+  COMPLETED: '배송 완료',
+  INSPECTING: '검수 중',
+  DEDUCTION_COMPLETED: '대금 차감 완료',
+  DEDUCTION_REJECTED: '대금 차감 거절',
+  CANCELED: '취소'
+}
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
 const returns = ref([])
@@ -32,7 +43,7 @@ const fetchReturns = async () => {
       productCode: '',
       orderCode: '',
       returnCode: item.returnCode,
-      status: item.status,
+      status: STATUS_LABEL[item.status] || item.status,
       quantity: item.quantity,
       amount: Number(item.totalPrice || 0)
     }))
@@ -74,7 +85,7 @@ const filter = ref({
 })
 
 const statuses = [
-  '대기', '접수', '배송 대기', '배송중', '배송 완료', '검수', '대금 차감 완료', '대금 차감 거절'
+  '대기', '접수', '배송 대기', '배송중', '배송 완료', '검수 중', '대금 차감 완료', '대금 차감 거절'
 ]
 
 // [NEW] Selection State
@@ -128,6 +139,7 @@ const getStatusClass = (s) => ({
   '접수': 'status-info',
   '배송중': 'status-primary',
   '배송 완료': 'status-ok',
+  '검수 중': 'status-primary',
   '대금 차감 완료': 'status-ok',
   '대금 차감 거절': 'status-danger'
 }[s] || 'status-default')

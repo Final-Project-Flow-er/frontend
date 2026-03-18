@@ -29,8 +29,6 @@ const filter = ref({
   spiciness: ''
 })
 
-const showRecommended = ref(true)
-
 const statuses = ['위험', '부족', '입고 예정', '안전']
 const spicinessLevels = ['순한맛', '기본맛', '매운맛', '아주 매운맛']
 
@@ -55,7 +53,6 @@ onMounted(async () => {
       spiciness: parseSpicinessFromName(s.productName),
       current: s.totalQuantity ?? 0,
       safety: s.safetyStock ?? 0,
-      recommended: 0,
       inputQty: 0
     }))
     orderInfo.value.managerName = myInfo.username || ''
@@ -138,9 +135,6 @@ const createOrder = async () => {
     <div class="section-card">
       <div class="section-header">
         <h3>현 재고 조회</h3>
-        <button class="toggle-btn" @click="showRecommended = !showRecommended">
-          추천 수량 {{ showRecommended ? '숨기기' : '보기' }}
-        </button>
       </div>
 
       <!-- Filters -->
@@ -180,7 +174,6 @@ const createOrder = async () => {
               <th>매운맛</th>
               <th class="num-col">현 재고</th>
               <th class="num-col">안전 재고</th>
-              <th v-if="showRecommended" class="num-col recommended-col">추천 재고</th>
               <th class="qty-col">실 수량 (발주)</th>
             </tr>
           </thead>
@@ -192,7 +185,6 @@ const createOrder = async () => {
               <td>{{ stock.spiciness }}</td>
               <td class="num-col">{{ stock.current.toLocaleString() }}</td>
               <td class="num-col">{{ stock.safety.toLocaleString() }}</td>
-              <td v-if="showRecommended" class="num-col recommended-val">{{ stock.recommended.toLocaleString() }}</td>
               <td class="qty-col">
                 <input type="number" v-model.number="stock.inputQty" class="qty-input" min="0" />
               </td>
@@ -268,8 +260,6 @@ const createOrder = async () => {
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
 .section-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-dark); }
 
-.toggle-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-
 /* Filters */
 .filter-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
 .filter-group { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -284,9 +274,6 @@ const createOrder = async () => {
 
 .num-col { text-align: right; font-family: 'JetBrains Mono', monospace; }
 .code-cell { font-weight: 600; color: var(--primary); }
-
-.recommended-col { background: #fff7ed !important; color: #9a3412 !important; }
-.recommended-val { color: #c2410c; font-weight: 600; }
 
 .qty-col { text-align: center; width: 150px; }
 .qty-input { width: 80px; padding: 0.5rem; border: 2px solid var(--primary); border-radius: 6px; text-align: right; font-weight: 700; }
