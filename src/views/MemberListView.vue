@@ -176,7 +176,7 @@ const filters = reactive({
   role: 'all',
   status: 'all',
   searchQuery: '',
-  orgName: '' // 백엔드 요약 정보에는 소속명이 없으므로 일단 검색 대상에서 제외될 수 있음
+  orgName: ''
 })
 
 // 세부 역할 라벨 (백엔드 UserPosition 매핑)
@@ -198,10 +198,15 @@ const isLoading = ref(false)
 const fetchMembers = async () => {
   isLoading.value = true
   try {
+    const kw = filters.searchQuery?.trim() || null
     const params = {
       role: filters.role !== 'all' ? filters.role.toUpperCase() : null,
       status: filters.status !== 'all' ? filters.status.toUpperCase() : null,
-      username: filters.searchQuery || null
+      // searchQuery를 loginId, username, employeeNumber 모두에 전달 → 백엔드에서 OR 조건 처리
+      loginId: kw,
+      username: kw,
+      employeeNumber: kw,
+      orgName: filters.orgName?.trim() || null
     }
     await userManagementStore.fetchUsers(params)
   } catch (error) {
@@ -214,7 +219,7 @@ const fetchMembers = async () => {
 onMounted(fetchMembers)
 
 // 필터 변경 시 자동 재조회
-watch(() => [filters.role, filters.status], fetchMembers)
+watch(() => [filters.role, filters.status, filters.orgName], fetchMembers)
 
 // 검색어는 엔터나 버튼 클릭 시 조회하도록 하거나, 디바운스 적용 가능
 // 여기서는 일단 수동 조회 버튼이 없으므로 엔터 키 대응 등을 추가할 수 있으나

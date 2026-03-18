@@ -293,19 +293,20 @@ watch(() => [filters.status, filters.region, filters.selectedDays, filters.searc
 
 const fetchOrganizations = async () => {
   try {
-    // 팁: DTO의 code와 name에 keyword를 지능적으로 배분 조절
-    // 사용자가 입력한 키워드가 영문+숫자 위주면 code로, 아니면 name으로 시도하거나 둘 다 검색
-    const isCode = /^[A-Z0-9]+$/i.test(filters.keyword)
-    
+    const kw = filters.keyword?.trim() || null
+    const sub = filters.subKeyword?.trim() || null
     const params = {
       page: currentPage.value,
       size: pageSize.value,
       status: filters.status === 'all' ? null : filters.status,
       region: filters.region === 'all' ? null : filters.region,
-      code: isCode ? filters.keyword || null : null,
-      name: !isCode ? filters.keyword || null : null,
-      representativeName: (filters.subKeyword && isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
-      businessNumber: (filters.subKeyword && !isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
+      // keyword를 name과 code 모두에 전달 → 백엔드에서 각각 OR 없이 AND이므로,
+      // 이름 검색과 코드 검색 중 하나라도 매칭되려면 두 파라미터를 함께 보내야 함.
+      // 백엔드가 name/code를 각각 null일 때만 무시하는 구조이므로 동시 전달이 가능.
+      name: kw,
+      code: kw,
+      representativeName: sub,
+      businessNumber: sub,
       operatingDays: filters.selectedDays.length > 0 ? filters.selectedDays.join(',') : null,
       isReturnBlocked: filters.isReturnBlocked
     }
