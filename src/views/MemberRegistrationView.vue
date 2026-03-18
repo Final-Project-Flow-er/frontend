@@ -2,7 +2,6 @@
   <div class="registration-container">
     <div class="registration-header">
       <h1>회원 등록</h1>
-      <p class="subtitle">새로운 회원을 시스템에 등록합니다</p>
     </div>
 
     <!-- 권한(본사/가맹점/공장) 선택 버튼 -->
@@ -81,7 +80,7 @@
               <!-- 공통 필드 -->
               <div class="form-group">
                 <label>이름 <span class="required">*</span></label>
-                <input type="text" v-model="formData.name" placeholder="이름을 입력하세요" required>
+                <input type="text" v-model="formData.name" @input="formData.name = formData.name.replace(/[0-9]/g, '')" placeholder="이름을 입력하세요" required>
               </div>
 
               <div class="form-group">
@@ -550,7 +549,7 @@ const closeModal = () => {
   display: flex; align-items: center; gap: 0.4rem;
   padding: 0 1rem; background: #0f172a; border: none;
   border-radius: 8px; font-size: 0.85rem; font-weight: 600;
-  color: white; cursor: pointer; transition: all 0.2s;
+  color: white; cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
 .btn-search-trigger:hover { background: #1e293b; transform: translateY(-1px); }
 

@@ -3,7 +3,6 @@
     <div class="log-header">
       <div class="header-left">
         <h1>회원 로그</h1>
-        <p class="subtitle">회원 등록, 수정, 삭제 등의 상태 변동 기록을 조회합니다</p>
       </div>
     </div>
 

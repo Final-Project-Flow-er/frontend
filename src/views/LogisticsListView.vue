@@ -3,7 +3,6 @@
     <div class="list-header">
       <div class="header-left">
         <h1>업체 및 차량 조회</h1>
-        <p class="subtitle">협력 운송 업체 정보 및 배송 차량을 관리하세요</p>
       </div>
     </div>
 

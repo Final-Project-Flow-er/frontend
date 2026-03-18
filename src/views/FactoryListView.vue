@@ -2,7 +2,6 @@
   <div class="org-list-container">
     <div class="org-list-header">
       <h1>공장 조회</h1>
-      <p class="subtitle">생산 공장의 운영 현황 및 지역별 정보를 관리합니다</p>
     </div>
 
     <!-- 필터 및 검색 -->

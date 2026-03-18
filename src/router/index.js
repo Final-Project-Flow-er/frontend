@@ -407,4 +407,25 @@ const router = createRouter({
     ]
 })
 
+router.beforeEach((to, from, next) => {
+    const accessToken = localStorage.getItem('accessToken')
+
+    // If attempting to go to Login or Account Support while not logged in, allow it
+    if (!accessToken && (to.name === 'Login' || to.name === 'AccountSupport')) {
+        next()
+    }
+    // If attempting to go to any other page while not logged in, redirect to Login
+    else if (!accessToken) {
+        next({ name: 'Login' })
+    }
+    // If logged in and attempting to go to Login, redirect to Home
+    else if (accessToken && to.name === 'Login') {
+        next({ name: 'Home' })
+    }
+    // Otherwise allow navigation
+    else {
+        next()
+    }
+})
+
 export default router
