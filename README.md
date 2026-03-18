@@ -66,6 +66,13 @@ frontend/
 
 <br>
 
+## ⭐ ui/ux 테스트케이스
+
+<img width="700" height="651" alt="image" src="https://github.com/user-attachments/assets/324eee5f-5b64-4484-a821-00f5b22365aa" />
+<img width="703" height="509" alt="image" src="https://github.com/user-attachments/assets/6fc1a607-2992-4080-b6bb-eb7f92875a78" />
+
+<br>
+
 ## 🖥️ 주요 화면
 
 - **로그인 및 계정 분실**
@@ -81,7 +88,6 @@ frontend/
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/6a9dbef8-876f-4779-9210-e4eb76749ffd" />
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/a48912ac-56ca-4fdf-8a76-35da04cb9251" />
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/757d84e3-e417-496d-9b83-c9f5b7d63f8a" />
-
 
 <br>
 
