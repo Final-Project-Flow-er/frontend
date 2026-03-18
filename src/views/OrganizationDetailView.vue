@@ -209,6 +209,8 @@
                 disabled 
                 class="input-disabled"
               >
+            </div>
+
             <div class="info-field full-width">
               <label>주소</label>
               <div class="address-input-group">
