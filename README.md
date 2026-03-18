@@ -76,18 +76,18 @@ frontend/
 ## 🖥️ 주요 화면
 
 - **로그인 및 계정 분실**
-<img width="300" alt="화면 캡처 2026-03-18 122122" src="https://github.com/user-attachments/assets/e0052e9e-5aa0-424d-b574-b5fedb8a6db2" />
-<img width="300" height="905" alt="image" src="https://github.com/user-attachments/assets/88fbaed9-8a6d-4bbb-a0cd-327b475e4461" />
+<img width="400" alt="화면 캡처 2026-03-18 122122" src="https://github.com/user-attachments/assets/e0052e9e-5aa0-424d-b574-b5fedb8a6db2" />
+<img width="400" height="905" alt="image" src="https://github.com/user-attachments/assets/88fbaed9-8a6d-4bbb-a0cd-327b475e4461" />
 
 - **권한별 대시보드 (본사/가맹점/공장)**
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/256e3962-2ba5-48a1-a4c0-e5275fe26aa4" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/2f4aec61-f33e-40c7-aa06-6a48c2682ac8" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/ba3e7370-1fd3-4288-92c1-11e033ca4650" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/256e3962-2ba5-48a1-a4c0-e5275fe26aa4" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/2f4aec61-f33e-40c7-aa06-6a48c2682ac8" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/ba3e7370-1fd3-4288-92c1-11e033ca4650" />
 
 - **주요 기능 페이지 (재고관리/발주 관리/정산)**
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/6a9dbef8-876f-4779-9210-e4eb76749ffd" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/a48912ac-56ca-4fdf-8a76-35da04cb9251" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/757d84e3-e417-496d-9b83-c9f5b7d63f8a" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/6a9dbef8-876f-4779-9210-e4eb76749ffd" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/a48912ac-56ca-4fdf-8a76-35da04cb9251" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/757d84e3-e417-496d-9b83-c9f5b7d63f8a" />
 
 <br>
 
