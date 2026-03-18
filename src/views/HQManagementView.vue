@@ -214,7 +214,8 @@ const saveChanges = async () => {
     }
   } catch (error) {
     console.error('본사 정보 업데이트 실패:', error)
-    alert('본사 정보 업데이트 중 오류가 발생했습니다.')
+    const serverMessage = error.response?.data?.message
+    alert(serverMessage || '본사 정보 업데이트 중 오류가 발생했습니다.')
   }
 }
 
