@@ -66,7 +66,7 @@ frontend/
 
 <br>
 
-## ⭐ ui/ux 테스트케이스
+## ⭐ UI/UX 테스트케이스
 
 <img width="700" height="651" alt="image" src="https://github.com/user-attachments/assets/324eee5f-5b64-4484-a821-00f5b22365aa" />
 <img width="703" height="509" alt="image" src="https://github.com/user-attachments/assets/6fc1a607-2992-4080-b6bb-eb7f92875a78" />
