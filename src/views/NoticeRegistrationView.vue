@@ -168,15 +168,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/api/index'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
-const userRole = sessionStorage.getItem('userRole')
-const isAdmin = userRole === 'admin' || userRole === 'headOffice'
+const userRole = computed(() => authStore.userRole?.toLowerCase())
+const isAdmin = computed(() => ['admin', 'headoffice', 'hq'].includes(userRole.value))
 
 const isEdit = ref(false)
 const files = ref([])
@@ -295,14 +297,14 @@ const clearAllFiles = () => {
 }
 const formData = reactive({
   title: '',
-  author: sessionStorage.getItem('userName') || '유저',
+  author: authStore.userName || '유저',
   content: '',
   important: false,
   importantUntil: ''
 })
 
 onMounted(async () => {
-  if (!isAdmin) {
+  if (!isAdmin.value) {
     alert('권한이 없습니다.')
     router.push('/notice')
     return

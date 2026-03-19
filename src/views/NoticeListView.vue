@@ -146,8 +146,11 @@ import { useRouter } from 'vue-router'
 import api from '@/api/index'
 
 const router = useRouter()
-const userRole = sessionStorage.getItem('userRole')
-const isAdmin = computed(() => userRole === 'admin' || userRole === 'headOffice')
+import { useAuthStore } from '@/stores/auth'
+const authStore = useAuthStore()
+const userRole = computed(() => authStore.userRole)
+const userRoleLower = computed(() => userRole.value?.toLowerCase())
+const isAdmin = computed(() => ['admin', 'headOffice', 'hq', 'headoffice'].includes(userRoleLower.value))
 const filters = reactive({
   searchQuery: '',
   author: ''
