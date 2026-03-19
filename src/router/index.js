@@ -20,6 +20,7 @@ import FactoryOrderListView from '../views/factory/OrderListView.vue'
 import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
 import FactoryInboundView from '../views/factory/InboundView.vue'
 import FactoryOutboundView from '../views/factory/OutboundView.vue'
+import FactoryInventoryView from '../views/factory/InventoryView.vue'
 import HeadOfficeVehicleAssignmentView from '../views/head-office/VehicleAssignmentView.vue'
 import HeadOfficeReturnVehicleAssignmentView from '../views/head-office/ReturnVehicleAssignmentView.vue'
 import MyPageView from '../views/MyPageView.vue'
@@ -298,6 +299,11 @@ const router = createRouter({
             path: '/factory/outbound',
             name: 'factory-outbound',
             component: FactoryOutboundView
+        },
+        {
+            path: '/factory/inventory',
+            name: 'factory-inventory',
+            component: FactoryInventoryView
         },
         {
             path: '/factory/orders/request',

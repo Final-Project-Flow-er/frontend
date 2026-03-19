@@ -133,14 +133,30 @@
     <div class="pagination" v-if="totalPages > 1">
         <button class="page-nav-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">이전</button>
         <div class="page-numbers">
+            <button
+                class="page-group-btn"
+                :disabled="!canGoPrevPageGroup"
+                @click="goPrevPageGroup"
+                aria-label="이전 페이지 그룹"
+            >
+                ‹
+            </button>
             <button 
-                v-for="p in totalPages" 
+                v-for="p in visiblePageNumbers" 
                 :key="p" 
                 @click="changePage(p - 1)" 
                 :class="{ active: currentPage === p - 1 }"
                 class="page-num-btn"
             >
                 {{ p }}
+            </button>
+            <button
+                class="page-group-btn"
+                :disabled="!canGoNextPageGroup"
+                @click="goNextPageGroup"
+                aria-label="다음 페이지 그룹"
+            >
+                ›
             </button>
         </div>
         <button class="page-nav-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">다음</button>
@@ -188,6 +204,7 @@ const loading = ref(false)
 const currentPage = ref(0)
 const totalPages = ref(0)
 const pageSize = ref(20)
+const PAGE_GROUP_SIZE = 10
 let filterDebounceTimer = null
 
 const filter = ref({
@@ -236,7 +253,8 @@ const fetchLogs = async () => {
 
         const params = {
            page: currentPage.value,
-           size: pageSize.value
+           size: pageSize.value,
+           pageSize: pageSize.value
         }
 
         if (filter.value.startDate) params.startDate = filter.value.startDate
@@ -307,8 +325,36 @@ watch(filter, () => {
 }, { deep: true })
 
 const changePage = (page) => {
+    if (page < 0 || page >= totalPages.value) return
     currentPage.value = page
     fetchLogs()
+}
+
+const pageGroupStart = computed(() => {
+  return Math.floor(currentPage.value / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE
+})
+
+const visiblePageNumbers = computed(() => {
+  const start = pageGroupStart.value + 1
+  const end = Math.min(start + PAGE_GROUP_SIZE - 1, totalPages.value)
+  const pages = []
+  for (let p = start; p <= end; p += 1) {
+    pages.push(p)
+  }
+  return pages
+})
+
+const canGoPrevPageGroup = computed(() => pageGroupStart.value > 0)
+const canGoNextPageGroup = computed(() => pageGroupStart.value + PAGE_GROUP_SIZE < totalPages.value)
+
+const goPrevPageGroup = () => {
+  if (!canGoPrevPageGroup.value) return
+  changePage(pageGroupStart.value - PAGE_GROUP_SIZE)
+}
+
+const goNextPageGroup = () => {
+  if (!canGoNextPageGroup.value) return
+  changePage(pageGroupStart.value + PAGE_GROUP_SIZE)
 }
  
 const toApiDate = (dateString) => {
@@ -620,6 +666,24 @@ tr:hover { background: #f8fafc; }
   background: var(--text-dark);
   color: white;
   border-color: var(--text-dark);
+}
+.page-group-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.page-group-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Responsive Table Wrapper */

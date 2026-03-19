@@ -34,3 +34,9 @@ export const updateOrderShippingPending = (data) => request(`${BASE}/shipping-pe
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(data),
 })
+
+export const checkIsPossible = (orderCodes) => request(`${BASE}/is-possible`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(orderCodes),
+})
