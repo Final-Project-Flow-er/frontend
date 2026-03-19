@@ -334,7 +334,7 @@ const downloadExcel = () => {
     <div class="final-settlement-card">
       <div class="fs-left">
         <span class="fs-label">최종 정산 금액</span>
-        <p class="fs-formula">총 매출 − (발주 대금 + 배송비 + 수수료 + 손실) + 반품 환급</p>
+        <p class="fs-formula">발주 대금 + 수수료 - 배송비 - 손실 - 반품 차감액 + 기타 조정</p>
       </div>
       <p class="fs-amount">₩ {{ fmt(settlementData.finalAmount) }}</p>
     </div>
@@ -354,7 +354,7 @@ const downloadExcel = () => {
       </div>
       <div class="summary-card clickable" @click="goToVoucherWithFilter('shipping')">
         <span class="s-label">배송비</span>
-        <p class="s-value negative">₩ {{ fmt(settlementData.deliveryFee) }}</p>
+        <p class="s-value negative">₩ {{ fmt(settlement.deliveryFee) }}</p>
       </div>
       <div class="summary-card clickable" @click="goToVoucherWithFilter('loss')">
         <span class="s-label">손실</span>

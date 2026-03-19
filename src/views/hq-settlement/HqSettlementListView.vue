@@ -236,7 +236,7 @@ const downloadExcel = async () => {
     <div class="final-card" v-if="!isLoading">
       <div class="fc-left">
         <span class="fc-label">최종 정산 금액</span>
-        <span class="fc-formula">발주 대금 + 수수료 + 배송비 - 반품 차감액 - 본사 부담 손실 + 기타 조정</span>
+        <span class="fc-formula">발주 대금 + 수수료 - 배송비 - 반품 차감액 - 본사 부담 손실 + 기타 조정</span>
       </div>
       <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
     </div>
@@ -251,8 +251,8 @@ const downloadExcel = async () => {
         <p class="s-value positive">₩ {{ fmt(totals.commission) }}</p>
       </div>
       <div class="summary-card clickable" @click="goToSummaryDetail('shipping')">
-        <span class="s-label">배송 수익</span>
-        <p class="s-value positive">₩ {{ fmt(totals.shipping) }}</p>
+        <span class="s-label">배송비</span>
+        <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
       </div>
       <div class="summary-card refund-card clickable" @click="goToSummaryDetail('refund')">
         <span class="s-label">반품 차감액</span>
