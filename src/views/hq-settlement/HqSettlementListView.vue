@@ -29,9 +29,18 @@ const hqSummary = ref({
 })
 const franchiseList = ref([])
 const trendDataList = ref([])
+const isSearchFocused = ref(false)
+
+const hideDropdown = () => {
+  setTimeout(() => { isSearchFocused.value = false }, 200)
+}
 
 /* ── 가맹점 필터 ── */
 const searchStore = ref('')
+const selectStoreFromDropdown = (name) => {
+  searchStore.value = name
+  isSearchFocused.value = false
+}
 
 const fetchData = async () => {
   isLoading.value = true
@@ -227,9 +236,25 @@ const downloadExcel = async () => {
     </div>
 
     <!-- 가맹점 검색 -->
-    <div class="search-bar">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" v-model="searchStore" placeholder="가맹점 검색..." class="search-input" />
+    <div class="search-container">
+      <div class="search-bar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input 
+          type="text" 
+          v-model="searchStore" 
+          placeholder="가맹점 검색..." 
+          class="search-input"
+          @focus="isSearchFocused = true"
+          @blur="hideDropdown"
+        />
+      </div>
+      <!-- 자동완성 드롭다운 -->
+      <ul v-if="isSearchFocused && filteredStores.length > 0" class="search-dropdown">
+        <li v-for="s in filteredStores" :key="s.franchiseId" @click="selectStoreFromDropdown(s.franchiseName)">
+          <span class="drop-name">{{ s.franchiseName }}</span>
+          <span class="drop-status">{{ getStatusLabel(s.status) }}</span>
+        </li>
+      </ul>
     </div>
 
     <!-- 최종 합계 (상단) -->
@@ -366,8 +391,36 @@ const downloadExcel = async () => {
 .cal-icon { color: #475569; pointer-events: none; flex-shrink: 0; }
 .date-label { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); pointer-events: none; white-space: nowrap; }
 .date-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; }
-.search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); margin-bottom: 1.25rem; max-width: 300px; }
+.search-container { position: relative; margin-bottom: 1.25rem; max-width: 300px; z-index: 50; }
+.search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); }
 .search-input { border: none; outline: none; font-size: 0.9rem; width: 100%; color: var(--text-dark); }
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  max-height: 250px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+.search-dropdown li {
+  padding: 0.7rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.search-dropdown li:hover { background: #f1f5f9; }
+.drop-name { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
+.drop-status { font-size: 0.75rem; color: var(--text-light); background: #f8fafc; padding: 2px 8px; border-radius: 4px; }
 
 .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-bottom: 1rem; }
 .summary-grid .summary-card { grid-column: span 2; }
