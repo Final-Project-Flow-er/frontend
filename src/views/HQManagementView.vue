@@ -68,21 +68,33 @@
           <div class="card-content">
             <div class="hq-form-group">
               <label>본사 연락처</label>
-              <input type="tel" v-model="hqData.phone" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" @input="handlePhoneInput" maxlength="13" placeholder="예: 02-1234-5678">
+              <input type="tel" v-model="hqData.phone" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" @input="handlePhoneInput" maxlength="13">
             </div>
             <div class="hq-form-group full-width">
               <label>본사 공식 소재지</label>
-              <div class="address-input-wrapper">
-                <input type="text" v-model="hqData.address" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" readonly @click="isEditing && openPostcode()">
-                <button v-if="isEditing" @click="openPostcode" class="btn-search-addr">주소 검색</button>
+              <div v-if="!isEditing" class="hq-address-display">
+                {{ hqData.address.replace('|', ' ') }} {{ hqData.detailAddress }}
               </div>
-              <input 
-                v-if="isEditing" 
-                type="text" 
-                v-model="hqData.detailAddress" 
-                placeholder="상세 주소를 입력하세요" 
-                class="detail-address-input-hq"
-              >
+              <template v-else>
+                <div class="address-input-wrapper">
+                  <input 
+                    type="text" 
+                    v-model="hqData.address" 
+                    :disabled="!isEditing" 
+                    :class="{ 'is-editing': isEditing }" 
+                    placeholder="주소를 입력하거나 검색하세요"
+                  >
+                  <button v-if="isEditing" @click="openPostcode" class="btn-search-addr">주소 검색</button>
+                </div>
+                  <input 
+                    v-if="isEditing" 
+                    type="text" 
+                    v-model="hqData.detailAddress" 
+                    placeholder="상세 주소를 입력하세요" 
+                    class="detail-address-input-hq"
+                    :class="{ 'is-editing': isEditing }"
+                  >
+              </template>
             </div>
           </div>
         </div>
@@ -146,8 +158,17 @@ const fetchHqInfo = async () => {
   try {
     const response = await api.get('/hq/business-units/HQ/1')
     if (response.data.success) {
-      hqData.value = response.data.data
-      hqData.value.detailAddress = ''
+      const data = response.data.data
+      hqData.value = data
+      const fullAddr = data.address || ''
+      if (fullAddr.includes('|')) {
+        const parts = fullAddr.split('|')
+        hqData.value.address = parts[0]
+        hqData.value.detailAddress = parts[1]
+      } else {
+        hqData.value.address = fullAddr
+        hqData.value.detailAddress = ''
+      }
       if (hqData.value.phone) {
         handlePhoneInput({ target: { value: hqData.value.phone } })
       }
@@ -177,23 +198,29 @@ const handlePhoneInput = (e) => {
   }
   
   if (val.startsWith('02')) {
-    if (val.length <= 5) {
+    val = val.slice(0, 10); // 서울은 최대 10자리
+    if (val.length <= 2) {
+      // 가만히 둠
+    } else if (val.length <= 5) {
       val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
     } else if (val.length <= 9) {
       val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
     } else {
-      val = val.replace(/(\d{2})(\d{4})(\d{1,4})/, '$1-$2-$3');
+      val = val.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   } else {
-    if (val.length <= 6) {
-      val = val.replace(/(\d{3})(\d{1,3})/, '$1-$2');
+    val = val.slice(0, 11); // 나머지는 최대 11자리
+    if (val.length <= 3) {
+      // 가만히 둠
+    } else if (val.length <= 7) {
+      val = val.replace(/(\d{3})(\d{1,4})/, '$1-$2');
     } else if (val.length <= 10) {
-      val = val.replace(/(\d{3})(\d{3})(\d{1,4})/, '$1-$2-$3');
+      val = val.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
     } else {
-      val = val.replace(/(\d{3})(\d{4})(\d{1,4})/, '$1-$2-$3');
+      val = val.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   }
-  hqData.value.phone = val.slice(0, 13);
+  hqData.value.phone = val;
 }
 
 const openPostcode = () => {
@@ -217,7 +244,7 @@ const saveChanges = async () => {
   try {
     const payload = {
       name: hqData.value.name,
-      address: hqData.value.detailAddress ? `${hqData.value.address} ${hqData.value.detailAddress}` : hqData.value.address,
+      address: hqData.value.detailAddress ? `${hqData.value.address}|${hqData.value.detailAddress}` : hqData.value.address,
       phone: hqData.value.phone,
       representativeName: hqData.value.representativeName,
     }
@@ -498,9 +525,9 @@ const getRegionLabel = (region) => {
 }
 
 .hq-form-group input.is-editing, .hq-form-group select.is-editing {
-  border-color: #3b82f6;
+  border-color: #0f172a;
   background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
 }
 
 .hq-form-group input:disabled, .hq-form-group select:disabled {
@@ -517,13 +544,28 @@ const getRegionLabel = (region) => {
 
 .address-input-wrapper {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   align-items: center;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0;
+}
+
+.hq-address-display {
+  display: block;
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.4;
+  word-break: break-all;
+  box-sizing: border-box;
+  min-height: 2.6rem; /* 일반 입력창과 비슷한 최소 높이 */
 }
 
 .detail-address-input-hq {
-  margin-top: -0.3rem;
+  margin-top: 0.75rem;
 }
 
 .btn-search-addr {
