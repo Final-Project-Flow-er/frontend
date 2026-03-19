@@ -281,6 +281,8 @@ const toggleRow = async (id) => {
                 const params = { transactionCode: log.orderCode }
                 const date = toApiDate(log.arrivalTime)
                 if (date) params.date = date
+                if (log.name) params.productName = log.name
+                if (log.logType) params.logType = log.logType
                 const res = await api.get('/hq/log/boxes', { params })
                 if (res.data && res.data.success) {
                     boxCodesMap.value[id] = res.data.data
