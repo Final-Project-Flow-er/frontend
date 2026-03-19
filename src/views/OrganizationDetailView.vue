@@ -830,21 +830,32 @@ onMounted(() => {
 // 전화번호 자동 하이픈
 const handlePhoneInput = (e) => {
   let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length < 3) {
+    organization.value.phone = val;
+    return;
+  }
+  
   if (val.startsWith('02')) {
-    if (val.length > 2 && val.length <= 5) {
-      val = val.slice(0, 2) + '-' + val.slice(2);
-    } else if (val.length > 5 && val.length <= 9) {
-      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
-    } else if (val.length > 9) {
-      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    val = val.slice(0, 10); // 서울은 최대 10자리
+    if (val.length <= 2) {
+      // 가만히 둠
+    } else if (val.length <= 5) {
+      val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 9) {
+      val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   } else {
-    if (val.length > 3 && val.length <= 7) {
-      val = val.slice(0, 3) + '-' + val.slice(3);
-    } else if (val.length > 7 && val.length <= 11) {
-      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
-    } else if (val.length > 11) {
-      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    val = val.slice(0, 11); // 나머지는 최대 11자리
+    if (val.length <= 3) {
+      // 가만히 둠
+    } else if (val.length <= 7) {
+      val = val.replace(/(\d{3})(\d{1,4})/, '$1-$2');
+    } else if (val.length <= 10) {
+      val = val.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   }
   organization.value.phone = val;
