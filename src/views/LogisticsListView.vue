@@ -34,12 +34,12 @@
     <div v-if="activeTab === 'companies'" class="table-section fade-in">
       <div class="filter-bar">
         <div class="filter-group">
-          <select v-model="companySearchFields.status" @change="fetchCompanies" class="filter-select">
+          <select v-model="companySearchFields.status" class="filter-select">
             <option :value="null">상태: 전체</option>
             <option value="ACTIVE">활성</option>
             <option value="INACTIVE">비활성</option>
           </select>
-          <select v-model="companySearchFields.usableRegion" @change="fetchCompanies" class="filter-select">
+          <select v-model="companySearchFields.usableRegion" class="filter-select">
             <option :value="null">지역: 전체</option>
             <option value="SEOUL">서울</option>
             <option value="GYEONGGI">경기</option>
@@ -64,7 +64,6 @@
             <input 
               type="number" 
               v-model.number="companySearchFields.unitPrice" 
-              @input="fetchCompanies"
               placeholder="0 (이하)"
               class="filter-input-small"
             >
@@ -75,8 +74,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input 
               type="text" 
-              v-model="companySearchFields.companyName" 
-              @input="fetchCompanies"
+              :value="companySearchFields.companyName" 
+              @input="companySearchFields.companyName = $event.target.value"
               placeholder="업체명 검색"
             >
           </div>
@@ -84,8 +83,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input 
               type="text" 
-              v-model="companySearchFields.manager" 
-              @input="fetchCompanies"
+              :value="companySearchFields.manager" 
+              @input="companySearchFields.manager = $event.target.value"
               placeholder="담당자 검색"
             >
           </div>
@@ -177,18 +176,18 @@
     <div v-if="activeTab === 'vehicles'" class="table-section fade-in">
       <div class="filter-bar">
         <div class="filter-group">
-          <select v-model="vehicleSearchFields.status" @change="fetchVehicles" class="filter-select">
+          <select v-model="vehicleSearchFields.status" class="filter-select">
             <option :value="null">상태: 전체</option>
             <option value="ACTIVE">운행가능</option>
             <option value="INACTIVE">비활성</option>
           </select>
-          <select v-model="vehicleSearchFields.dispatchable" @change="fetchVehicles" class="filter-select">
+          <select v-model="vehicleSearchFields.dispatchable" class="filter-select">
             <option :value="null">배차: 전체</option>
             <option value="AVAILABLE">배차 가능</option>
             <option value="UNAVAILABLE">배차 불가</option>
             <option value="DISPATCHED">배차 중</option>
           </select>
-          <select v-model="vehicleSearchFields.vehicleType" @change="fetchVehicles" class="filter-select">
+          <select v-model="vehicleSearchFields.vehicleType" class="filter-select">
             <option :value="null">종류: 전체</option>
             <option value="CARGO">카고</option>
             <option value="WING_BODY">윙바디</option>
@@ -201,7 +200,6 @@
             <input 
               type="number" 
               v-model.number="vehicleSearchFields.maxLoad" 
-              @input="fetchVehicles"
               placeholder="0 (이상)"
               class="filter-input-small"
             >
@@ -212,8 +210,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input 
               type="text" 
-              v-model="vehicleSearchFields.companyName" 
-              @input="fetchVehicles"
+              :value="vehicleSearchFields.companyName" 
+              @input="vehicleSearchFields.companyName = $event.target.value"
               placeholder="소속 업체 검색"
             >
           </div>
@@ -221,8 +219,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input 
               type="text" 
-              v-model="vehicleSearchFields.vehicleNumber" 
-              @input="fetchVehicles"
+              :value="vehicleSearchFields.vehicleNumber" 
+              @input="vehicleSearchFields.vehicleNumber = $event.target.value"
               placeholder="차량번호 검색"
             >
           </div>
@@ -382,7 +380,7 @@ const fetchAllCompaniesForSelect = async () => {
   }
 }
 
-// 업체 목록 조회 (백엔드 필터링)
+// 업체 목록 조회 (디바운스 적용)
 let companyTimeout = null
 const fetchCompanies = async () => {
   if (companyTimeout) clearTimeout(companyTimeout)
@@ -403,10 +401,10 @@ const fetchCompanies = async () => {
     } catch (err) {
       console.error('Failed to fetch companies:', err)
     }
-  }, 300)
+  }, 400)
 }
 
-// 차량 목록 조회 (백엔드 필터링)
+// 차량 목록 조회 (디바운스 적용)
 let vehicleTimeout = null
 const fetchVehicles = async () => {
   if (vehicleTimeout) clearTimeout(vehicleTimeout)
@@ -428,8 +426,17 @@ const fetchVehicles = async () => {
     } catch (err) {
       console.error('Failed to fetch vehicles:', err)
     }
-  }, 300)
+  }, 400)
 }
+
+// 필터 변화 감시
+watch(companySearchFields, () => {
+  if (activeTab.value === 'companies') fetchCompanies()
+}, { deep: true })
+
+watch(vehicleSearchFields, () => {
+  if (activeTab.value === 'vehicles') fetchVehicles()
+}, { deep: true })
 
 // 상세 모달 상태
 const isDetailModalOpen = ref(false)

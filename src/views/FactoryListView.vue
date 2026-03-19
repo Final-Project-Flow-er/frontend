@@ -49,7 +49,8 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.keyword" 
+              :value="filters.keyword" 
+              @input="filters.keyword = $event.target.value"
               placeholder="공장명 또는 코드 입력"
             >
           </div>
@@ -57,7 +58,7 @@
 
         <div class="filter-group sub-search-group">
           <label>대표자/사업자번호</label>
-          <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
+          <input type="text" :value="filters.subKeyword" @input="filters.subKeyword = $event.target.value" placeholder="대표자 또는 번호">
         </div>
 
         <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
@@ -215,33 +216,7 @@ const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = ref(20)
 
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터 변경 시 자동 조회
-watch(() => [filters.status, filters.region, filters.keyword, filters.subKeyword], () => {
-  debouncedFetch()
-})
-
-let fetchTimeout = null
-const debouncedFetch = () => {
-  if (fetchTimeout) clearTimeout(fetchTimeout)
-  fetchTimeout = setTimeout(() => {
-    currentPage.value = 0
-    fetchOrganizations()
-  }, 300)
-}
-
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터 변경 시 첫 페이지로 이동
-watch(() => [filters.status, filters.region, filters.searchQuery], () => {
-  currentPage.value = 0
-}, { deep: true })
-
+// 데이터 조회
 const fetchOrganizations = async () => {
   try {
     const kw = filters.keyword?.trim() || null
@@ -267,6 +242,18 @@ const fetchOrganizations = async () => {
     console.error('공장 목록 조회 실패:', error)
   }
 }
+
+// 필터 변경 시 자동 조회 (디바운스 적용)
+let fetchTimeout = null
+watch(filters, () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchOrganizations()
+  }, 400)
+}, { deep: true })
+
+onMounted(fetchOrganizations)
 
 const changePage = (page) => {
   currentPage.value = page
