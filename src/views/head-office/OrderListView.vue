@@ -11,7 +11,6 @@ const filter = ref({
   orderCode: '',
   managerName: '',
   managerPhone: '',
-  productCode: '',
   arrivalDate: '',
   arrivalTime: ''
 })
@@ -85,27 +84,14 @@ const filteredOrders = computed(() => {
     const matchOrderCode = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchManagerName = !filter.value.managerName || item.managerName.includes(filter.value.managerName)
     const matchManagerPhone = !filter.value.managerPhone || item.managerPhone.includes(filter.value.managerPhone)
-    const matchProductCode = !filter.value.productCode || item.products.some(p => p.productCode.includes(filter.value.productCode))
     const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
     const matchArrivalTime = !filter.value.arrivalTime || item.arrivalTime.includes(filter.value.arrivalTime)
-    
-    return matchStatus && matchOrderDate && matchOrderCode && matchManagerName && matchManagerPhone && matchProductCode && matchArrivalDate && matchArrivalTime
-  })
-})
 
-const flattenedOrders = computed(() => {
-  const flattened = []
-  filteredOrders.value.forEach(order => {
-    order.products.forEach((product, index) => {
-      flattened.push({
-        ...order,
-        product,
-        isFirstProduct: index === 0,
-        productCount: order.products.length
-      })
-    })
-  })
-  return flattened
+    return matchStatus && matchOrderDate && matchOrderCode && matchManagerName && matchManagerPhone && matchArrivalDate && matchArrivalTime
+  }).map(order => ({
+    ...order,
+    totalQuantity: order.products.reduce((sum, p) => sum + p.quantity, 0)
+  }))
 })
 
 const HQ_ORDER_STATUS_LABEL = {
@@ -164,10 +150,6 @@ const goToEdit = (item) => {
         <label>담당자 번호</label>
         <input type="text" v-model="filter.managerPhone" placeholder="전화번호" />
       </div>
-      <div class="filter-group smaller">
-        <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="OR0101" />
-      </div>
     </div>
 
     <div class="data-table-card">
@@ -183,15 +165,15 @@ const goToEdit = (item) => {
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="(row, idx) in flattenedOrders" 
-            :key="`${row.orderCode}-${row.product.productCode}`" 
-            @click="goToDetail(row)" 
-            :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
+          <tr
+            v-for="row in filteredOrders"
+            :key="row.orderCode"
+            @click="goToDetail(row)"
+            class="clickable-row"
           >
             <td class="sku-cell code-order">{{ row.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
-            <td>{{ row.product.quantity }}</td>
+            <td>{{ row.totalQuantity }}</td>
             <td>{{ new Intl.NumberFormat('ko-KR').format(row.totalAmount) }}</td>
             <td>{{ row.orderDate }}</td>
             <td>{{ row.managerName }}</td>
