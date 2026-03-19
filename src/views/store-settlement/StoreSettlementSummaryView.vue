@@ -31,6 +31,7 @@ const orderItems = ref([])
 const trendData = ref([])
 
 const isLoading = ref(false)
+const isGeneratingPDF = ref(false)
 
 /* ── 데이터 페칭 ── */
 const fetchData = async () => {
@@ -322,21 +323,29 @@ const downloadExcel = async () => {
 }
 
 const downloadPDF = async () => {
+    if (isGeneratingPDF.value) return
+    isGeneratingPDF.value = true
     try {
         let res
         if (activeTab.value === 'daily') {
+            console.log('[DEBUG] Daily PDF Request:', selectedDate.value)
             res = await franchiseSettlementsApi.getDailyReceiptPdf(selectedDate.value)
         } else {
+            console.log('[DEBUG] Monthly PDF Request:', selectedMonth.value)
             res = await franchiseSettlementsApi.getMonthlyReceiptPdf(selectedMonth.value)
         }
+        
         if (res && res.startsWith('http')) {
             window.open(res, '_blank')
         } else if (res) {
-            alert(res)
+            alert('PDF 생성 결과를 확인할 수 없습니다.')
         }
     } catch (error) {
         console.error('Failed to download PDF:', error)
-        alert('PDF 다운로드 중 오류가 발생했습니다.')
+        const errorMsg = error.response?.data?.message || 'PDF 다운로드 중 오류가 발생했습니다.'
+        alert(errorMsg)
+    } finally {
+        isGeneratingPDF.value = false
     }
 }
 </script>
@@ -355,9 +364,10 @@ const downloadPDF = async () => {
         <p class="page-desc">일별 · 월별 정산 현황을 확인하세요.</p>
       </div>
       <div class="header-actions">
-        <button class="action-btn receipt-btn" @click="downloadPDF">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          정산 영수증 (PDF)
+        <button class="action-btn receipt-btn" @click="downloadPDF" :disabled="isGeneratingPDF">
+          <svg v-if="!isGeneratingPDF" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span v-else class="btn-loader"></span>
+          {{ isGeneratingPDF ? '생성 중...' : '정산 영수증 (PDF)' }}
         </button>
         <button v-if="activeTab === 'monthly'" class="action-btn excel-btn" @click="downloadExcel">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -439,7 +449,7 @@ const downloadPDF = async () => {
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             {{ showSalesTrend ? '매출 추이 닫기' : '매출 추이' }}
           </button>
-          <button class="view-all-btn" @click="router.push({ path: '/store/settlement/sales', query: { month: selectedMonth, date: selectedDate, tab: activeTab } })">전체보기</button>
+          <button class="view-all-btn" @click="router.push({ path: '/store/settlement/sales-all', query: { month: selectedMonth, date: selectedDate, tab: activeTab } })">전체보기</button>
         </div>
       </div>
       <table class="data-table">
@@ -576,7 +586,7 @@ const downloadPDF = async () => {
     <div class="data-table-card">
       <div class="table-header">
         <h3>발주내역 <span v-if="activeTab === 'monthly'" style="font-size: 0.8rem; font-weight: 400; color: #94a3b8; margin-left: 0.5rem;">총액 기준 상위 5개</span></h3>
-        <button class="view-all-btn" @click="router.push({ path: '/store/settlement/orders', query: { month: selectedMonth, date: selectedDate, tab: activeTab } })">전체보기</button>
+        <button class="view-all-btn" @click="router.push({ path: '/store/settlement/orders-all', query: { month: selectedMonth, date: selectedDate, tab: activeTab } })">전체보기</button>
       </div>
       <table class="data-table">
         <thead>
@@ -624,6 +634,17 @@ const downloadPDF = async () => {
     animation: spin 1s linear infinite;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.btn-loader {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+}
 
 /* ── 페이지 헤더 ── */
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
