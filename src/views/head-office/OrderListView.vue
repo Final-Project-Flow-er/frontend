@@ -11,7 +11,6 @@ const filter = ref({
   orderCode: '',
   managerName: '',
   managerPhone: '',
-  productCode: '',
   arrivalDate: '',
   arrivalTime: ''
 })
@@ -43,7 +42,7 @@ const fetchOrders = async () => {
           stockInDate: item.storedDate || '',
           arrivalDate: '',
           arrivalTime: '',
-          totalAmount: 0,
+          totalAmount: Number(item.totalPrice || 0),
           products: []
         }
       }
@@ -85,27 +84,14 @@ const filteredOrders = computed(() => {
     const matchOrderCode = !filter.value.orderCode || item.orderCode.includes(filter.value.orderCode)
     const matchManagerName = !filter.value.managerName || item.managerName.includes(filter.value.managerName)
     const matchManagerPhone = !filter.value.managerPhone || item.managerPhone.includes(filter.value.managerPhone)
-    const matchProductCode = !filter.value.productCode || item.products.some(p => p.productCode.includes(filter.value.productCode))
     const matchArrivalDate = !filter.value.arrivalDate || item.arrivalDate.includes(filter.value.arrivalDate)
     const matchArrivalTime = !filter.value.arrivalTime || item.arrivalTime.includes(filter.value.arrivalTime)
-    
-    return matchStatus && matchOrderDate && matchOrderCode && matchManagerName && matchManagerPhone && matchProductCode && matchArrivalDate && matchArrivalTime
-  })
-})
 
-const flattenedOrders = computed(() => {
-  const flattened = []
-  filteredOrders.value.forEach(order => {
-    order.products.forEach((product, index) => {
-      flattened.push({
-        ...order,
-        product,
-        isFirstProduct: index === 0,
-        productCount: order.products.length
-      })
-    })
-  })
-  return flattened
+    return matchStatus && matchOrderDate && matchOrderCode && matchManagerName && matchManagerPhone && matchArrivalDate && matchArrivalTime
+  }).map(order => ({
+    ...order,
+    totalQuantity: order.products.reduce((sum, p) => sum + p.quantity, 0)
+  }))
 })
 
 const HQ_ORDER_STATUS_LABEL = {
@@ -139,12 +125,6 @@ const goToEdit = (item) => {
       <button class="add-btn" @click="router.push({ name: 'head-office-order-create' })">발주 생성</button>
     </div>
 
-    <section class="summary-section">
-      <div class="summary-card"><span class="s-label">금일 발주 건수</span><p class="s-value">1건</p></div>
-      <div class="summary-card"><span class="s-label">배송 준비중</span><p class="s-value">1건</p></div>
-      
-    </section>
-
     <!-- Filter Section -->
     <div class="filter-section">
       <div class="filter-group">
@@ -170,10 +150,6 @@ const goToEdit = (item) => {
         <label>담당자 번호</label>
         <input type="text" v-model="filter.managerPhone" placeholder="전화번호" />
       </div>
-      <div class="filter-group smaller">
-        <label>제품 코드</label>
-        <input type="text" v-model="filter.productCode" placeholder="OR0101" />
-      </div>
     </div>
 
     <div class="data-table-card">
@@ -182,29 +158,25 @@ const goToEdit = (item) => {
           <tr>
             <th>발주 코드</th>
             <th>발주 상태</th>
-            <th>제품 코드</th>
             <th>수량</th>
-            <th>발주일</th>
+            <th>금액</th>
+            <th>발주 생성일</th>
             <th>담당자 이름</th>
-            <th>담당자 전화번호</th>
-            <th>입고 날짜</th>
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="(row, idx) in flattenedOrders" 
-            :key="`${row.orderCode}-${row.product.productCode}`" 
-            @click="goToDetail(row)" 
-            :class="['clickable-row', { 'first-product-row': row.isFirstProduct, 'grouped-row': !row.isFirstProduct }]"
+          <tr
+            v-for="row in filteredOrders"
+            :key="row.orderCode"
+            @click="goToDetail(row)"
+            class="clickable-row"
           >
             <td class="sku-cell code-order">{{ row.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(row.orderStatus)]">{{ toStatusLabel(row.orderStatus) }}</span></td>
-            <td class="sku-cell small">{{ row.product.productCode }}</td>
-            <td>{{ row.product.quantity }}</td>
+            <td>{{ row.totalQuantity }}</td>
+            <td>{{ new Intl.NumberFormat('ko-KR').format(row.totalAmount) }}</td>
             <td>{{ row.orderDate }}</td>
             <td>{{ row.managerName }}</td>
-            <td>{{ row.managerPhone }}</td>
-            <td>{{ row.stockInDate }}</td>
           </tr>
         </tbody>
       </table>
@@ -231,11 +203,6 @@ const goToEdit = (item) => {
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .header-row h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
 .content-wrapper { max-width: 1400px; margin: 0 auto; }
-.summary-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-.summary-card { background: white; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); }
-.s-label { font-size: 0.9rem; color: var(--text-light); }
-.s-value { font-size: 1.75rem; font-weight: 700; margin: 0.5rem 0; }
-.summary-card.warn .s-value { color: #ef4444; }
 .add-btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
 
 /* Filter Styles */

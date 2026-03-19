@@ -232,7 +232,7 @@ const resolveStockNotificationRoute = (notif) => {
   }
 
   if (uiRole === 'factory') {
-    return '/hq/inventory/factory'
+    return '/factory/inventory'
   }
 
   if (targetId >= FRANCHISE_STOCK_ALERT_TARGET_BASE) {

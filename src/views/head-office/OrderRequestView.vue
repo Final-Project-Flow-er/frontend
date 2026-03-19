@@ -17,15 +17,22 @@ const totalPages = ref(0)
 const fetchOrders = async () => {
   try {
     const pageData = (await getRequestedOrders(false, { page: currentPage.value, size: pageSize.value })) || {}
-    orders.value = (pageData.content || []).map(item => ({
-      orderCode: item.orderCode,
-      status: item.status,
-      franchiseCode: item.franchiseCode,
-      receiver: item.receiver,
-      productCode: item.productCode,
-      quantity: item.quantity,
-      deliveryDate: formatDate(item.deliveryDate),
-    }))
+    // orderCode 기준으로 그룹핑, 수량 합산
+    const orderMap = {}
+    for (const item of (pageData.content || [])) {
+      if (!orderMap[item.orderCode]) {
+        orderMap[item.orderCode] = {
+          orderCode: item.orderCode,
+          status: item.status,
+          franchiseCode: item.franchiseCode,
+          receiver: item.receiver,
+          quantity: 0,
+          deliveryDate: formatDate(item.deliveryDate),
+        }
+      }
+      orderMap[item.orderCode].quantity += item.quantity
+    }
+    orders.value = Object.values(orderMap)
     totalPages.value = pageData.totalPages || 0
   } catch (e) {
     orders.value = []
@@ -55,7 +62,6 @@ const filter = ref({
   status: '',
   franchiseCode: '',
   receiver: '',
-  productCode: '',
   deliveryDate: '',
 })
 
@@ -83,7 +89,6 @@ const filteredOrders = computed(() => {
            (!filter.value.status || item.status === filter.value.status) &&
            (!filter.value.franchiseCode || item.franchiseCode.includes(filter.value.franchiseCode)) &&
            (!filter.value.receiver || item.receiver.includes(filter.value.receiver)) &&
-           (!filter.value.productCode || item.productCode.includes(filter.value.productCode)) &&
            (!filter.value.deliveryDate || item.deliveryDate === filter.value.deliveryDate)
   })
 })
@@ -212,10 +217,6 @@ const getStatusClass = (s) => ({
           <input type="text" v-model="filter.franchiseCode" placeholder="SE01" />
         </div>
         <div class="filter-group">
-          <label>제품 코드</label>
-          <input type="text" v-model="filter.productCode" placeholder="OR0101" />
-        </div>
-        <div class="filter-group">
           <label>수령인 이름</label>
           <input type="text" v-model="filter.receiver" />
         </div>
@@ -237,7 +238,6 @@ const getStatusClass = (s) => ({
             <th>발주 코드</th>
             <th>상태</th>
             <th>가맹점</th>
-            <th>제품 코드</th>
             <th>수령인</th>
             <th>수량</th>
             <th>배송 일자</th>
@@ -253,13 +253,12 @@ const getStatusClass = (s) => ({
             <td class="sku-cell code-order">{{ order.orderCode }}</td>
             <td><span :class="['status-tag', getStatusClass(order.status)]">{{ toStatusLabel(order.status) }}</span></td>
             <td>{{ order.franchiseCode }}</td>
-            <td class="sku-cell">{{ order.productCode }}</td>
             <td>{{ order.receiver }}</td>
             <td>{{ order.quantity }}</td>
             <td>{{ order.deliveryDate }}</td>
           </tr>
           <tr v-if="filteredOrders.length === 0">
-            <td :colspan="isSelectionMode ? 9 : 8" class="empty-cell">조회된 발주 요청이 없습니다.</td>
+            <td :colspan="isSelectionMode ? 8 : 7" class="empty-cell">조회된 발주 요청이 없습니다.</td>
           </tr>
         </tbody>
       </table>

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getFranchiseStock } from '@/api/franchiseInventory.js'
-import { getMyWorkplaceInfo } from '@/api/users.js'
+import { getOrderCreationInfo } from '@/api/franchiseOrders.js'
 
 const router = useRouter()
 
@@ -28,7 +28,11 @@ const products = ref([])
 
 onMounted(async () => {
   try {
-    const workplace = await getMyWorkplaceInfo()
+    const userInfo = await getOrderCreationInfo()
+    form.value.recipientName = userInfo.username || ''
+    form.value.recipientPhone = userInfo.phoneNumber || ''
+    form.value.recipientAddress = userInfo.address || ''
+
     const data = await getFranchiseStock()
     products.value = (data || []).map(p => ({
       code: p.productCode,
@@ -38,7 +42,7 @@ onMounted(async () => {
       stock: p.totalQuantity,
       safetyStock: p.safetyStock,
       recommendedStock: 0,
-      status: p.status,
+      status: (p.status === 0 || p.status == null) ? '품절' : p.status,
       actualQuantity: 0
     }))
   } catch (e) {
@@ -60,7 +64,8 @@ const getStatusClass = (s) => ({
   '위험': 'status-danger',
   '부족': 'status-warning',
   '입고 예정': 'status-info',
-  '안전': 'status-ok'
+  '안전': 'status-ok',
+  '품절': 'status-soldout'
 }[s] || '')
 
 
@@ -184,6 +189,7 @@ const isFormValid = computed(() => {
   <div class="content-wrapper">
     <div class="header-row">
       <h2>신규 발주 등록</h2>
+      <button @click="$router.back()" class="back-btn">뒤로가기</button>
     </div>
 
     <!-- 1. Product List Section -->
@@ -191,11 +197,6 @@ const isFormValid = computed(() => {
       <div class="section-header">
         <h3>상품 선택</h3>
         <div class="controls">
-          <label class="toggle-switch">
-            추천 재고
-            <input type="checkbox" v-model="showRecommendation" />
-            <span class="slider"></span>
-          </label>
         </div>
       </div>
 
@@ -209,9 +210,10 @@ const isFormValid = computed(() => {
           <option value="부족">부족</option>
           <option value="입고 예정">입고 예정</option>
           <option value="안전">안전</option>
+          <option value="품절">품절</option>
         </select>
         <select v-model="productFilter.flavor">
-          <option value="">매운맛 전체</option>
+          <option value="">맵기</option>
           <option v-for="level in ['순한맛', '기본맛', '매운맛', '아주 매운맛']" :key="level" :value="level">{{ level }}</option>
         </select>
       </div>
@@ -222,7 +224,7 @@ const isFormValid = computed(() => {
             <th>제품 코드</th>
             <th>제품명</th>
             <th>제품 상태</th>
-            <th>매운맛</th>
+            <th>맵기</th>
             <th>현 재고</th>
             <th>안전 재고</th>
             <th v-if="showRecommendation" class="rec-col">추천 재고</th>
@@ -252,12 +254,12 @@ const isFormValid = computed(() => {
       <div class="form-grid">
         <div class="form-group">
           <label>수령인 이름</label>
-          <input type="text" v-model="form.recipientName" placeholder="이름" @blur="validateName" />
+          <input type="text" v-model="form.recipientName" placeholder="이름" readonly disabled />
           <span v-if="nameError" class="field-error">{{ nameError }}</span>
         </div>
         <div class="form-group">
           <label>수령인 전화번호</label>
-          <input type="tel" v-model="form.recipientPhone" placeholder="010-0000-0000" maxlength="13" @input="formatPhone" @blur="validatePhone" />
+          <input type="tel" v-model="form.recipientPhone" placeholder="010-0000-0000" readonly disabled />
           <span v-if="phoneError" class="field-error">{{ phoneError }}</span>
         </div>
         <div class="form-group">
@@ -266,7 +268,7 @@ const isFormValid = computed(() => {
         </div>
         <div class="form-group full-width">
           <label>수령 주소</label>
-          <input type="text" v-model="form.recipientAddress" placeholder="주소 입력" />
+          <input type="text" v-model="form.recipientAddress" placeholder="주소 입력" readonly disabled />
         </div>
         <div class="form-group full-width">
           <label>요구사항</label>
@@ -284,7 +286,10 @@ const isFormValid = computed(() => {
 
 <style scoped>
 .field-error { color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem; display: block; }
-.header-row { margin-bottom: 1.5rem; }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.header-row h2 { margin: 0; }
+.back-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-light); transition: all 0.2s; }
+.back-btn:hover { border-color: var(--text-light); color: var(--text-dark); }
 .content-wrapper { max-width: 1000px; margin: 0 auto; padding-bottom: 4rem; }
 
 .section-card { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; }
@@ -310,6 +315,7 @@ const isFormValid = computed(() => {
 .status-warning { background: #fef3c7; color: #92400e; }
 .status-info { background: #dbeafe; color: #1e40af; }
 .status-danger { background: #fee2e2; color: #991b1b; }
+.status-soldout { background: #f3f4f6; color: #6b7280; }
 
 /* Checkbox Toggle */
 .toggle-switch { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; }

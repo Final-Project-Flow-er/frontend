@@ -1,14 +1,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { updateOrderStatus, getRequestedOrders } from '@/api/hqOrders.js'
+import { updateOrderStatus, getRequestedOrders, checkIsPossible } from '@/api/hqOrders.js'
 
 const router = useRouter()
 
 const formatDate = (iso) => iso ? iso.replace('T', ' ').substring(0, 10) : ''
 
-// 1. Central Inventory (재고 API 미연동 — 추후 연동 필요)
-const centralStock = ref({})
+// 1. 가불 여부 판정 맵 { [orderCode]: boolean }
+const possibleMap = ref({})
 
 // 2. Orders (실제 API 로드)
 const orders = ref([])
@@ -23,7 +23,7 @@ const fetchOrders = async () => {
     const pageData = await getRequestedOrders(true, { page: currentPage.value, size: pageSize.value })
     const data = pageData?.content || []
     totalPages.value = pageData?.totalPages || 0
-    // 평탄화된 응답을 orderCode 기준으로 그룹화
+    // 평탄화된 응답을 orderCode 기준으로 그룹화, 수량 합산
     const orderMap = {}
     data.forEach(item => {
       if (!orderMap[item.orderCode]) {
@@ -36,20 +36,22 @@ const fetchOrders = async () => {
           orderDate: '-',
           arrivalDate: formatDate(item.deliveryDate),
           status: item.status,
-          products: []
+          totalQuantity: 0
         }
       }
-      orderMap[item.orderCode].products.push({
-        productCode: item.productCode,
-        quantity: item.quantity,
-        amount: 0,
-        status: item.status
-      })
+      orderMap[item.orderCode].totalQuantity += item.quantity
     })
     orders.value = Object.values(orderMap)
+
+    // 가불 여부 판정
+    const orderCodes = Object.keys(orderMap)
+    if (orderCodes.length > 0) {
+      const result = await checkIsPossible(orderCodes)
+      result.forEach(r => { possibleMap.value[r.orderCode] = r.isPossible })
+    }
   } catch (e) {
     orders.value = []
-    centralStock.value = {}
+    possibleMap.value = {}
   }
 }
 
@@ -75,8 +77,6 @@ onMounted(() => fetchOrders())
 const filter = ref({
   orderCode: '',
   franchiseCode: '',
-  recipientName: '',
-  productCode: '',
   status: ''
 })
 
@@ -84,110 +84,36 @@ const filter = ref({
 const selectedRowKeys = ref([])
 const selectionMode = ref(null)
 
-// Core Logic 1: Flattening
-const flattenedRows = computed(() => {
-  return orders.value.flatMap(order => {
-    return order.products.map((product, index) => ({
-      rowKey: `${order.id}-${index}`,
-      orderId: order.id,
-      orderCode: order.orderCode,
-      franchiseCode: order.franchiseCode,
-      recipientName: order.recipientName,
-      recipientPhone: order.recipientPhone,
-      orderDate: order.orderDate,
-      arrivalDate: order.arrivalDate,
-      productIndex: index,
-      productCode: product.productCode,
-      quantity: product.quantity,
-      unitAmount: product.amount,
-      totalAmount: product.quantity * product.amount,
-      status: product.status
-    }))
-  })
-})
-
-// Core Logic 2: Filtering
+// Core Logic 1: Filtering
 const filteredRows = computed(() => {
-  return flattenedRows.value.filter(row => {
-    return (!filter.value.orderCode || row.orderCode.includes(filter.value.orderCode)) &&
-        (!filter.value.franchiseCode || row.franchiseCode.includes(filter.value.franchiseCode)) &&
-        (!filter.value.recipientName || row.recipientName.includes(filter.value.recipientName)) &&
-        (!filter.value.productCode || row.productCode.includes(filter.value.productCode)) &&
-        (!filter.value.status || row.status === filter.value.status)
+  return orders.value.filter(order => {
+    return (!filter.value.orderCode || order.orderCode.includes(filter.value.orderCode)) &&
+        (!filter.value.franchiseCode || order.franchiseCode.includes(filter.value.franchiseCode)) &&
+        (!filter.value.status || order.status === filter.value.status)
   })
 })
 
-// Core Logic 3: Stock Reservation
-const currentReservedStock = computed(() => {
-  const reservation = {}
-  selectedRowKeys.value.forEach(key => {
-    const row = flattenedRows.value.find(r => r.rowKey === key)
-    if (row) {
-      reservation[row.productCode] = (reservation[row.productCode] || 0) + row.quantity
-    }
-  })
-  return reservation
-})
-
+// Core Logic 3: Stock Reservation (placeholder)
 const getRowAvailability = (row) => {
   if (row.status !== 'PENDING') return null
-  const stock = centralStock.value[row.productCode] || 0
-  const reservedTotal = currentReservedStock.value[row.productCode] || 0
-  const isSelected = selectedRowKeys.value.includes(row.rowKey)
-  const required = isSelected ? reservedTotal : (reservedTotal + row.quantity)
-
-  if (stock >= required) return 'possible'
-  if (stock > 0) return 'partial'
-  return 'impossible'
+  const isPossible = possibleMap.value[row.orderCode]
+  return isPossible ? 'possible' : 'impossible'
 }
 
 // Core Logic 4: Actions
-const updateParentOrderStatus = (orderId) => {
-  const order = orders.value.find(o => o.id === orderId)
-  if (!order) return
-  const statuses = order.products.map(p => p.status)
-  if (statuses.every(s => s === 'ACCEPTED')) order.status = 'ACCEPTED'
-  else if (statuses.every(s => s === 'REJECTED')) order.status = 'REJECTED'
-  else if (statuses.every(s => s === 'PENDING')) order.status = 'PENDING'
-  else order.status = 'PARTIAL'
-}
-
 const confirmAccept = async () => {
   if (selectedRowKeys.value.length === 0) {
     alert('접수할 항목을 선택해주세요.')
     return
   }
-  const impossible = selectedRowKeys.value.find(key => {
-    const row = flattenedRows.value.find(r => r.rowKey === key)
-    return getRowAvailability(row) === 'impossible'
-  })
-  if (impossible) {
-    alert('재고가 부족한 항목이 포함되어 있습니다.')
-    return
-  }
 
-  const orderCodes = [...new Set(selectedRowKeys.value.map(key => {
-    const row = flattenedRows.value.find(r => r.rowKey === key)
-    return row?.orderCode
-  }).filter(Boolean))]
+  const orderCodes = [...selectedRowKeys.value]
 
   try {
     await updateOrderStatus({ orderCodes, isAccepted: true })
-    selectedRowKeys.value.forEach(key => {
-      const row = flattenedRows.value.find(r => r.rowKey === key)
-      if (row) {
-        if (centralStock.value[row.productCode] >= row.quantity) {
-          centralStock.value[row.productCode] -= row.quantity
-        }
-        const order = orders.value.find(o => o.id === row.orderId)
-        if (order) {
-          order.products[row.productIndex].status = 'ACCEPTED'
-          updateParentOrderStatus(order.id)
-        }
-      }
-    })
     alert('선택한 항목이 접수되었습니다.')
     cancelSelection()
+    await fetchOrders()
   } catch (e) {
     alert(e.message || '접수 처리에 실패했습니다.')
   }
@@ -200,25 +126,13 @@ const confirmReject = async () => {
   }
   if (!confirm('선택한 항목을 반려하시겠습니까?')) return
 
-  const orderCodes = [...new Set(selectedRowKeys.value.map(key => {
-    const row = flattenedRows.value.find(r => r.rowKey === key)
-    return row?.orderCode
-  }).filter(Boolean))]
+  const orderCodes = [...selectedRowKeys.value]
 
   try {
     await updateOrderStatus({ orderCodes, isAccepted: false })
-    selectedRowKeys.value.forEach(key => {
-      const row = flattenedRows.value.find(r => r.rowKey === key)
-      if (row) {
-        const order = orders.value.find(o => o.id === row.orderId)
-        if (order) {
-          order.products[row.productIndex].status = 'REJECTED'
-          updateParentOrderStatus(order.id)
-        }
-      }
-    })
     alert('선택한 항목이 반려되었습니다.')
     cancelSelection()
+    await fetchOrders()
   } catch (e) {
     alert(e.message || '반려 처리에 실패했습니다.')
   }
@@ -231,20 +145,16 @@ const enterRejectMode = () => { selectionMode.value = 'reject'; selectedRowKeys.
 const cancelSelection = () => { selectionMode.value = null; selectedRowKeys.value = [] }
 const toggleSelectAll = (e) => {
   if (e.target.checked) {
-    selectedRowKeys.value = filteredRows.value.filter(r => r.status === 'PENDING').map(r => r.rowKey)
+    selectedRowKeys.value = filteredRows.value.filter(r => r.status === 'PENDING').map(r => r.orderCode)
   } else {
     selectedRowKeys.value = []
   }
 }
-const toggleOrderGroup = (row, e) => {
-  const sameOrderKeys = filteredRows.value
-    .filter(r => r.orderCode === row.orderCode && r.status === 'PENDING')
-    .map(r => r.rowKey)
+const toggleRow = (row, e) => {
   if (e.target.checked) {
-    const merged = new Set([...selectedRowKeys.value, ...sameOrderKeys])
-    selectedRowKeys.value = [...merged]
+    selectedRowKeys.value = [...selectedRowKeys.value, row.orderCode]
   } else {
-    selectedRowKeys.value = selectedRowKeys.value.filter(k => !sameOrderKeys.includes(k))
+    selectedRowKeys.value = selectedRowKeys.value.filter(k => k !== row.orderCode)
   }
 }
 const ORDER_STATUS_LABEL = {
@@ -308,14 +218,6 @@ const goToDetail = (row) => {
           <input type="text" v-model="filter.franchiseCode" placeholder="SE01" />
         </div>
         <div class="filter-group">
-          <label>수령인</label>
-          <input type="text" v-model="filter.recipientName" placeholder="검색..." />
-        </div>
-        <div class="filter-group">
-          <label>제품 코드</label>
-          <input type="text" v-model="filter.productCode" placeholder="검색..." />
-        </div>
-        <div class="filter-group">
           <label>제품 상태</label>
           <select v-model="filter.status">
             <option value="">전체</option>
@@ -335,43 +237,30 @@ const goToDetail = (row) => {
           </th>
           <th>발주 코드</th>
           <th>가맹점</th>
-          <th>수령인</th>
-          <th>제품 코드</th>
-          <th>제품 상태</th>
           <th>수량</th>
-          <th>현재고</th>
+          <th>상태</th>
           <th>가불 여부</th>
-          <th>도착 예정일</th>
+          <th>배송 요청일</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="row in filteredRows" :key="row.rowKey"
-            :class="{ 'selected-row': selectedRowKeys.includes(row.rowKey) }"
+        <tr v-for="row in filteredRows" :key="row.orderCode"
+            :class="{ 'selected-row': selectedRowKeys.includes(row.orderCode) }"
             @click="goToDetail(row)"
             style="cursor: pointer;">
 
           <td v-if="selectionMode" @click.stop>
             <input type="checkbox"
-                   :checked="selectedRowKeys.includes(row.rowKey)"
-                   @change="toggleOrderGroup(row, $event)"
+                   :checked="selectedRowKeys.includes(row.orderCode)"
+                   @change="toggleRow(row, $event)"
                    :disabled="row.status !== 'PENDING'" />
           </td>
 
           <td class="sku-cell code-order">{{ row.orderCode }}</td>
           <td>{{ row.franchiseCode }}</td>
-          <td>{{ row.recipientName }}</td>
-
-          <!-- 여기 .sku-cell 클래스가 파란색을 적용합니다 -->
-          <td class="sku-cell">{{ row.productCode }}</td>
-
+          <td class="text-right">{{ row.totalQuantity }}</td>
           <td>
             <span :class="['status-tag', getStatusClass(row.status)]">{{ toStatusLabel(row.status) }}</span>
-          </td>
-          <td class="text-right">{{ row.quantity }}</td>
-          <td class="text-right">
-              <span :class="{ 'low-stock': (centralStock[row.productCode] || 0) < 10 }">
-                {{ centralStock[row.productCode] || 0 }}
-              </span>
           </td>
           <td>
             <template v-if="row.status === 'PENDING'">
@@ -384,7 +273,8 @@ const goToDetail = (row) => {
           <td>{{ row.arrivalDate }}</td>
         </tr>
         <tr v-if="filteredRows.length === 0">
-          <td :colspan="selectionMode ? 11 : 10" class="empty-cell">데이터가 없습니다.</td>
+          <td :colspan="selectionMode ? 7 : 6" class="empty-cell">데이터가 없습니다.</td>
+
         </tr>
         </tbody>
       </table>

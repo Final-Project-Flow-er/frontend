@@ -148,13 +148,13 @@ table.org-table tbody tr:hover {
 }
 
 /* 확장 행(박스코드 상세)은 본사 로그 기준으로 좌측 정렬 유지 */
-.table-container table tbody tr.expanded-row > td,
-.table-outer-container table tbody tr.expanded-row > td,
-table.data-table tbody tr.expanded-row > td,
-table.logistics-table tbody tr.expanded-row > td,
-table.log-table tbody tr.expanded-row > td,
-table.member-table tbody tr.expanded-row > td,
-table.org-table tbody tr.expanded-row > td {
+.table-container table tbody tr.expanded-row>td,
+.table-outer-container table tbody tr.expanded-row>td,
+table.data-table tbody tr.expanded-row>td,
+table.logistics-table tbody tr.expanded-row>td,
+table.log-table tbody tr.expanded-row>td,
+table.member-table tbody tr.expanded-row>td,
+table.org-table tbody tr.expanded-row>td {
   text-align: left !important;
 }
 
@@ -388,4 +388,17 @@ table.org-table td.minus {
 .registration-header h1 {
   font-weight: 700 !important;
   color: #0f172a !important;
+}
+
+/* Chrome, Safari, Edge, Opera: number input 화살표 제거 */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox: number input 화살표 제거 */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: none;
 }

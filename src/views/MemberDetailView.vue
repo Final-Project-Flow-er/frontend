@@ -103,6 +103,7 @@
                 <input 
                   type="date" 
                   v-model="member.birthdate" 
+                  :max="today"
                   :disabled="!isEditing"
                   :class="{ 'input-disabled': !isEditing }"
                 >
@@ -209,6 +210,7 @@ const route = useRoute()
 const userManagementStore = useUserManagementStore()
 const photoInput = ref(null)
 const selectedPhotoFile = ref(null)
+const today = new Date().toISOString().split('T')[0]
 
 const isEditing = ref(false)
 const isLoading = ref(true)

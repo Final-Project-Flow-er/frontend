@@ -157,6 +157,7 @@ const menuGroups = ref([
     items: [
       { name: '입고 관리', path: '/factory/inbound' },
       { name: '출고 관리', path: '/factory/outbound' },
+      { name: '재고 관리', path: '/factory/inventory' },
       {
         name: '발주 관리',
         isOpen: false,

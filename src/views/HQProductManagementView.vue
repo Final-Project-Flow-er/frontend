@@ -2,11 +2,6 @@
   <div class="content-wrapper">
     <div class="header-row">
       <h2>본사 상품 관리</h2>
-      <div class="header-actions">
-        <!-- Add Buttons -->
-        <button class="action-btn secondary mr-1" @click="openTypeModal">상품 타입 추가</button>
-        <button class="action-btn primary" @click="openAddModal">상품 추가</button>
-      </div>
     </div>
 
     <!-- Filter Section -->
@@ -37,13 +32,16 @@
           <option value="03">3~4인분</option>
         </select>
       </div>
-      <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-          <path d="M3 3v5h5"></path>
-        </svg>
-        초기화
-      </button>
+      <div class="filter-actions">
+        <button type="button" class="btn-reset-filters" @click="resetFilters" title="필터 초기화">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          초기화
+        </button>
+        <button type="button" class="action-btn primary" @click="openAddModal">상품 추가</button>
+      </div>
     </div>
 
     <!-- Product Card Grid -->
@@ -104,7 +102,17 @@
           <!-- Row 1: Basic Info -->
           <div class="form-row three-col">
              <div class="form-group">
-              <label>상품 타입</label>
+              <div class="field-label-row">
+                <label>상품 타입</label>
+                <button
+                  v-if="!isEditMode"
+                  type="button"
+                  class="inline-add-type-btn"
+                  @click="openTypeModal"
+                >
+                  타입 추가
+                </button>
+              </div>
               <select v-model="form.type" :disabled="isEditMode" @change="updateCodeAndName">
                 <option v-for="t in productTypes" :key="t.code" :value="t.code">{{ t.name }}</option>
               </select>
@@ -284,21 +292,6 @@
       </div>
     </div>
 
-    <!-- Admin Password Verification Popup -->
-    <div v-if="showPasswordPopup" class="modal-overlay">
-      <div class="modal-content type-modal">
-        <h3>관리자 확인</h3>
-        <p class="modal-hint">관리자 비밀번호를 입력하세요.</p>
-        <div class="form-group">
-          <input type="password" v-model="adminPassword" placeholder="비밀번호 입력" @keyup.enter="handlePasswordConfirmation" />
-        </div>
-        <div class="modal-actions">
-          <button @click="closePasswordPopup">취소</button>
-          <button class="primary" @click="handlePasswordConfirmation">확인</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -326,12 +319,9 @@ const showModal = ref(false)
 const showTypeModal = ref(false)
 const showComponentModal = ref(false)
 const isEditMode = ref(false)
+const MAX_IMAGE_SIZE_MB = 10
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
-// Admin Password State
-const showPasswordPopup = ref(false)
-const adminPassword = ref('')
-const pendingAction = ref(null) // 'ADD_PRODUCT', 'EDIT_PRODUCT', 'ADD_TYPE'
-const pendingData = ref(null)
 const fileInput = ref(null)
 
 
@@ -500,54 +490,7 @@ const updateCodeAndName = () => {
     form.value.weight = sz === '01' ? 500 : 1000
 }
 
-// Password Verification Logic
-const requestVerification = (action, data = null) => {
-    pendingAction.value = action
-    pendingData.value = data
-    adminPassword.value = ''
-    showPasswordPopup.value = true
-}
-
-const handlePasswordConfirmation = async () => {
-    if (!adminPassword.value?.trim()) {
-        alert('비밀번호를 입력해주세요.')
-        return
-    }
-
-    try {
-        const res = await api.post('/hq/inventory/verify-password', {
-            password: adminPassword.value
-        })
-
-        if (res.data?.data) {
-            showPasswordPopup.value = false
-            if (pendingAction.value === 'ADD_PRODUCT') executeOpenAddModal()
-            else if (pendingAction.value === 'EDIT_PRODUCT') executeOpenEditModal(pendingData.value)
-            else if (pendingAction.value === 'ADD_TYPE') executeOpenTypeModal()
-            pendingAction.value = null
-            pendingData.value = null
-            adminPassword.value = ''
-            return
-        }
-
-        alert('비밀번호가 틀렸습니다.')
-    } catch (err) {
-        console.error('비밀번호 확인 실패:', err)
-        alert('비밀번호 확인 중 오류가 발생했습니다.')
-    }
-}
-
-const closePasswordPopup = () => {
-    showPasswordPopup.value = false
-    pendingAction.value = null
-    pendingData.value = null
-}
-
 const openAddModal = () => {
-  requestVerification('ADD_PRODUCT')
-}
-
-const executeOpenAddModal = () => {
   isEditMode.value = false
   form.value = {
       ...createDefaultForm(),
@@ -559,10 +502,6 @@ const executeOpenAddModal = () => {
 }
 
 const openEditModal = (product) => {
-    requestVerification('EDIT_PRODUCT', product)
-}
-
-const executeOpenEditModal = (product) => {
   isEditMode.value = true
   // Deconstruct code to fill form
   const type = product.productCode.substring(0, 2)
@@ -764,10 +703,6 @@ const saveProduct = async () => {
 
 // Type Modal Logic
 const openTypeModal = () => {
-    requestVerification('ADD_TYPE')
-}
-
-const executeOpenTypeModal = () => {
     typeForm.value = { name: '', code: '' }
     showTypeModal.value = true
 }
@@ -787,16 +722,23 @@ const addType = async () => {
     }
     
     try {
+        const addedCode = typeForm.value.code.toUpperCase()
+        const addedName = typeForm.value.name
+
         await api.post('/hq/product/product-types', null, {
             params: {
-                type: typeForm.value.code.toUpperCase(),
-                productName: typeForm.value.name
+                type: addedCode,
+                productName: addedName
             }
         })
         productTypes.value.push({
-            name: typeForm.value.name,
-            code: typeForm.value.code.toUpperCase()
+            name: addedName,
+            code: addedCode
         })
+        if (showModal.value && !isEditMode.value) {
+            form.value.type = addedCode
+            updateCodeAndName()
+        }
         alert(`신규 타입 [${typeForm.value.name}]이 추가되었습니다.`)
         closeTypeModal()
     } catch (err) {
@@ -808,8 +750,8 @@ const addType = async () => {
 const handleImageUpload = (event) => {
     const file = event.target.files[0]
     if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-            alert('이미지 크기는 2MB를 초과할 수 없습니다.')
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+            alert(`이미지 크기는 ${MAX_IMAGE_SIZE_MB}MB를 초과할 수 없습니다.`)
             if (fileInput.value) {
                 fileInput.value.value = ''
             }
@@ -836,6 +778,7 @@ const handleImageUpload = (event) => {
   background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap;
 }
 .filter-group { display: flex; flex-direction: column; gap: 0.5rem; min-width: 150px; }
+.filter-actions { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
 .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 .filter-group input, .filter-group select { padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
 .search-btn { background: var(--text-dark); color: white; border: none; padding: 0.6rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 600; height: 42px; margin-left: auto; }
@@ -868,7 +811,6 @@ const handleImageUpload = (event) => {
 .edit-btn:hover { background: #f8fafc; }
 .action-btn.primary { background: var(--primary); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; }
 .action-btn.secondary { background: white; color: var(--text-dark); border: 1px solid var(--border-color); padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; }
-.mr-1 { margin-right: 0.5rem; }
 
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
@@ -882,8 +824,11 @@ const handleImageUpload = (event) => {
 .form-group { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
 .form-group.flex-2 { flex: 2; }
 .form-group.full-width { width: 100%; margin-bottom: 1rem; }
+.field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: #64748b; }
 .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; }
+.inline-add-type-btn { border: 1px solid var(--border-color); background: #fff; color: #334155; border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+.inline-add-type-btn:hover { background: #f8fafc; }
 .readonly-input { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; cursor: not-allowed; }
 .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
 .modal-actions button { padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: 600; }

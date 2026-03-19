@@ -50,8 +50,7 @@
                   <input
                     type="text"
                     v-model="companyData.address"
-                    placeholder="주소를 검색하세요"
-                    readonly
+                    placeholder="주소를 검색하거나 직접 입력하세요"
                     @click="openPostcode"
                   >
                   <button type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>
@@ -108,11 +107,11 @@
                 >
               </div>
               <div class="form-group">
-                <label>운송 단가 (원/km) <span class="required">*</span></label>
+                <label>운송 단가 (원) <span class="required">*</span></label>
                 <input
                   type="number"
                   v-model.number="companyData.unitPrice"
-                  placeholder="km당 운송 단가를 입력하세요"
+                  placeholder="운송 단가를 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -195,11 +194,11 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>최대 적재량 (톤 단위) <span class="required">*</span></label>
+                <label>최대 적재량 (kg 단위) <span class="required">*</span></label>
                 <input
                   type="number"
                   v-model.number="vehicleData.maxLoad"
-                  placeholder="최대 적재 중량을 입력하세요"
+                  placeholder="최대 적재 중량(kg)을 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -249,17 +248,21 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import TransportSelectionModal from './TransportSelectionModal.vue'
 import api from '@/api/index'
 
 const router = useRouter()
+const route = useRoute()
 const registrationType = ref('company')
 const dateError = ref('')
 
 const companies = ref([])
 
 onMounted(async () => {
+  if (route.query.type) {
+    registrationType.value = route.query.type
+  }
   await fetchCompanies()
 })
 

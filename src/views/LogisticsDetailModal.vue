@@ -46,8 +46,8 @@
               <span class="value">{{ data.ownedVehicles }}대</span>
             </div>
             <div class="info-item">
-              <span class="label">운송 단가</span>
-              <span class="value">{{ data.unitPrice?.toLocaleString() }} 원/km</span>
+              <span class="label">운송 단가 (원)</span>
+              <span class="value">{{ data.unitPrice?.toLocaleString() }}</span>
             </div>
             <div class="info-item">
               <span class="label">계약 시작일</span>
@@ -74,8 +74,8 @@
               <span class="value">{{ getVehicleTypeText(data.vehicleType) }}</span>
             </div>
             <div class="info-item">
-              <span class="label">최대 적재량</span>
-              <span class="value">{{ data.maxLoad }}</span>
+              <span class="label">최대 적재량(kg)</span>
+              <span class="value">{{ data.maxLoad }}kg</span>
             </div>
             <div class="info-item">
               <span class="label">운전자명</span>
@@ -106,7 +106,7 @@
             <div class="form-group full-width">
               <label>사업장 주소 <span class="required">*</span></label>
               <div class="address-input-group">
-                <input type="text" v-model="formData.address" required readonly @click="isEditMode && openPostcode()">
+                <input type="text" v-model="formData.address" required placeholder="주소를 직접 입력하거나 검색하세요" @click="isEditMode && openPostcode()">
                 <button v-if="isEditMode" type="button" @click="openPostcode" class="btn-address">주소 검색</button>
               </div>
               <input 
@@ -148,7 +148,7 @@
               <input type="number" v-model="formData.ownedVehicles" required>
             </div>
             <div class="form-group">
-              <label>운송 단가 (원/km) <span class="required">*</span></label>
+              <label>운송 단가 (원) <span class="required">*</span></label>
               <input type="number" v-model="formData.unitPrice" required>
             </div>
             <div class="form-group">
@@ -188,7 +188,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>최대 적재량 (카) <span class="required">*</span></label>
+              <label>최대 적재량 (kg) <span class="required">*</span></label>
               <input type="number" v-model.number="formData.maxLoad" min="0" required>
             </div>
             <div class="form-group">

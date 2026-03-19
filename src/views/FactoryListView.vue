@@ -244,17 +244,17 @@ watch(() => [filters.status, filters.region, filters.searchQuery], () => {
 
 const fetchOrganizations = async () => {
   try {
-    const isCode = /^[A-Z0-9]+$/i.test(filters.keyword)
-
+    const kw = filters.keyword?.trim() || null
+    const sub = filters.subKeyword?.trim() || null
     const params = {
       page: currentPage.value,
       size: pageSize.value,
       status: filters.status === 'all' ? null : filters.status,
       region: filters.region === 'all' ? null : filters.region,
-      code: isCode ? filters.keyword || null : null,
-      name: !isCode ? filters.keyword || null : null,
-      representativeName: (filters.subKeyword && isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
-      businessNumber: (filters.subKeyword && !isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null
+      name: kw,
+      code: kw,
+      representativeName: sub,
+      businessNumber: sub
     }
     
     const response = await api.get('/hq/business-units/FACTORY', { params })

@@ -29,7 +29,7 @@ const filter = ref({
   spiciness: ''
 })
 
-const statuses = ['위험', '부족', '입고 예정', '안전']
+const statuses = ['위험', '부족', '입고 예정', '안전', '품절']
 const spicinessLevels = ['순한맛', '기본맛', '매운맛', '아주 매운맛']
 
 // Filtered Stock Logic
@@ -49,7 +49,7 @@ onMounted(async () => {
       id: s.productId,
       code: s.productCode,
       name: s.productName,
-      status: statusMap[s.status] || s.status || '',
+      status: (s.status == null || s.status === 0) ? '품절' : (statusMap[s.status] || s.status || ''),
       spiciness: parseSpicinessFromName(s.productName),
       current: s.totalQuantity ?? 0,
       safety: s.safetyStock ?? 0,
@@ -89,7 +89,8 @@ const getStatusClass = (s) => ({
   '위험': 'status-danger',
   '부족': 'status-warning',
   '입고 예정': 'status-info',
-  '안전': 'status-ok'
+  '안전': 'status-ok',
+  '품절': 'status-soldout'
 }[s] || '')
 
 const createOrder = async () => {
@@ -155,7 +156,7 @@ const createOrder = async () => {
           </select>
         </div>
         <div class="filter-group">
-          <label>매운맛</label>
+          <label>맵기</label>
           <select v-model="filter.spiciness">
             <option value="">전체</option>
             <option v-for="s in spicinessLevels" :key="s" :value="s">{{ s }}</option>
@@ -171,7 +172,7 @@ const createOrder = async () => {
               <th>제품 코드</th>
               <th>제품명</th>
               <th>상태</th>
-              <th>매운맛</th>
+              <th>맵기</th>
               <th class="num-col">현 재고</th>
               <th class="num-col">안전 재고</th>
               <th class="qty-col">실 수량 (발주)</th>
@@ -283,6 +284,7 @@ const createOrder = async () => {
 .status-warning { background: #fef3c7; color: #92400e; }
 .status-info { background: #dbeafe; color: #1e40af; }
 .status-ok { background: #d1fae5; color: #065f46; }
+.status-soldout { background: #f1f5f9; color: #64748b; }
 
 /* Form */
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
