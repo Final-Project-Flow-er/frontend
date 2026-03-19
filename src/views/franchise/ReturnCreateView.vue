@@ -122,6 +122,7 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
   <div class="content-wrapper">
     <div class="header-row">
       <h2>반품 요청 등록</h2>
+      <button @click="$router.back()" class="back-btn">뒤로가기</button>
     </div>
 
     <div class="form-card">
@@ -235,8 +236,10 @@ const formatPrice = (p) => new Intl.NumberFormat('ko-KR').format(p)
 
 <style scoped>
 .content-wrapper { max-width: 900px; margin: 0 auto; padding-bottom: 4rem; }
-.header-row { margin-bottom: 2rem; }
-.header-row h2 { font-size: 1.5rem; color: var(--text-dark); }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-row h2 { font-size: 1.5rem; color: var(--text-dark); margin: 0; }
+.back-btn { background: white; border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-light); transition: all 0.2s; }
+.back-btn:hover { border-color: var(--text-light); color: var(--text-dark); }
 
 .form-card { background: white; padding: 2.5rem; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
 
