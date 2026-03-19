@@ -23,7 +23,7 @@ const fetchOrders = async () => {
     const pageData = await getRequestedOrders(true, { page: currentPage.value, size: pageSize.value })
     const data = pageData?.content || []
     totalPages.value = pageData?.totalPages || 0
-    // 평탄화된 응답을 orderCode 기준으로 그룹화
+    // 평탄화된 응답을 orderCode 기준으로 그룹화, 수량 합산
     const orderMap = {}
     data.forEach(item => {
       if (!orderMap[item.orderCode]) {
@@ -36,15 +36,10 @@ const fetchOrders = async () => {
           orderDate: '-',
           arrivalDate: formatDate(item.deliveryDate),
           status: item.status,
-          products: []
+          totalQuantity: 0
         }
       }
-      orderMap[item.orderCode].products.push({
-        productCode: item.productCode,
-        quantity: item.quantity,
-        amount: 0,
-        status: item.status
-      })
+      orderMap[item.orderCode].totalQuantity += item.quantity
     })
     orders.value = Object.values(orderMap)
 
@@ -89,25 +84,12 @@ const filter = ref({
 const selectedRowKeys = ref([])
 const selectionMode = ref(null)
 
-// Core Logic 1: 주문 단위 행
-const flattenedRows = computed(() => {
-  return orders.value.map(order => ({
-    rowKey: order.orderCode,
-    orderId: order.id,
-    orderCode: order.orderCode,
-    franchiseCode: order.franchiseCode,
-    arrivalDate: order.arrivalDate,
-    quantity: order.products.reduce((sum, p) => sum + p.quantity, 0),
-    status: order.status
-  }))
-})
-
-// Core Logic 2: Filtering
+// Core Logic 1: Filtering
 const filteredRows = computed(() => {
-  return flattenedRows.value.filter(row => {
-    return (!filter.value.orderCode || row.orderCode.includes(filter.value.orderCode)) &&
-        (!filter.value.franchiseCode || row.franchiseCode.includes(filter.value.franchiseCode)) &&
-        (!filter.value.status || row.status === filter.value.status)
+  return orders.value.filter(order => {
+    return (!filter.value.orderCode || order.orderCode.includes(filter.value.orderCode)) &&
+        (!filter.value.franchiseCode || order.franchiseCode.includes(filter.value.franchiseCode)) &&
+        (!filter.value.status || order.status === filter.value.status)
   })
 })
 
@@ -125,10 +107,7 @@ const confirmAccept = async () => {
     return
   }
 
-  const orderCodes = selectedRowKeys.value.map(key => {
-    const row = flattenedRows.value.find(r => r.rowKey === key)
-    return row?.orderCode
-  }).filter(Boolean)
+  const orderCodes = [...selectedRowKeys.value]
 
   try {
     await updateOrderStatus({ orderCodes, isAccepted: true })
@@ -147,10 +126,7 @@ const confirmReject = async () => {
   }
   if (!confirm('선택한 항목을 반려하시겠습니까?')) return
 
-  const orderCodes = selectedRowKeys.value.map(key => {
-    const row = flattenedRows.value.find(r => r.rowKey === key)
-    return row?.orderCode
-  }).filter(Boolean)
+  const orderCodes = [...selectedRowKeys.value]
 
   try {
     await updateOrderStatus({ orderCodes, isAccepted: false })
@@ -169,16 +145,16 @@ const enterRejectMode = () => { selectionMode.value = 'reject'; selectedRowKeys.
 const cancelSelection = () => { selectionMode.value = null; selectedRowKeys.value = [] }
 const toggleSelectAll = (e) => {
   if (e.target.checked) {
-    selectedRowKeys.value = filteredRows.value.filter(r => r.status === 'PENDING').map(r => r.rowKey)
+    selectedRowKeys.value = filteredRows.value.filter(r => r.status === 'PENDING').map(r => r.orderCode)
   } else {
     selectedRowKeys.value = []
   }
 }
 const toggleRow = (row, e) => {
   if (e.target.checked) {
-    selectedRowKeys.value = [...selectedRowKeys.value, row.rowKey]
+    selectedRowKeys.value = [...selectedRowKeys.value, row.orderCode]
   } else {
-    selectedRowKeys.value = selectedRowKeys.value.filter(k => k !== row.rowKey)
+    selectedRowKeys.value = selectedRowKeys.value.filter(k => k !== row.orderCode)
   }
 }
 const ORDER_STATUS_LABEL = {
@@ -268,21 +244,21 @@ const goToDetail = (row) => {
         </tr>
         </thead>
         <tbody>
-        <tr v-for="row in filteredRows" :key="row.rowKey"
-            :class="{ 'selected-row': selectedRowKeys.includes(row.rowKey) }"
+        <tr v-for="row in filteredRows" :key="row.orderCode"
+            :class="{ 'selected-row': selectedRowKeys.includes(row.orderCode) }"
             @click="goToDetail(row)"
             style="cursor: pointer;">
 
           <td v-if="selectionMode" @click.stop>
             <input type="checkbox"
-                   :checked="selectedRowKeys.includes(row.rowKey)"
+                   :checked="selectedRowKeys.includes(row.orderCode)"
                    @change="toggleRow(row, $event)"
                    :disabled="row.status !== 'PENDING'" />
           </td>
 
           <td class="sku-cell code-order">{{ row.orderCode }}</td>
           <td>{{ row.franchiseCode }}</td>
-          <td class="text-right">{{ row.quantity }}</td>
+          <td class="text-right">{{ row.totalQuantity }}</td>
           <td>
             <span :class="['status-tag', getStatusClass(row.status)]">{{ toStatusLabel(row.status) }}</span>
           </td>
