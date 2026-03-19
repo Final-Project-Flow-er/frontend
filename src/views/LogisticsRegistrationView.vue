@@ -107,11 +107,11 @@
                 >
               </div>
               <div class="form-group">
-                <label>운송 단가 (원/km) <span class="required">*</span></label>
+                <label>운송 단가 (원) <span class="required">*</span></label>
                 <input
                   type="number"
                   v-model.number="companyData.unitPrice"
-                  placeholder="km당 운송 단가를 입력하세요"
+                  placeholder="운송 단가를 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -194,11 +194,11 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>최대 적재량 (톤 단위) <span class="required">*</span></label>
+                <label>최대 적재량 (kg 단위) <span class="required">*</span></label>
                 <input
                   type="number"
                   v-model.number="vehicleData.maxLoad"
-                  placeholder="최대 적재 중량을 입력하세요"
+                  placeholder="최대 적재 중량(kg)을 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required

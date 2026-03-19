@@ -103,7 +103,7 @@
               <th>담당자명</th>
               <th>업체 연락처</th>
               <th>주력 지역</th>
-              <th>운송 단가</th>
+              <th>운송 단가 (원)</th>
               <th>차량수</th>
               <th>상태</th>
               <th>관리</th>
@@ -197,7 +197,7 @@
             <option value="CONTAINER">컨테이너 캐리어</option>
           </select>
           <div class="input-with-label">
-            <label>최소 적재량</label>
+            <label>최소 적재량(kg)</label>
             <input 
               type="number" 
               v-model.number="vehicleSearchFields.maxLoad" 
@@ -239,7 +239,7 @@
               <th>차량 번호</th>
               <th>소속 업체</th>
               <th>차량 종류</th>
-              <th>최대 적재량</th>
+              <th>최대 적재량(kg)</th>
               <th>배차 상태</th>
               <th>상태</th>
               <th>관리</th>
@@ -256,7 +256,7 @@
               <td class="name-cell">{{ vehicle.vehicleNumber }}</td>
               <td>{{ getCompanyName(vehicle.transportId) }}</td>
               <td>{{ getVehicleTypeText(vehicle.vehicleType) }}</td>
-              <td>{{ vehicle.maxLoad }}톤</td>
+              <td>{{ vehicle.maxLoad }}kg</td>
               <td>
                 <span :class="['status-badge', getDispatchStatusClass(vehicle.dispatchable)]">
                   {{ getDispatchLabel(vehicle.dispatchable) }}
