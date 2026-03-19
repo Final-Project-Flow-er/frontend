@@ -127,7 +127,6 @@
                 </div>
                 <div class="action-text">
                   <span class="label">내 사업장 정보</span>
-                  <span class="desc">가맹점 또는 공장 정보 조회 및 수정</span>
                 </div>
                 <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
@@ -143,7 +142,6 @@
                 </div>
                 <div class="action-text">
                   <span class="label">비밀번호 변경</span>
-                  <span class="desc">주기적인 비밀번호 변경으로 보안 유지</span>
                 </div>
                 <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
@@ -162,7 +160,13 @@
         <div class="modal-header">
           <h2>내 사업장 정보</h2>
           <div class="modal-header-actions">
-            <button v-if="!isEditingOrg" @click="startEditOrg" class="btn-edit-tool">수정</button>
+            <button 
+              v-if="!isEditingOrg && userInfo.role !== 'HQ'" 
+              @click="startEditOrg" 
+              class="btn-edit-tool"
+            >
+              수정
+            </button>
             <button @click="handleCloseOrgModal" class="btn-modal-close">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -194,6 +198,7 @@
                 class="premium-input-small"
                 @input="handleOrgPhoneInput"
                 maxlength="13"
+                placeholder="예: 02-1234-5678"
               >
             </div>
             <div class="info-group">
@@ -459,24 +464,29 @@ const regionLabel = computed(() => REGION_LABELS[myOrgInfo.region] || myOrgInfo.
 // 유효성 검사 및 포맷팅
 const handleOrgPhoneInput = (e) => {
   let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length < 3) {
+    myOrgInfo.phone = val;
+    return;
+  }
+  
   if (val.startsWith('02')) {
-    if (val.length > 2 && val.length <= 5) {
-      val = val.slice(0, 2) + '-' + val.slice(2);
-    } else if (val.length > 5 && val.length <= 9) {
-      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
-    } else if (val.length > 9) {
-      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    if (val.length <= 5) {
+      val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 9) {
+      val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{2})(\d{4})(\d{1,4})/, '$1-$2-$3');
     }
   } else {
-    if (val.length > 3 && val.length <= 7) {
-      val = val.slice(0, 3) + '-' + val.slice(3);
-    } else if (val.length > 7 && val.length <= 11) {
-      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
-    } else if (val.length > 11) {
-      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    if (val.length <= 6) {
+      val = val.replace(/(\d{3})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 10) {
+      val = val.replace(/(\d{3})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{3})(\d{4})(\d{1,4})/, '$1-$2-$3');
     }
   }
-  myOrgInfo.phone = val;
+  myOrgInfo.phone = val.slice(0, 13);
 }
 
 const formatPhoneNumber = (target, key) => {
@@ -595,6 +605,10 @@ const fetchWorkplaceInfo = async () => {
       myOrgInfo.address = data.address
       myOrgInfo.detailAddress = ''
       myOrgInfo.businessNumber = data.businessNumber
+      myOrgInfo.phone = data.phone || ''
+      if (myOrgInfo.phone) {
+        handleOrgPhoneInput({ target: { value: myOrgInfo.phone } })
+      }
       
       // unitType에 따른 내 사업장 타입 매핑
       if (data.unitType === 'FRANCHISE') {

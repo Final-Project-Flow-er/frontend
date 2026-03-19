@@ -67,8 +67,8 @@
           </div>
           <div class="card-content">
             <div class="hq-form-group">
-              <label>대표 연락처</label>
-              <input type="tel" v-model="hqData.phone" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" @input="handlePhoneInput">
+              <label>본사 연락처</label>
+              <input type="tel" v-model="hqData.phone" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" @input="handlePhoneInput" maxlength="13" placeholder="예: 02-1234-5678">
             </div>
             <div class="hq-form-group full-width">
               <label>본사 공식 소재지</label>
@@ -148,6 +148,9 @@ const fetchHqInfo = async () => {
     if (response.data.success) {
       hqData.value = response.data.data
       hqData.value.detailAddress = ''
+      if (hqData.value.phone) {
+        handlePhoneInput({ target: { value: hqData.value.phone } })
+      }
     }
   } catch (error) {
     console.error('본사 정보 조회 실패:', error)
@@ -167,18 +170,30 @@ const cancelEdit = () => {
 }
 
 const handlePhoneInput = (e) => {
-  const value = e.target.value.replace(/[^0-9]/g, '')
-  let result = ''
-  if (value.length < 4) {
-    result = value
-  } else if (value.length < 7) {
-    result = value.substr(0, 3) + '-' + value.substr(3)
-  } else if (value.length < 11) {
-    result = value.substr(0, 3) + '-' + value.substr(3, 3) + '-' + value.substr(6)
-  } else {
-    result = value.substr(0, 3) + '-' + value.substr(3, 4) + '-' + value.substr(7)
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length < 3) {
+    hqData.value.phone = val;
+    return;
   }
-  hqData.value.phone = result
+  
+  if (val.startsWith('02')) {
+    if (val.length <= 5) {
+      val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 9) {
+      val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{2})(\d{4})(\d{1,4})/, '$1-$2-$3');
+    }
+  } else {
+    if (val.length <= 6) {
+      val = val.replace(/(\d{3})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 10) {
+      val = val.replace(/(\d{3})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{3})(\d{4})(\d{1,4})/, '$1-$2-$3');
+    }
+  }
+  hqData.value.phone = val.slice(0, 13);
 }
 
 const openPostcode = () => {
