@@ -191,7 +191,7 @@ const filteredMenuGroups = computed(() => {
   if (!role) return []
 
   const allItems = menuGroups.value
-    .filter(group => group.role.includes(role) || group.role.includes('admin'))
+    .filter(group => group.role.includes(role))
     .flatMap(group => group.items)
 
   const uniqueItems = []
