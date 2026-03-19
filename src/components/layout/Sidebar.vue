@@ -130,8 +130,7 @@ const menuGroups = ref([
         path: '/hq/settlement',
         isOpen: false,
         children: [
-          { name: '전표조정', path: '/hq/settlement/voucher-manage' },
-          { name: '정산 로그', path: '/hq/settlement/logs' }
+          { name: '전표조정', path: '/hq/settlement/voucher-manage' }
         ]
       },
       { name: '공지사항', path: '/notice' }
