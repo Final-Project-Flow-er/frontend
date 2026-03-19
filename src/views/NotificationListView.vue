@@ -134,11 +134,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '../stores/notification'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const authStore = useAuthStore()
+
 const activeTab = computed(() => notificationStore.activeTab)
-const uiRole = sessionStorage.getItem('userRole')
+const userRole = computed(() => authStore.userRole?.toLowerCase())
 
 const FACTORY_STOCK_ALERT_TARGET_BASE = 2000000000
 const FRANCHISE_STOCK_ALERT_TARGET_BASE = 3000000000
@@ -219,19 +222,20 @@ const formatTime = (dateStr) => {
 
 const resolveStockNotificationRoute = (notif) => {
   const targetId = Number(notif?.targetId || 0)
+  const role = userRole.value
 
-  if (uiRole === 'franchise') {
+  if (role === 'franchise') {
     return '/store/inventory'
   }
 
-  if (uiRole === 'headOffice') {
+  if (role === 'headoffice' || role === 'hq') {
     if (targetId >= FRANCHISE_STOCK_ALERT_TARGET_BASE) {
       return '/hq/inventory/franchise'
     }
     return '/hq/inventory/factory'
   }
 
-  if (uiRole === 'factory') {
+  if (role === 'factory') {
     return '/factory/inventory'
   }
 
