@@ -205,25 +205,28 @@
               <label>사업자 번호</label>
               <input v-model="myOrgInfo.businessNumber" disabled class="premium-input-small input-locked">
             </div>
-            <div class="info-group">
+            <div class="info-group full-width">
               <label>주소</label>
-              <div class="address-input-wrapper">
-                <input 
-                  v-model="myOrgInfo.address" 
-                  :disabled="!isEditingOrg" 
-                  :class="{ 'input-locked': !isEditingOrg }" 
-                  class="premium-input-small"
-                  placeholder="주소를 직접 입력하거나 검색하세요"
-                  @click="isEditingOrg && openPostcode()"
-                >
-                <button v-if="isEditingOrg" @click="openPostcode" class="btn-address-search-mini">조회</button>
+              <div v-if="!isEditingOrg" class="value-box multi-line-box">
+                {{ myOrgInfo.address.replace('|', ' ') }} {{ myOrgInfo.detailAddress }}
               </div>
-              <input 
-                v-if="isEditingOrg"
-                v-model="myOrgInfo.detailAddress" 
-                placeholder="상세 주소를 입력하세요" 
-                class="premium-input-small"
-              >
+              <template v-else>
+                <div class="address-input-wrapper">
+                  <input 
+                    v-model="myOrgInfo.address" 
+                    :disabled="!isEditingOrg" 
+                    :class="{ 'input-locked': !isEditingOrg }" 
+                    class="premium-input-small"
+                    placeholder="주소를 직접 입력하거나 검색하세요"
+                  >
+                  <button v-if="isEditingOrg" @click="openPostcode" class="btn-address-search-mini">조회</button>
+                </div>
+                <input 
+                  v-model="myOrgInfo.detailAddress" 
+                  placeholder="상세 주소를 입력하세요" 
+                  class="premium-input-small mt-2"
+                >
+              </template>
             </div>
 
             <!-- 가맹점 전용 -->
@@ -470,23 +473,29 @@ const handleOrgPhoneInput = (e) => {
   }
   
   if (val.startsWith('02')) {
-    if (val.length <= 5) {
+    val = val.slice(0, 10); // 서울은 최대 10자리
+    if (val.length <= 2) {
+      // 가만히 둠
+    } else if (val.length <= 5) {
       val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
     } else if (val.length <= 9) {
       val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
     } else {
-      val = val.replace(/(\d{2})(\d{4})(\d{1,4})/, '$1-$2-$3');
+      val = val.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   } else {
-    if (val.length <= 6) {
-      val = val.replace(/(\d{3})(\d{1,3})/, '$1-$2');
+    val = val.slice(0, 11); // 나머지는 최대 11자리
+    if (val.length <= 3) {
+      // 가만히 둠
+    } else if (val.length <= 7) {
+      val = val.replace(/(\d{3})(\d{1,4})/, '$1-$2');
     } else if (val.length <= 10) {
-      val = val.replace(/(\d{3})(\d{3})(\d{1,4})/, '$1-$2-$3');
+      val = val.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
     } else {
-      val = val.replace(/(\d{3})(\d{4})(\d{1,4})/, '$1-$2-$3');
+      val = val.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   }
-  myOrgInfo.phone = val.slice(0, 13);
+  myOrgInfo.phone = val;
 }
 
 const formatPhoneNumber = (target, key) => {
@@ -602,8 +611,15 @@ const fetchWorkplaceInfo = async () => {
     if (data) {
       myOrgInfo.code = data.code
       myOrgInfo.name = data.name
-      myOrgInfo.address = data.address
-      myOrgInfo.detailAddress = ''
+      const fullAddr = data.address || ''
+      if (fullAddr.includes('|')) {
+        const parts = fullAddr.split('|')
+        myOrgInfo.address = parts[0]
+        myOrgInfo.detailAddress = parts[1]
+      } else {
+        myOrgInfo.address = fullAddr
+        myOrgInfo.detailAddress = ''
+      }
       myOrgInfo.businessNumber = data.businessNumber
       myOrgInfo.phone = data.phone || ''
       if (myOrgInfo.phone) {
@@ -786,7 +802,7 @@ const saveOrgInfo = async () => {
 
   try {
     const updateData = {
-      address: myOrgInfo.detailAddress ? `${myOrgInfo.address} ${myOrgInfo.detailAddress}` : myOrgInfo.address,
+      address: myOrgInfo.detailAddress ? `${myOrgInfo.address}|${myOrgInfo.detailAddress}` : myOrgInfo.address,
       phone: myOrgInfo.phone,
       operatingDays: (myOrgInfo.operatingDays || []).join(','),
       openTime: myOrgInfo.openTime && myOrgInfo.openTime !== '' ? myOrgInfo.openTime + (myOrgInfo.openTime.length === 5 ? ':00' : '') : null,
@@ -1193,10 +1209,29 @@ const changePassword = async () => {
   border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
-  color: #334155;
+  color: #1e293b;
   transition: all 0.2s;
-  min-height: 24px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  word-break: break-all;
 }
+
+.multi-line-box {
+  line-height: 1.5;
+  height: auto;
+  padding: 0.75rem 1rem;
+  min-height: 48px;
+  background: #f8fafc;
+  border: 1.5px solid #f1f5f9;
+  color: #94a3b8;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.mt-2 { margin-top: 0.5rem; }
 
 
 .premium-input {
