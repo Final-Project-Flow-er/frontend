@@ -12,13 +12,13 @@
           <span class="value">{{ pendingInboundCount }}<small>건</small></span>
         </div>
       </div>
-      <div class="summary-card" @click="$router.push('/factory/outbound')">
+      <div class="summary-card" @click="$router.push('/factory/inventory')">
         <div class="card-icon-box shipping">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polyline points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         </div>
         <div class="card-data">
-          <span class="label">출고 대기 박스</span>
-          <span class="value">{{ pendingOutboundCount }}<small>건</small></span>
+          <span class="label">전체 재고 품목</span>
+          <span class="value">{{ pendingOutboundCount }}<small>종</small></span>
         </div>
       </div>
       <div class="summary-card" @click="$router.push('/factory/orders')">
@@ -138,7 +138,7 @@ const fetchDashboardData = async () => {
     
     // 1. 본사 발주 요청 (Pending)
     const ordersRes = await api.get('factory/orders', { params: { isAll: false } })
-    pendingOrderCount.value = ordersRes.data.data?.length || 0
+    pendingOrderCount.value = ordersRes.data.data?.totalElements || 0
     console.log('1. 발주 요청:', pendingOrderCount.value)
 
     // 2. 생산 입고 대기
@@ -146,12 +146,13 @@ const fetchDashboardData = async () => {
     pendingInboundCount.value = inboundRes.data.data?.length || 0
     console.log('2. 입고 대기:', pendingInboundCount.value)
 
-    // 3. 출고 대기 박스
-    const outboundRes = await api.get('outbounds/boxes')
-    pendingOutboundCount.value = outboundRes.data.data?.length || 0
-    console.log('3. 출고 대기:', pendingOutboundCount.value)
+    // 3. 전체 재고 현황 (재고관리 API 활용)
+    const inventoryRes = await api.get('/hq/inventory')
+    const products = inventoryRes.data.data || []
+    pendingOutboundCount.value = products.length
+    console.log('3. 전체 품목 수:', pendingOutboundCount.value)
 
-    // 4. 오늘 로그 (선택사항, factoryId 필요)
+    // 4. 오늘 로그
     try {
       const workplace = await authStore.getMyWorkplaceInfo()
       if (workplace && workplace.id) {
@@ -159,7 +160,8 @@ const fetchDashboardData = async () => {
         const logRes = await api.get(`factory/log/${workplace.id}`, {
           params: { startDate: today, endDate: today, size: 1 }
         })
-        todayLogCount.value = logRes.data.data.totalElements || 0
+        const logData = logRes.data.data
+        todayLogCount.value = logData?.totalElements || 0
       }
     } catch (logErr) {
        console.warn('활동 로그 조회 실패:', logErr)
