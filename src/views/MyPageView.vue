@@ -127,7 +127,6 @@
                 </div>
                 <div class="action-text">
                   <span class="label">내 사업장 정보</span>
-                  <span class="desc">가맹점 또는 공장 정보 조회 및 수정</span>
                 </div>
                 <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
@@ -143,7 +142,6 @@
                 </div>
                 <div class="action-text">
                   <span class="label">비밀번호 변경</span>
-                  <span class="desc">주기적인 비밀번호 변경으로 보안 유지</span>
                 </div>
                 <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
@@ -162,7 +160,13 @@
         <div class="modal-header">
           <h2>내 사업장 정보</h2>
           <div class="modal-header-actions">
-            <button v-if="!isEditingOrg" @click="startEditOrg" class="btn-edit-tool">수정</button>
+            <button 
+              v-if="!isEditingOrg && userInfo.role !== 'HQ'" 
+              @click="startEditOrg" 
+              class="btn-edit-tool"
+            >
+              수정
+            </button>
             <button @click="handleCloseOrgModal" class="btn-modal-close">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -194,31 +198,35 @@
                 class="premium-input-small"
                 @input="handleOrgPhoneInput"
                 maxlength="13"
+                placeholder="예: 02-1234-5678"
               >
             </div>
             <div class="info-group">
               <label>사업자 번호</label>
               <input v-model="myOrgInfo.businessNumber" disabled class="premium-input-small input-locked">
             </div>
-            <div class="info-group">
+            <div class="info-group full-width">
               <label>주소</label>
-              <div class="address-input-wrapper">
-                <input 
-                  v-model="myOrgInfo.address" 
-                  :disabled="!isEditingOrg" 
-                  :class="{ 'input-locked': !isEditingOrg }" 
-                  class="premium-input-small"
-                  placeholder="주소를 직접 입력하거나 검색하세요"
-                  @click="isEditingOrg && openPostcode()"
-                >
-                <button v-if="isEditingOrg" @click="openPostcode" class="btn-address-search-mini">조회</button>
+              <div v-if="!isEditingOrg" class="value-box multi-line-box">
+                {{ myOrgInfo.address.replace('|', ' ') }} {{ myOrgInfo.detailAddress }}
               </div>
-              <input 
-                v-if="isEditingOrg"
-                v-model="myOrgInfo.detailAddress" 
-                placeholder="상세 주소를 입력하세요" 
-                class="premium-input-small"
-              >
+              <template v-else>
+                <div class="address-input-wrapper">
+                  <input 
+                    v-model="myOrgInfo.address" 
+                    :disabled="!isEditingOrg" 
+                    :class="{ 'input-locked': !isEditingOrg }" 
+                    class="premium-input-small"
+                    placeholder="주소를 직접 입력하거나 검색하세요"
+                  >
+                  <button v-if="isEditingOrg" @click="openPostcode" class="btn-address-search-mini">조회</button>
+                </div>
+                <input 
+                  v-model="myOrgInfo.detailAddress" 
+                  placeholder="상세 주소를 입력하세요" 
+                  class="premium-input-small mt-2"
+                >
+              </template>
             </div>
 
             <!-- 가맹점 전용 -->
@@ -459,21 +467,32 @@ const regionLabel = computed(() => REGION_LABELS[myOrgInfo.region] || myOrgInfo.
 // 유효성 검사 및 포맷팅
 const handleOrgPhoneInput = (e) => {
   let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length < 3) {
+    myOrgInfo.phone = val;
+    return;
+  }
+  
   if (val.startsWith('02')) {
-    if (val.length > 2 && val.length <= 5) {
-      val = val.slice(0, 2) + '-' + val.slice(2);
-    } else if (val.length > 5 && val.length <= 9) {
-      val = val.slice(0, 2) + '-' + val.slice(2, 5) + '-' + val.slice(5);
-    } else if (val.length > 9) {
-      val = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
+    val = val.slice(0, 10); // 서울은 최대 10자리
+    if (val.length <= 2) {
+      // 가만히 둠
+    } else if (val.length <= 5) {
+      val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 9) {
+      val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   } else {
-    if (val.length > 3 && val.length <= 7) {
-      val = val.slice(0, 3) + '-' + val.slice(3);
-    } else if (val.length > 7 && val.length <= 11) {
-      val = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7);
-    } else if (val.length > 11) {
-      val = val.slice(0, 3) + '-' + val.slice(3, 8) + '-' + val.slice(8, 12);
+    val = val.slice(0, 11); // 나머지는 최대 11자리
+    if (val.length <= 3) {
+      // 가만히 둠
+    } else if (val.length <= 7) {
+      val = val.replace(/(\d{3})(\d{1,4})/, '$1-$2');
+    } else if (val.length <= 10) {
+      val = val.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
     }
   }
   myOrgInfo.phone = val;
@@ -592,9 +611,20 @@ const fetchWorkplaceInfo = async () => {
     if (data) {
       myOrgInfo.code = data.code
       myOrgInfo.name = data.name
-      myOrgInfo.address = data.address
-      myOrgInfo.detailAddress = ''
+      const fullAddr = data.address || ''
+      if (fullAddr.includes('|')) {
+        const parts = fullAddr.split('|')
+        myOrgInfo.address = parts[0]
+        myOrgInfo.detailAddress = parts[1]
+      } else {
+        myOrgInfo.address = fullAddr
+        myOrgInfo.detailAddress = ''
+      }
       myOrgInfo.businessNumber = data.businessNumber
+      myOrgInfo.phone = data.phone || ''
+      if (myOrgInfo.phone) {
+        handleOrgPhoneInput({ target: { value: myOrgInfo.phone } })
+      }
       
       // unitType에 따른 내 사업장 타입 매핑
       if (data.unitType === 'FRANCHISE') {
@@ -772,7 +802,7 @@ const saveOrgInfo = async () => {
 
   try {
     const updateData = {
-      address: myOrgInfo.detailAddress ? `${myOrgInfo.address} ${myOrgInfo.detailAddress}` : myOrgInfo.address,
+      address: myOrgInfo.detailAddress ? `${myOrgInfo.address}|${myOrgInfo.detailAddress}` : myOrgInfo.address,
       phone: myOrgInfo.phone,
       operatingDays: (myOrgInfo.operatingDays || []).join(','),
       openTime: myOrgInfo.openTime && myOrgInfo.openTime !== '' ? myOrgInfo.openTime + (myOrgInfo.openTime.length === 5 ? ':00' : '') : null,
@@ -1179,10 +1209,29 @@ const changePassword = async () => {
   border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
-  color: #334155;
+  color: #1e293b;
   transition: all 0.2s;
-  min-height: 24px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  word-break: break-all;
 }
+
+.multi-line-box {
+  line-height: 1.5;
+  height: auto;
+  padding: 0.75rem 1rem;
+  min-height: 48px;
+  background: #f8fafc;
+  border: 1.5px solid #f1f5f9;
+  color: #94a3b8;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.mt-2 { margin-top: 0.5rem; }
 
 
 .premium-input {

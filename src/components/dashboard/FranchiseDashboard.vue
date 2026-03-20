@@ -140,15 +140,15 @@
             <div v-else-if="settlementSummary" class="settlement-list">
               <div class="settle-item">
                 <span class="s-label">최종 정산 금액</span>
-                <span class="s-val primary">{{ formatCurrency(settlementSummary.finalSettlementAmount) }}원</span>
+                <span class="s-val primary">{{ formatCurrency(settlementSummary.finalAmount) }}원</span>
               </div>
               <div class="settle-item">
                 <span class="s-label">발주 매출</span>
-                <span class="s-val">{{ formatCurrency(settlementSummary.orderRevenue) }}원</span>
+                <span class="s-val">{{ formatCurrency(settlementSummary.orderAmount) }}원</span>
               </div>
               <div class="settle-item">
                 <span class="s-label">반품 차감액</span>
-                <span class="s-val warn">-{{ formatCurrency(settlementSummary.returnDeduction) }}원</span>
+                <span class="s-val warn">-{{ formatCurrency(settlementSummary.refundAmount) }}원</span>
               </div>
             </div>
             <div v-else class="settlement-empty">이번 달 정산 데이터가 없습니다.</div>
@@ -197,68 +197,59 @@ const formatCurrency = (val) => {
 
 const fetchDashboardData = async () => {
   try {
-    console.group('가맹점 대시보드 데이터 로딩 상세')
     const [inventoryRes, ordersRes, returnsRes, alertsRes] = await Promise.all([
       api.get('franchise/inventory'),
-      api.get('franchise/orders'),
-      api.get('franchise/returns'),
+      api.get('franchise/orders', { params: { size: 500 } }),
+      api.get('franchise/returns', { params: { size: 500 } }),
       api.get('franchise/inventory/alerts')
     ])
 
-    console.log('1. 재고:', inventoryRes.data)
-    console.log('2. 발주:', ordersRes.data)
-    console.log('3. 반품:', returnsRes.data)
-    console.log('4. 알림:', alertsRes.data)
-
     const inventoryData = inventoryRes.data.data || []
-    // 종 (종류 수)
     inventoryCount.value = inventoryData.length
-    // 개 (총 수량 합계)
     totalStockQty.value = inventoryData.reduce((acc, curr) => acc + (Number(curr.totalQuantity) || 0), 0)
-    console.log('계산된 재고 - 종:', inventoryCount.value, '총 수량:', totalStockQty.value)
 
-    const orders = ordersRes.data.data || []
-    orderCount.value = orders.length
-    console.log(`발주 데이터(${orders.length}건) 필터링 시작...`)
+    const ordersData = ordersRes.data.data || { content: [], totalElements: 0 }
+    const orders = ordersData.content || []
+    orderCount.value = ordersData.totalElements || 0
     
-    // 대량 데이터 처리를 위한 최적화 filter
     let pCount = 0
     let dCount = 0
     for(const o of orders) {
-      const s = String(o.status || '').toUpperCase()
+      // DTO 필드명이 orderStatus임
+      const s = String(o.orderStatus || '').toUpperCase()
       if (s.includes('대기') || s.includes('PENDING') || s.includes('WAIT')) pCount++
       if (s.includes('배송중') || s.includes('DELIVERING') || s.includes('SHIPPING')) dCount++
     }
     pendingOrderCount.value = pCount
     deliveringOrderCount.value = dCount
 
-    const returns = returnsRes.data.data || []
-    returnCount.value = returns.length
+    const returnsData = returnsRes.data.data || { content: [], totalElements: 0 }
+    const returns = returnsData.content || []
+    returnCount.value = returnsData.totalElements || 0
     pendingReturnCount.value = returns.filter(r => {
+      // 반품은 status 필드 사용
       const s = String(r.status || '').toUpperCase()
       return s.includes('대기') || s.includes('PENDING') || s.includes('WAIT')
     }).length
 
     const alerts = alertsRes.data.data || {}
-    alertCount.value = (alerts.expirationAlerts?.length || 0) + (alerts.safetyStockAlerts?.length || 0)
-    console.groupEnd()
+    // 위험 재고(위험재고 수량 < 안전재고) 직접 계산 + 유통기한 임박 알림 합산
+    const safetyStockAlertsCount = inventoryData.filter(item => 
+      item.safetyStock !== null && item.safetyStock !== undefined && item.totalQuantity < item.safetyStock
+    ).length
+    const expirationAlertsCount = alerts.expirationAlerts?.length || 0
+    alertCount.value = safetyStockAlertsCount + expirationAlertsCount
 
   } catch (error) {
-    console.error('가맹점 대시보드 데이터 로드 중 치명적 오류:', error)
-    if (error.response) {
-      console.error('서버 응답:', error.response.status, error.response.data)
-    }
+    console.error('가맹점 대시보드 데이터 로드 오류:', error)
   }
 
   // 정산 별도 fetch
   try {
     settlementLoading.value = true
-    const settlementMonth = thisMonthParam.value
-    console.log(`5. 정산 요약 요청 (${settlementMonth})...`)
     const stlRes = await api.get('franchise/settlements/monthly/summary', {
-      params: { month: settlementMonth }
+      params: { month: thisMonthParam.value }
     })
-    console.log('5. 정산 요약 응답:', stlRes.data)
     settlementSummary.value = stlRes.data.data
   } catch (error) {
     console.warn('가맹점 정산 요약 로드 실패:', error)

@@ -125,19 +125,19 @@
             <div v-else-if="settlementSummary" class="settlement-list">
               <div class="settle-item">
                 <span class="s-label">최종 정산 금액</span>
-                <span class="s-val primary">{{ formatCurrency(settlementSummary.finalSettlementAmount) }}원</span>
+                <span class="s-val primary">{{ formatCurrency(settlementSummary.finalAmount) }}원</span>
               </div>
               <div class="settle-item">
                 <span class="s-label">발주 매출</span>
-                <span class="s-val">{{ formatCurrency(settlementSummary.orderRevenue) }}원</span>
+                <span class="s-val">{{ formatCurrency(settlementSummary.orderAmount) }}원</span>
               </div>
               <div class="settle-item">
                 <span class="s-label">수수료 수익</span>
-                <span class="s-val">{{ formatCurrency(settlementSummary.commissionRevenue) }}원</span>
+                <span class="s-val">{{ formatCurrency(settlementSummary.commissionFee) }}원</span>
               </div>
               <div class="settle-item">
                 <span class="s-label">반품 차감액</span>
-                <span class="s-val warn">-{{ formatCurrency(settlementSummary.returnDeduction) }}원</span>
+                <span class="s-val warn">-{{ formatCurrency(settlementSummary.refundAmount) }}원</span>
               </div>
             </div>
             <div v-else class="settlement-empty">오늘 정산 데이터가 없습니다.</div>
@@ -195,7 +195,7 @@ const fetchDashboardData = async () => {
     userCount.value = memberRes.data.data.totalElements || 0
     
     if (transportRes.data.data.content) {
-      vehicleCount.value = transportRes.data.data.content.reduce((acc, curr) => acc + (curr.vehicleCount || 0), 0)
+      vehicleCount.value = transportRes.data.data.content.reduce((acc, curr) => acc + (curr.ownedVehicles || 0), 0)
     }
 
     const [pendingOrders, pendingReturns] = await Promise.all([
@@ -203,8 +203,8 @@ const fetchDashboardData = async () => {
       api.get('hq/returns', { params: { isAll: false } })
     ])
 
-    pendingOrderCount.value = pendingOrders.data.data?.length || 0
-    pendingReturnCount.value = pendingReturns.data.data?.length || 0
+    pendingOrderCount.value = pendingOrders.data.data?.totalElements || 0
+    pendingReturnCount.value = pendingReturns.data.data?.totalElements || 0
     
   } catch (error) {
     console.error('HQ Dashboard fetch failed:', error)

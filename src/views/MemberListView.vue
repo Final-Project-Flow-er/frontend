@@ -35,7 +35,8 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.searchQuery" 
+              :value="filters.searchQuery" 
+              @input="filters.searchQuery = $event.target.value"
               placeholder="이름, 아이디, 이메일, 사원번호 검색"
             >
           </div>
@@ -45,7 +46,8 @@
           <label>소속</label>
           <input 
             type="text" 
-            v-model="filters.orgName" 
+            :value="filters.orgName" 
+            @input="filters.orgName = $event.target.value"
             placeholder="소속 사업장 검색"
           >
         </div>
@@ -216,19 +218,17 @@ const fetchMembers = async () => {
   }
 }
 
-onMounted(fetchMembers)
 
-// 필터 변경 시 자동 재조회
-watch(() => [filters.role, filters.status, filters.orgName], fetchMembers)
-
-// 검색어는 엔터나 버튼 클릭 시 조회하도록 하거나, 디바운스 적용 가능
-// 여기서는 일단 수동 조회 버튼이 없으므로 엔터 키 대응 등을 추가할 수 있으나
-// 기존 코드 흐름에 따라 computed 대신 실시간 조회를 원한다면 watch를 searchQuery에도 걸어줍니다.
-watch(() => filters.searchQuery, (newVal) => {
-  if (newVal.length === 0 || newVal.length >= 2) {
+// 필터 변경 시 자동 조회 (디바운스 적용)
+let fetchTimeout = null
+watch(filters, () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
     fetchMembers()
-  }
-})
+  }, 400)
+}, { deep: true })
+
+onMounted(fetchMembers)
 
 const members = computed(() => userManagementStore.users)
 
