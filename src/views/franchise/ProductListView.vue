@@ -68,8 +68,9 @@ const groupedSales = computed(() => {
         totalPrice: 0
       }
     }
-    map[item.salesCode].quantity += item.quantity
-    map[item.salesCode].totalPrice += item.unitPrice * item.quantity
+    // 목록 API가 SalesItem 단위이므로, 판매코드별 행 개수로 수량 집계
+    map[item.salesCode].quantity += 1
+    map[item.salesCode].totalPrice += Number(item.unitPrice)
   }
   return Object.values(map)
 })
