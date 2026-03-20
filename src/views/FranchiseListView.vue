@@ -58,7 +58,8 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.keyword" 
+              :value="filters.keyword" 
+              @input="filters.keyword = $event.target.value"
               placeholder="매장명 또는 코드 입력"
             >
           </div>
@@ -66,7 +67,7 @@
 
         <div class="filter-group sub-search-group">
           <label>대표자/사업자번호</label>
-          <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
+          <input type="text" :value="filters.subKeyword" @input="filters.subKeyword = $event.target.value" placeholder="대표자 또는 번호">
         </div>
 
         <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
@@ -264,33 +265,7 @@ const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = ref(20)
 
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터 변경 시 자동 조회
-watch(() => [filters.status, filters.region, filters.isReturnBlocked, filters.keyword, filters.subKeyword], () => {
-  debouncedFetch()
-})
-
-let fetchTimeout = null
-const debouncedFetch = () => {
-  if (fetchTimeout) clearTimeout(fetchTimeout)
-  fetchTimeout = setTimeout(() => {
-    currentPage.value = 0
-    fetchOrganizations()
-  }, 300)
-}
-
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터나 검색어가 바뀔 때 첫 페이지로 이동 (데이터는 fetch할 필요 없음, 로컬 필터링이므로)
-watch(() => [filters.status, filters.region, filters.selectedDays, filters.searchQuery], () => {
-  currentPage.value = 0
-}, { deep: true })
-
+// 데이터 조회
 const fetchOrganizations = async () => {
   try {
     const kw = filters.keyword?.trim() || null
@@ -298,20 +273,17 @@ const fetchOrganizations = async () => {
     const params = {
       page: currentPage.value,
       size: pageSize.value,
-      status: filters.status === 'all' ? null : filters.status,
-      region: filters.region === 'all' ? null : filters.region,
-      // keyword를 name과 code 모두에 전달 → 백엔드에서 각각 OR 없이 AND이므로,
-      // 이름 검색과 코드 검색 중 하나라도 매칭되려면 두 파라미터를 함께 보내야 함.
-      // 백엔드가 name/code를 각각 null일 때만 무시하는 구조이므로 동시 전달이 가능.
       name: kw,
       code: kw,
       representativeName: sub,
       businessNumber: sub,
-      operatingDays: filters.selectedDays.length > 0 ? filters.selectedDays.join(',') : null,
-      isReturnBlocked: filters.isReturnBlocked
+      status: filters.status !== 'all' ? filters.status : null,
+      region: filters.region !== 'all' ? filters.region : null,
+      isReturnBlocked: filters.isReturnBlocked,
+      operatingDays: filters.selectedDays.length > 0 ? filters.selectedDays.join(',') : null
     }
-    
-    const response = await api.get('/hq/business-units/FRANCHISE', { params })
+
+    const response = await api.get('/hq/business-units/franchise', { params })
     if (response.data.success) {
       organizations.value = response.data.data.content
       totalElements.value = response.data.data.totalElements
@@ -321,6 +293,19 @@ const fetchOrganizations = async () => {
     console.error('가맹점 목록 조회 실패:', error)
   }
 }
+
+// 필터 변경 시 자동 조회 (디바운스 적용)
+let fetchTimeout = null
+watch(filters, () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchOrganizations()
+  }, 400)
+}, { deep: true })
+
+onMounted(fetchOrganizations)
+
 
 const changePage = async (page) => {
   currentPage.value = page
