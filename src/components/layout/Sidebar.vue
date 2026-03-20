@@ -42,11 +42,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 const menuGroups = ref([
   {
@@ -100,9 +102,8 @@ const menuGroups = ref([
         name: '로그 관리',
         isOpen: false,
         children: [
-          { name: '본사 로그', path: '/hq/inventory/logs/hq' },
-          { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
           { name: '공장 로그', path: '/hq/inventory/logs/factory' },
+          { name: '가맹점 로그', path: '/hq/inventory/logs/franchise' },
           { name: '운송 로그', path: '/head-office/logs/logistics' }
         ]
       },
@@ -131,8 +132,7 @@ const menuGroups = ref([
         path: '/hq/settlement',
         isOpen: false,
         children: [
-          { name: '전표조정', path: '/hq/settlement/voucher-manage' },
-          { name: '정산 로그', path: '/hq/settlement/logs' }
+          { name: '전표조정', path: '/hq/settlement/voucher-manage' }
         ]
       },
       { name: '공지사항', path: '/notice' }
@@ -158,6 +158,7 @@ const menuGroups = ref([
     items: [
       { name: '입고 관리', path: '/factory/inbound' },
       { name: '출고 관리', path: '/factory/outbound' },
+      { name: '재고 관리', path: '/factory/inventory' },
       {
         name: '발주 관리',
         isOpen: false,
@@ -172,23 +173,37 @@ const menuGroups = ref([
   }
 ])
 
-const userRole = sessionStorage.getItem('userRole')
-// 모든 메뉴를 하나로 합침
-const allItems = menuGroups.value
-  .filter(group => group.role.includes(userRole))
-  .flatMap(group => group.items)
-
-// 중복 제거 (대시보드 홈 등)
-const uniqueItems = []
-const seenPaths = new Set()
-for (const item of allItems) {
-  if (!seenPaths.has(item.path)) {
-    uniqueItems.push(item)
-    if (item.path) seenPaths.add(item.path)
+const userRole = computed(() => {
+  const role = authStore.userRole
+  if (!role) return null
+  const roleMap = {
+    'HQ': 'headOffice',
+    'FACTORY': 'factory',
+    'FRANCHISE': 'franchise',
+    'ADMIN': 'admin'
   }
-}
+  return roleMap[role] || role.toLowerCase()
+})
 
-const filteredMenuGroups = ref([{ title: '', items: uniqueItems }])
+const filteredMenuGroups = computed(() => {
+  const role = userRole.value
+  if (!role) return []
+
+  const allItems = menuGroups.value
+    .filter(group => group.role.includes(role))
+    .flatMap(group => group.items)
+
+  const uniqueItems = []
+  const seenPaths = new Set()
+  for (const item of allItems) {
+    if (!seenPaths.has(item.path)) {
+      uniqueItems.push(item)
+      if (item.path) seenPaths.add(item.path)
+    }
+  }
+
+  return [{ title: '', items: uniqueItems }]
+})
 
 const goHome = () => {
   router.push({ path: '/' })

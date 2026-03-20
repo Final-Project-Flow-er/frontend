@@ -12,9 +12,9 @@
     </div>
 
     <!-- Role-based Dashboard Components -->
-    <HQDashboard v-if="userRole === 'admin' || userRole === 'headOffice'" />
-    <FranchiseDashboard v-else-if="userRole === 'franchise'" />
-    <FactoryDashboard v-else-if="userRole === 'factory'" />
+    <HQDashboard v-if="['admin', 'headoffice', 'hq', 'admin'].includes(userRole?.toLowerCase())" />
+    <FranchiseDashboard v-else-if="userRole?.toLowerCase() === 'franchise'" />
+    <FactoryDashboard v-else-if="userRole?.toLowerCase() === 'factory'" />
 
     <!-- Fallback / Loading -->
     <div v-else class="loading-container">
@@ -33,7 +33,7 @@ import FactoryDashboard from '@/components/dashboard/FactoryDashboard.vue'
 
 const authStore = useAuthStore()
 
-const userRole = sessionStorage.getItem('userRole')
+const userRole = computed(() => authStore.userRole)
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('ko-KR', {
@@ -41,9 +41,10 @@ const currentDate = computed(() => {
   })
 })
 const subtitle = computed(() => {
-  if (userRole === 'admin' || userRole === 'headOffice') return '실시간 운영 현황 및 주요 시스템 지표를 관리합니다'
-  if (userRole === 'franchise') return '가맹점 운영 현황 및 주요 지표를 확인합니다'
-  if (userRole === 'factory') return '공장 운영 현황 및 주요 지표를 확인합니다'
+  const role = userRole.value?.toLowerCase()
+  if (role === 'admin' || role === 'headoffice' || role === 'hq') return '실시간 운영 현황 및 주요 시스템 지표를 관리합니다'
+  if (role === 'franchise') return '가맹점 운영 현황 및 주요 지표를 확인합니다'
+  if (role === 'factory') return '공장 운영 현황 및 주요 지표를 확인합니다'
   return '시스템 현황을 확인합니다'
 })
 </script>

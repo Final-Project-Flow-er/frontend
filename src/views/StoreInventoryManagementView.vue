@@ -130,7 +130,7 @@
               <th>재고</th>
               <th>
                 안전재고
-                <button class="icon-btn" @click.stop="openPasswordPopup" title="안전재고 설정">⚙️</button>
+                <button class="icon-btn" @click.stop="openSettingsPopup" title="안전재고 설정">⚙️</button>
               </th>
               <th>상태</th>
             </tr>
@@ -224,41 +224,111 @@
         <button class="back-btn" @click="currentStep = 1">목록으로</button>
       </div>
 
-      <div class="data-table-card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>제조일</th>
-              <th>총 수량</th>
-              <th>가용 수량</th>
-              <th>반품 대기</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="batch in sortedBatches" :key="batch.productionDate" @click="goToStep3(batch)" class="clickable-row">
-              <td>{{ batch.productionDate }}</td>
-              <td class="number-cell">{{ batch.total }}</td>
-              <td class="number-cell available">{{ batch.available }}</td>
-              <td class="number-cell pending">{{ batch.pending }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="step2-split">
+        <div class="data-table-card left-pane">
+          <div class="batch-accordion">
+            <div v-for="group in monthlyBatches" :key="group.monthKey" class="month-group">
+              <button type="button" class="month-row" @click="toggleMonth(group.monthKey)">
+                <span class="month-main">
+                  <span class="month-label">{{ formatMonthLabel(group.monthKey) }}</span>
+                  <span class="month-sub">재고 {{ group.totalQuantity }}개</span>
+                </span>
+                <span class="month-arrow">{{ isMonthExpanded(group.monthKey) ? '▼' : '▶' }}</span>
+              </button>
 
-        <!-- Step 2 Pagination -->
-        <div class="pagination" v-if="batchTotalPages > 1">
-          <button class="page-nav-btn" :disabled="batchPage === 0" @click="changeBatchPage(batchPage - 1)">이전</button>
-          <div class="page-numbers">
-            <button 
-              v-for="p in batchTotalPages" 
-              :key="p" 
-              @click="changeBatchPage(p - 1)" 
-              :class="{ active: batchPage === p - 1 }"
-              class="page-num-btn"
-            >
-              {{ p }}
-            </button>
+              <div v-if="isMonthExpanded(group.monthKey)" class="day-list">
+                <button
+                  v-for="day in group.days"
+                  :key="day.productionDate"
+                  type="button"
+                  class="day-row"
+                  @click="selectBatchInStep2(day)"
+                >
+                  <span class="day-date">{{ day.productionDate }}</span>
+                  <span class="day-count">{{ day.total }}개</span>
+                </button>
+              </div>
+            </div>
           </div>
-          <button class="page-nav-btn" :disabled="batchPage === batchTotalPages - 1" @click="changeBatchPage(batchPage + 1)">다음</button>
+        </div>
+
+        <div class="data-table-card right-pane">
+          <div v-if="!selectedProductionDate" class="detail-empty">
+            왼쪽에서 제조일을 선택하면 상세가 여기에 표시됩니다.
+          </div>
+          <template v-else>
+            <div class="section-header compact">
+              <h3>{{ selectedProductionDate }} 제조분 상세</h3>
+              <span>{{ selectedItems.length }}개 선택</span>
+            </div>
+
+            <div class="filter-section mini">
+              <div class="filter-group">
+                <label>제품 식별 코드</label>
+                <input type="text" v-model="step3Filter.serialCode" placeholder="코드 검색" />
+              </div>
+              <div class="filter-group">
+                <label>박스 코드</label>
+                <input type="text" v-model="step3Filter.boxCode" placeholder="박스코드 검색" />
+              </div>
+            </div>
+
+            <table class="data-table step3-table inventory-detail-table">
+              <colgroup>
+                <col style="width: 8%;" />
+                <col style="width: 44%;" />
+                <col style="width: 32%;" />
+                <col style="width: 16%;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="checkbox-col">
+                    <input type="checkbox" @change="toggleAllInStep3" :checked="isAllSelectedInStep3" />
+                  </th>
+                  <th>제품 식별 코드</th>
+                  <th>박스 코드</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in granularItems" :key="item.serialCode">
+                  <td>
+                    <input type="checkbox" :checked="selectedItems.includes(item.inventoryId)" @change="toggleItemSelection(item)" />
+                  </td>
+                  <td class="sku-cell">{{ item.serialCode }}</td>
+                  <td>{{ item.boxCode }}</td>
+                  <td>
+                    <span :class="['status-item-badge', (item.status || '').toLowerCase().split('.').pop()]">
+                      {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="granularItems.length === 0">
+                  <td colspan="4" class="empty-cell">해당 제조일의 상세 데이터가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="pagination" v-if="itemTotalPages > 1">
+              <button class="page-nav-btn" :disabled="itemPage === 0" @click="changeItemPage(itemPage - 1)">이전</button>
+              <div class="page-numbers">
+                <button 
+                  v-for="p in itemTotalPages" 
+                  :key="p" 
+                  @click="changeItemPage(p - 1)" 
+                  :class="{ active: itemPage === p - 1 }"
+                  class="page-num-btn"
+                >
+                  {{ p }}
+                </button>
+              </div>
+              <button class="page-nav-btn" :disabled="itemPage === itemTotalPages - 1" @click="changeItemPage(itemPage + 1)">다음</button>
+            </div>
+
+            <div class="bottom-actions" v-if="selectedItems.length > 0">
+              <button class="action-btn disposal" @click="requestDisposal">폐기 처리 ({{ selectedItems.length }}개)</button>
+            </div>
+          </template>
         </div>
       </div>
     </template>
@@ -282,18 +352,16 @@
           <label>박스 코드</label>
           <input type="text" v-model="step3Filter.boxCode" placeholder="박스코드 검색" />
         </div>
-        <div class="filter-group">
-          <label>배송완료 일자</label>
-          <input type="date" v-model="step3Filter.shippingDate" />
-        </div>
-        <div class="filter-group">
-          <label>입고 일자</label>
-          <input type="date" v-model="step3Filter.arrivalTime" />
-        </div>
       </div>
 
       <div class="data-table-card">
-        <table class="data-table">
+        <table class="data-table step3-table inventory-detail-table">
+          <colgroup>
+            <col style="width: 8%;" />
+            <col style="width: 44%;" />
+            <col style="width: 32%;" />
+            <col style="width: 16%;" />
+          </colgroup>
           <thead>
             <tr>
               <th class="checkbox-col">
@@ -302,14 +370,12 @@
               <th>제품 식별 코드</th>
               <th>박스 코드</th>
               <th>상태</th>
-              <th>배송완료 일자</th>
-              <th>입고 일자</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in granularItems" :key="item.serialCode">
               <td>
-                <input type="checkbox" :checked="selectedItems.includes(item.serialCode)" @change="toggleItemSelection(item)" />
+                <input type="checkbox" :checked="selectedItems.includes(item.inventoryId)" @change="toggleItemSelection(item)" />
               </td>
               <td class="sku-cell">{{ item.serialCode }}</td>
               <td>{{ item.boxCode }}</td>
@@ -318,11 +384,9 @@
                   {{ (item.status || '').includes('AVAILABLE') ? '가용' : ((item.status || '').includes('EXPIRED') ? '만료' : '반품 대기') }}
                 </span>
               </td>
-              <td>{{ item.shippingDate || '-' }}</td>
-              <td>{{ item.arrivalTime || '-' }}</td>
             </tr>
             <tr v-if="granularItems.length === 0">
-              <td colspan="6" class="empty-cell">조회된 상세 제품이 없습니다.</td>
+              <td colspan="4" class="empty-cell">조회된 상세 제품이 없습니다.</td>
             </tr>
           </tbody>
         </table>
@@ -350,19 +414,6 @@
         <button class="action-btn disposal" @click="requestDisposal">폐기 처리 ({{ selectedItems.length }}개)</button>
       </div>
     </template>
-
-    <!-- Password Popup -->
-    <div v-if="showPasswordPopup" class="popup-overlay">
-      <div class="popup-content">
-        <h3>관리자 확인</h3>
-        <p>안전재고 설정을 위해 비밀번호를 입력하세요.</p>
-        <input type="password" v-model="adminPassword" placeholder="비밀번호 입력" @keyup.enter="checkPassword" />
-        <div class="popup-actions">
-          <button @click="closePopup">취소</button>
-          <button class="primary" @click="checkPassword">확인</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Safe Stock Settings Popup -->
     <div v-if="showSettingsPopup" class="popup-overlay">
@@ -423,15 +474,11 @@ const filter = ref({
 
 const step3Filter = ref({
   serialCode: '',
-  boxCode: '',
-  shippingDate: '',
-  arrivalTime: ''
+  boxCode: ''
 })
 
 // Popups state
-const showPasswordPopup = ref(false)
 const showSettingsPopup = ref(false)
-const adminPassword = ref('')
 const settingForm = ref({ productCode: '', safeStock: 10 })
 const foundProduct = ref(null)
 
@@ -589,6 +636,7 @@ const sortedBatches = ref([])
 const batchPage = ref(0)
 const batchSize = ref(20)
 const batchTotalPages = ref(0)
+const expandedMonths = ref([])
 
 const itemPage = ref(0)
 const itemSize = ref(20)
@@ -597,19 +645,31 @@ const itemTotalPages = ref(0)
 
 const fetchBatches = async (productId) => {
   try {
-    const res = await api.get(`/franchise/inventory/batches/${productId}`, {
-      params: { page: batchPage.value, size: batchSize.value }
-    })
-    const pageData = res.data.data || {}
-    sortedBatches.value = (pageData.content || [])
-      .map(b => ({
-        productionDate: b.manufactureDate,
-        total: b.totalQuantity,
-        available: b.availableQuantity,
-        pending: b.returnPending
-      }))
-      .sort((a, b) => a.productionDate.localeCompare(b.productionDate))
-    batchTotalPages.value = pageData.totalPages || 0
+    const pageSize = 200
+    let page = 0
+    let totalPages = 1
+    const merged = []
+
+    while (page < totalPages) {
+      const res = await api.get(`/franchise/inventory/batches/${productId}`, {
+        params: { page, size: pageSize }
+      })
+      const pageData = res.data.data || {}
+      const content = (pageData.content || [])
+        .map(b => ({
+          productionDate: b.manufactureDate,
+          total: b.totalQuantity,
+          available: b.availableQuantity,
+          pending: b.returnPending
+        }))
+      merged.push(...content)
+      totalPages = pageData.totalPages || 0
+      if (totalPages === 0) break
+      page += 1
+    }
+
+    sortedBatches.value = merged.sort((a, b) => b.productionDate.localeCompare(a.productionDate))
+    batchTotalPages.value = 1
   } catch (e) {
     console.error('batch fetch failed:', e)
     sortedBatches.value = []
@@ -629,8 +689,6 @@ const fetchItems = async () => {
     }
     if (step3Filter.value.serialCode) requestBody.serialCode = step3Filter.value.serialCode
     if (step3Filter.value.boxCode) requestBody.boxCode = step3Filter.value.boxCode
-    if (step3Filter.value.shippingDate) requestBody.shippedAt = step3Filter.value.shippingDate
-    if (step3Filter.value.arrivalTime) requestBody.receivedAt = step3Filter.value.arrivalTime
 
     const res = await api.post('/franchise/inventory/items', requestBody, {
       params: { page: itemPage.value, size: itemSize.value }
@@ -643,9 +701,7 @@ const fetchItems = async () => {
         inventoryId: i.inventoryId,
         serialCode: i.serialCode,
         boxCode: i.boxCode,
-        status: parsedStatus,
-        shippingDate: i.shippedAt ? i.shippedAt.split('T')[0] : null,
-        arrivalTime: i.receivedAt ? i.receivedAt.split('T')[0] : null
+        status: parsedStatus
       }
     })
     itemTotalPages.value = pageData.totalPages || 0
@@ -656,11 +712,6 @@ const fetchItems = async () => {
   }
 }
 
-const changeBatchPage = async (page) => {
-  batchPage.value = page
-  await fetchBatches(selectedProduct.value.productId)
-}
-
 const changeItemPage = async (page) => {
   itemPage.value = page
   await fetchItems()
@@ -668,49 +719,49 @@ const changeItemPage = async (page) => {
 
 
 watch(step3Filter, () => {
-    if (currentStep.value === 3) {
+    if ((currentStep.value === 2 || currentStep.value === 3) && selectedProductionDate.value) {
         fetchItems()
     }
 }, { deep: true })
 
 // Selection Logic
 const isAllSelectedInStep3 = computed(() => {
-    return granularItems.value.length > 0 && granularItems.value.every(item => selectedItems.value.includes(item.serialCode))
+    return granularItems.value.length > 0 && granularItems.value.every(item => selectedItems.value.includes(item.inventoryId))
 })
 
 const toggleAllInStep3 = () => {
     if (isAllSelectedInStep3.value) {
         // Deselect all visible items
-        const serialsToRemove = granularItems.value.map(i => i.serialCode)
-        selectedItems.value = selectedItems.value.filter(s => !serialsToRemove.includes(s))
+        const idsToRemove = granularItems.value.map(i => i.inventoryId)
+        selectedItems.value = selectedItems.value.filter(id => !idsToRemove.includes(id))
     } else {
         // Select all visible items
         granularItems.value.forEach(item => {
-            if (!selectedItems.value.includes(item.serialCode)) {
-                selectedItems.value.push(item.serialCode)
+            if (!selectedItems.value.includes(item.inventoryId)) {
+                selectedItems.value.push(item.inventoryId)
             }
         })
     }
 }
 
 const toggleItemSelection = (item) => {
-    const isSelected = selectedItems.value.includes(item.serialCode)
+    const isSelected = selectedItems.value.includes(item.inventoryId)
     // Business Rule: Return/Disposal is BOX-based. Selecting one selects the whole box.
     // granularItems(현재 페이지/필터링된 목록) 내에서 동일한 boxCode를 가진 상품들을 찾아 처리
     const boxItems = item.boxCode 
         ? granularItems.value.filter(i => i.boxCode === item.boxCode)
         : [item]
-    const boxSerials = boxItems.map(i => i.serialCode)
+    const boxIds = boxItems.map(i => i.inventoryId)
     
     if (isSelected) {
         // Deselect whole box
-        selectedItems.value = selectedItems.value.filter(s => !boxSerials.includes(s))
+        selectedItems.value = selectedItems.value.filter(id => !boxIds.includes(id))
     } else {
         // Select whole box
         const newSelected = [...selectedItems.value]
-        boxSerials.forEach(s => {
-            if (!newSelected.includes(s)) {
-                newSelected.push(s)
+        boxIds.forEach(id => {
+            if (!newSelected.includes(id)) {
+                newSelected.push(id)
             }
         })
         selectedItems.value = newSelected
@@ -725,7 +776,11 @@ const createOrder = () => {
 const goToStep2 = async (product) => {
   selectedProduct.value = product
   selectedItems.value = []
-  batchPage.value = 0
+  expandedMonths.value = []
+  selectedProductionDate.value = null
+  granularItems.value = []
+  itemTotalPages.value = 0
+  step3Filter.value = { serialCode: '', boxCode: '' }
   currentStep.value = 2
   await fetchBatches(product.productId)
 }
@@ -738,10 +793,45 @@ const goToStep3 = async (batch) => {
   await fetchItems(batch.productionDate)
 }
 
+const selectBatchInStep2 = async (batch) => {
+  selectedProductionDate.value = batch.productionDate
+  selectedItems.value = []
+  itemPage.value = 0
+  await fetchItems(batch.productionDate)
+}
+
+const monthlyBatches = computed(() => {
+  const monthMap = new Map()
+  sortedBatches.value.forEach(batch => {
+    const monthKey = (batch.productionDate || '').slice(0, 7)
+    if (!monthMap.has(monthKey)) {
+      monthMap.set(monthKey, { monthKey, totalQuantity: 0, days: [] })
+    }
+    const group = monthMap.get(monthKey)
+    group.totalQuantity += Number(batch.total || 0)
+    group.days.push(batch)
+  })
+  return Array.from(monthMap.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey))
+})
+
+const isMonthExpanded = (monthKey) => expandedMonths.value.includes(monthKey)
+
+const toggleMonth = (monthKey) => {
+  if (isMonthExpanded(monthKey)) {
+    expandedMonths.value = expandedMonths.value.filter(key => key !== monthKey)
+  } else {
+    expandedMonths.value = [...expandedMonths.value, monthKey]
+  }
+}
+
+const formatMonthLabel = (monthKey) => {
+  if (!monthKey) return '-'
+  const [year, month] = monthKey.split('-')
+  return `${year}.${month}`
+}
+
 const requestDisposal = async () => {
-	const selectedIds = granularItems.value
-		.filter(i => selectedItems.value.includes(i.serialCode))
-		.map(i => i.inventoryId)
+	const selectedIds = [...selectedItems.value]
 	if (selectedIds.length === 0) return
 	if (!confirm(`선택한 ${selectedIds.length}개 제품을 폐기 처리하시겠습니까?`)) return
 	try {
@@ -761,28 +851,10 @@ const requestDisposal = async () => {
 }
 
 // Popup Logic
-const openPasswordPopup = () => {
-  showPasswordPopup.value = true
-  adminPassword.value = ''
-}
-
-const closePopup = () => {
-  showPasswordPopup.value = false
-}
-
-const checkPassword = async () => {
-	try {
-		const res = await api.post('/franchise/inventory/verify-password', { password: adminPassword.value })
-		if (res.data.data) {
-			showPasswordPopup.value = false
-			showSettingsPopup.value = true
-		} else {
-			alert('비밀번호가 틀렸습니다.')
-		}
-	} catch (e) {
-		console.error('비밀번호 확인 실패:', e)
-		alert('비밀번호 확인 중 오류가 발생했습니다.')
-	}
+const openSettingsPopup = () => {
+  showSettingsPopup.value = true
+  settingForm.value = { productCode: '', safeStock: 10 }
+  foundProduct.value = null
 }
 
 const closeSettingsPopup = () => {
@@ -1090,6 +1162,23 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 .back-btn:hover { background: #f8fafc; border-color: var(--text-light); }
 .selected-info h3 { margin: 0; font-size: 1.4rem; color: var(--text-dark); font-weight: 800; }
 .sub-info { color: #64748b; font-weight: 500; font-size: 1.1rem; margin-left: 0.75rem; }
+.step2-split { display: grid; grid-template-columns: minmax(280px, 40%) minmax(0, 60%); gap: 1rem; align-items: stretch; }
+.left-pane,
+.right-pane { height: 68vh; min-height: 520px; overflow: auto; }
+.detail-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: #64748b; font-weight: 600; background: #f8fafc; border-radius: 16px; text-align: center; padding: 1rem; }
+.batch-accordion { padding: 0.9rem 1rem 1rem; display: grid; gap: 0.7rem; background: #f8fafc; }
+.month-group { border: 1px solid #d6e0ea; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06); }
+.month-row { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; padding: 0.85rem 1rem; border: 0; background: #f1f5f9; cursor: pointer; color: #0f172a; text-align: left; }
+.month-main { display: flex; flex-direction: column; gap: 0.15rem; align-items: flex-start; }
+.month-label { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; color: #0f172a; }
+.month-sub { font-size: 0.78rem; color: #64748b; font-weight: 600; }
+.month-arrow { width: 18px; flex: 0 0 18px; text-align: center; color: #475569; font-size: 0.9rem; }
+.day-list { display: grid; padding: 0.15rem 0.95rem 0.35rem; background: #fff; }
+.day-row { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.55rem; border: 0; border-bottom: 1px solid #f1f5f9; background: transparent; border-radius: 0; padding: 0.62rem 0.35rem 0.62rem 0.9rem; cursor: pointer; color: #334155; text-align: left; }
+.day-row:last-child { border-bottom: 0; }
+.day-row:hover { background: #fafafa; }
+.day-date { width: 128px; flex: 0 0 128px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: left; }
+.day-count { width: 76px; flex: 0 0 76px; font-weight: 700; color: #0f766e; font-variant-numeric: tabular-nums; text-align: right; }
 
 .number-cell.available { color: #166534; }
 .number-cell.pending { color: #991b1b; }
@@ -1097,6 +1186,23 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 .filter-section.mini { padding: 1rem; gap: 1rem; margin-bottom: 1rem; background: #f8fafc; }
 .filter-section.mini .filter-group { min-width: 120px; }
 .filter-section.mini input { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+.data-table.inventory-detail-table {
+  min-width: 720px;
+  table-layout: fixed;
+}
+.data-table.inventory-detail-table th,
+.data-table.inventory-detail-table td {
+  padding-left: 1.1rem !important;
+  padding-right: 1.1rem !important;
+}
+.data-table.inventory-detail-table th:nth-child(1),
+.data-table.inventory-detail-table td:nth-child(1) { text-align: center; }
+.data-table.inventory-detail-table th:nth-child(2),
+.data-table.inventory-detail-table td:nth-child(2) { text-align: left; }
+.data-table.inventory-detail-table th:nth-child(3),
+.data-table.inventory-detail-table td:nth-child(3) { text-align: left; }
+.data-table.inventory-detail-table th:nth-child(4),
+.data-table.inventory-detail-table td:nth-child(4) { text-align: center; }
 
 .status-item-badge { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
 .status-item-badge.available { background: #dcfce7; color: #166534; }
@@ -1157,6 +1263,8 @@ input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 }
 
 @media (max-width: 960px) {
+  .step2-split { grid-template-columns: 1fr; }
+  .left-pane, .right-pane { height: auto; min-height: 0; overflow: visible; }
   .summary-grid {
     grid-template-columns: 1fr;
   }

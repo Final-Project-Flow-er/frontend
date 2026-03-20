@@ -2,7 +2,6 @@
   <div class="org-list-container">
     <div class="org-list-header">
       <h1>공장 조회</h1>
-      <p class="subtitle">생산 공장의 운영 현황 및 지역별 정보를 관리합니다</p>
     </div>
 
     <!-- 필터 및 검색 -->
@@ -50,7 +49,8 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.keyword" 
+              :value="filters.keyword" 
+              @input="filters.keyword = $event.target.value"
               placeholder="공장명 또는 코드 입력"
             >
           </div>
@@ -58,7 +58,7 @@
 
         <div class="filter-group sub-search-group">
           <label>대표자/사업자번호</label>
-          <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
+          <input type="text" :value="filters.subKeyword" @input="filters.subKeyword = $event.target.value" placeholder="대표자 또는 번호">
         </div>
 
         <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
@@ -216,46 +216,20 @@ const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = ref(20)
 
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터 변경 시 자동 조회
-watch(() => [filters.status, filters.region, filters.keyword, filters.subKeyword], () => {
-  debouncedFetch()
-})
-
-let fetchTimeout = null
-const debouncedFetch = () => {
-  if (fetchTimeout) clearTimeout(fetchTimeout)
-  fetchTimeout = setTimeout(() => {
-    currentPage.value = 0
-    fetchOrganizations()
-  }, 300)
-}
-
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터 변경 시 첫 페이지로 이동
-watch(() => [filters.status, filters.region, filters.searchQuery], () => {
-  currentPage.value = 0
-}, { deep: true })
-
+// 데이터 조회
 const fetchOrganizations = async () => {
   try {
-    const isCode = /^[A-Z0-9]+$/i.test(filters.keyword)
-
+    const kw = filters.keyword?.trim() || null
+    const sub = filters.subKeyword?.trim() || null
     const params = {
       page: currentPage.value,
       size: pageSize.value,
       status: filters.status === 'all' ? null : filters.status,
       region: filters.region === 'all' ? null : filters.region,
-      code: isCode ? filters.keyword || null : null,
-      name: !isCode ? filters.keyword || null : null,
-      representativeName: (filters.subKeyword && isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
-      businessNumber: (filters.subKeyword && !isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null
+      name: kw,
+      code: kw,
+      representativeName: sub,
+      businessNumber: sub
     }
     
     const response = await api.get('/hq/business-units/FACTORY', { params })
@@ -268,6 +242,18 @@ const fetchOrganizations = async () => {
     console.error('공장 목록 조회 실패:', error)
   }
 }
+
+// 필터 변경 시 자동 조회 (디바운스 적용)
+let fetchTimeout = null
+watch(filters, () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchOrganizations()
+  }, 400)
+}, { deep: true })
+
+onMounted(fetchOrganizations)
 
 const changePage = (page) => {
   currentPage.value = page

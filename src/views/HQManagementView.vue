@@ -5,7 +5,6 @@
       <div class="header-left">
         <div class="title-group">
           <h1>본사 정보 관리</h1>
-          <p class="subtitle">CHAIN-G 시스템의 핵심 운영 인프라 및 법적 정보를 총괄합니다</p>
         </div>
       </div>
       <div class="header-actions">
@@ -51,7 +50,7 @@
             </div>
             <div class="hq-form-group">
               <label>대표자 성명</label>
-              <input type="text" v-model="hqData.representativeName" :disabled="!isEditing" :class="{ 'is-editing': isEditing }">
+              <input type="text" v-model="hqData.representativeName" @input="hqData.representativeName = hqData.representativeName.replace(/[0-9]/g, '')" :disabled="!isEditing" :class="{ 'is-editing': isEditing }">
             </div>
             <div class="hq-form-group">
               <label>사업자 등록 번호</label>
@@ -68,15 +67,34 @@
           </div>
           <div class="card-content">
             <div class="hq-form-group">
-              <label>대표 연락처</label>
-              <input type="tel" v-model="hqData.phone" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" @input="handlePhoneInput">
+              <label>본사 연락처</label>
+              <input type="tel" v-model="hqData.phone" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" @input="handlePhoneInput" maxlength="13">
             </div>
             <div class="hq-form-group full-width">
               <label>본사 공식 소재지</label>
-              <div class="address-input-wrapper">
-                <input type="text" v-model="hqData.address" :disabled="!isEditing" :class="{ 'is-editing': isEditing }" readonly @click="isEditing && openPostcode()">
-                <button v-if="isEditing" @click="openPostcode" class="btn-search-addr">주소 검색</button>
+              <div v-if="!isEditing" class="hq-address-display">
+                {{ hqData.address.replace('|', ' ') }} {{ hqData.detailAddress }}
               </div>
+              <template v-else>
+                <div class="address-input-wrapper">
+                  <input 
+                    type="text" 
+                    v-model="hqData.address" 
+                    :disabled="!isEditing" 
+                    :class="{ 'is-editing': isEditing }" 
+                    placeholder="주소를 입력하거나 검색하세요"
+                  >
+                  <button v-if="isEditing" @click="openPostcode" class="btn-search-addr">주소 검색</button>
+                </div>
+                  <input 
+                    v-if="isEditing" 
+                    type="text" 
+                    v-model="hqData.detailAddress" 
+                    placeholder="상세 주소를 입력하세요" 
+                    class="detail-address-input-hq"
+                    :class="{ 'is-editing': isEditing }"
+                  >
+              </template>
             </div>
           </div>
         </div>
@@ -140,7 +158,20 @@ const fetchHqInfo = async () => {
   try {
     const response = await api.get('/hq/business-units/HQ/1')
     if (response.data.success) {
-      hqData.value = response.data.data
+      const data = response.data.data
+      hqData.value = data
+      const fullAddr = data.address || ''
+      if (fullAddr.includes('|')) {
+        const parts = fullAddr.split('|')
+        hqData.value.address = parts[0]
+        hqData.value.detailAddress = parts[1]
+      } else {
+        hqData.value.address = fullAddr
+        hqData.value.detailAddress = ''
+      }
+      if (hqData.value.phone) {
+        handlePhoneInput({ target: { value: hqData.value.phone } })
+      }
     }
   } catch (error) {
     console.error('본사 정보 조회 실패:', error)
@@ -160,18 +191,36 @@ const cancelEdit = () => {
 }
 
 const handlePhoneInput = (e) => {
-  const value = e.target.value.replace(/[^0-9]/g, '')
-  let result = ''
-  if (value.length < 4) {
-    result = value
-  } else if (value.length < 7) {
-    result = value.substr(0, 3) + '-' + value.substr(3)
-  } else if (value.length < 11) {
-    result = value.substr(0, 3) + '-' + value.substr(3, 3) + '-' + value.substr(6)
-  } else {
-    result = value.substr(0, 3) + '-' + value.substr(3, 4) + '-' + value.substr(7)
+  let val = e.target.value.replace(/[^0-9]/g, '');
+  if (val.length < 3) {
+    hqData.value.phone = val;
+    return;
   }
-  hqData.value.phone = result
+  
+  if (val.startsWith('02')) {
+    val = val.slice(0, 10); // 서울은 최대 10자리
+    if (val.length <= 2) {
+      // 가만히 둠
+    } else if (val.length <= 5) {
+      val = val.replace(/(\d{2})(\d{1,3})/, '$1-$2');
+    } else if (val.length <= 9) {
+      val = val.replace(/(\d{2})(\d{3})(\d{1,4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
+    }
+  } else {
+    val = val.slice(0, 11); // 나머지는 최대 11자리
+    if (val.length <= 3) {
+      // 가만히 둠
+    } else if (val.length <= 7) {
+      val = val.replace(/(\d{3})(\d{1,4})/, '$1-$2');
+    } else if (val.length <= 10) {
+      val = val.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    } else {
+      val = val.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    }
+  }
+  hqData.value.phone = val;
 }
 
 const openPostcode = () => {
@@ -195,7 +244,7 @@ const saveChanges = async () => {
   try {
     const payload = {
       name: hqData.value.name,
-      address: hqData.value.address,
+      address: hqData.value.detailAddress ? `${hqData.value.address}|${hqData.value.detailAddress}` : hqData.value.address,
       phone: hqData.value.phone,
       representativeName: hqData.value.representativeName,
     }
@@ -207,7 +256,8 @@ const saveChanges = async () => {
     }
   } catch (error) {
     console.error('본사 정보 업데이트 실패:', error)
-    alert('본사 정보 업데이트 중 오류가 발생했습니다.')
+    const serverMessage = error.response?.data?.message
+    alert(serverMessage || '본사 정보 업데이트 중 오류가 발생했습니다.')
   }
 }
 
@@ -258,12 +308,13 @@ const getRegionLabel = (region) => {
 .btn-premium-edit {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1.8rem;
+  gap: 0.5rem;
+  padding: 0.6rem 1.4rem;
   background: #0f172a;
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -282,11 +333,12 @@ const getRegionLabel = (region) => {
 }
 
 .btn-premium-save {
-  padding: 0.8rem 1.8rem;
+  padding: 0.6rem 1.4rem;
   background: #0f172a;
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -300,11 +352,12 @@ const getRegionLabel = (region) => {
 }
 
 .btn-premium-cancel {
-  padding: 0.8rem 1.2rem;
+  padding: 0.6rem 1.2rem;
   background: #f1f5f9;
   color: #64748b;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -313,13 +366,13 @@ const getRegionLabel = (region) => {
 .hq-profile-banner {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  padding: 2.5rem;
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .profile-main-info {
@@ -337,7 +390,7 @@ const getRegionLabel = (region) => {
 
 .logo-barcode-mini {
   font-family: 'Libre Barcode 39 Text', system-ui;
-  font-size: 52px;
+  font-size: 42px;
   color: #0f172a;
   margin: 0;
   font-weight: 100;
@@ -348,10 +401,10 @@ const getRegionLabel = (region) => {
 
 
 .hq-display-name {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
 }
 
 .hq-meta-row {
@@ -362,15 +415,15 @@ const getRegionLabel = (region) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1.25rem;
+  padding: 0.4rem 1rem;
   background: #eff6ff;
   color: #3b82f6;
   border-radius: 100px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   border: 2px solid #dbeafe;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
 }
 
 .profile-status-stats {
@@ -392,7 +445,7 @@ const getRegionLabel = (region) => {
 }
 
 .stat-value {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1e293b;
 }
@@ -415,9 +468,9 @@ const getRegionLabel = (region) => {
 .hq-card-section {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .hq-card-section.full-width {
@@ -428,11 +481,11 @@ const getRegionLabel = (region) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #0f172a;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid #f8fafc;
 }
 
@@ -460,10 +513,10 @@ const getRegionLabel = (region) => {
 }
 
 .hq-form-group input, .hq-form-group select {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 1.05rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #1e293b;
   background: #f8fafc;
@@ -472,9 +525,9 @@ const getRegionLabel = (region) => {
 }
 
 .hq-form-group input.is-editing, .hq-form-group select.is-editing {
-  border-color: #3b82f6;
+  border-color: #0f172a;
   background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
 }
 
 .hq-form-group input:disabled, .hq-form-group select:disabled {
@@ -491,8 +544,28 @@ const getRegionLabel = (region) => {
 
 .address-input-wrapper {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   align-items: center;
+  margin-bottom: 0;
+}
+
+.hq-address-display {
+  display: block;
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.4;
+  word-break: break-all;
+  box-sizing: border-box;
+  min-height: 2.6rem; /* 일반 입력창과 비슷한 최소 높이 */
+}
+
+.detail-address-input-hq {
+  margin-top: 0.75rem;
 }
 
 .btn-search-addr {
@@ -508,7 +581,7 @@ const getRegionLabel = (region) => {
 }
 
 .map-container {
-  height: 400px;
+  height: 300px;
   margin-top: 0.5rem;
   border-radius: 12px;
   overflow: hidden;

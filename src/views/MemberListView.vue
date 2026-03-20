@@ -2,7 +2,6 @@
   <div class="member-list-container">
     <div class="member-list-header">
       <h1>회원 조회</h1>
-      <p class="subtitle">등록된 전체 회원을 조회하고 관리합니다</p>
     </div>
 
     <!-- 필터 및 검색 -->
@@ -36,7 +35,8 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.searchQuery" 
+              :value="filters.searchQuery" 
+              @input="filters.searchQuery = $event.target.value"
               placeholder="이름, 아이디, 이메일, 사원번호 검색"
             >
           </div>
@@ -46,8 +46,9 @@
           <label>소속</label>
           <input 
             type="text" 
-            v-model="filters.orgName" 
-            placeholder="가맹점/공장명 검색..."
+            :value="filters.orgName" 
+            @input="filters.orgName = $event.target.value"
+            placeholder="소속 사업장 검색"
           >
         </div>
 
@@ -177,7 +178,7 @@ const filters = reactive({
   role: 'all',
   status: 'all',
   searchQuery: '',
-  orgName: '' // 백엔드 요약 정보에는 소속명이 없으므로 일단 검색 대상에서 제외될 수 있음
+  orgName: ''
 })
 
 // 세부 역할 라벨 (백엔드 UserPosition 매핑)
@@ -199,10 +200,15 @@ const isLoading = ref(false)
 const fetchMembers = async () => {
   isLoading.value = true
   try {
+    const kw = filters.searchQuery?.trim() || null
     const params = {
       role: filters.role !== 'all' ? filters.role.toUpperCase() : null,
       status: filters.status !== 'all' ? filters.status.toUpperCase() : null,
-      username: filters.searchQuery || null
+      // searchQuery를 loginId, username, employeeNumber 모두에 전달 → 백엔드에서 OR 조건 처리
+      loginId: kw,
+      username: kw,
+      employeeNumber: kw,
+      orgName: filters.orgName?.trim() || null
     }
     await userManagementStore.fetchUsers(params)
   } catch (error) {
@@ -212,19 +218,17 @@ const fetchMembers = async () => {
   }
 }
 
-onMounted(fetchMembers)
 
-// 필터 변경 시 자동 재조회
-watch(() => [filters.role, filters.status], fetchMembers)
-
-// 검색어는 엔터나 버튼 클릭 시 조회하도록 하거나, 디바운스 적용 가능
-// 여기서는 일단 수동 조회 버튼이 없으므로 엔터 키 대응 등을 추가할 수 있으나
-// 기존 코드 흐름에 따라 computed 대신 실시간 조회를 원한다면 watch를 searchQuery에도 걸어줍니다.
-watch(() => filters.searchQuery, (newVal) => {
-  if (newVal.length === 0 || newVal.length >= 2) {
+// 필터 변경 시 자동 조회 (디바운스 적용)
+let fetchTimeout = null
+watch(filters, () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
     fetchMembers()
-  }
-})
+  }, 400)
+}, { deep: true })
+
+onMounted(fetchMembers)
 
 const members = computed(() => userManagementStore.users)
 

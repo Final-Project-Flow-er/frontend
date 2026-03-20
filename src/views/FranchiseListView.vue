@@ -2,7 +2,6 @@
   <div class="org-list-container">
     <div class="org-list-header">
       <h1>가맹점 조회</h1>
-      <p class="subtitle">전체 가맹점의 운영 현황 및 정보를 조회합니다</p>
     </div>
 
     <!-- 필터 및 검색 -->
@@ -59,7 +58,8 @@
             </svg>
             <input 
               type="text" 
-              v-model="filters.keyword" 
+              :value="filters.keyword" 
+              @input="filters.keyword = $event.target.value"
               placeholder="매장명 또는 코드 입력"
             >
           </div>
@@ -67,7 +67,7 @@
 
         <div class="filter-group sub-search-group">
           <label>대표자/사업자번호</label>
-          <input type="text" v-model="filters.subKeyword" placeholder="대표자 또는 번호">
+          <input type="text" :value="filters.subKeyword" @input="filters.subKeyword = $event.target.value" placeholder="대표자 또는 번호">
         </div>
 
         <button @click="resetFilters" class="btn-reset-filters" title="필터 초기화">
@@ -265,53 +265,25 @@ const totalPages = ref(0)
 const currentPage = ref(0)
 const pageSize = ref(20)
 
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터 변경 시 자동 조회
-watch(() => [filters.status, filters.region, filters.isReturnBlocked, filters.keyword, filters.subKeyword], () => {
-  debouncedFetch()
-})
-
-let fetchTimeout = null
-const debouncedFetch = () => {
-  if (fetchTimeout) clearTimeout(fetchTimeout)
-  fetchTimeout = setTimeout(() => {
-    currentPage.value = 0
-    fetchOrganizations()
-  }, 300)
-}
-
-onMounted(async () => {
-  await fetchOrganizations()
-})
-
-// 필터나 검색어가 바뀔 때 첫 페이지로 이동 (데이터는 fetch할 필요 없음, 로컬 필터링이므로)
-watch(() => [filters.status, filters.region, filters.selectedDays, filters.searchQuery], () => {
-  currentPage.value = 0
-}, { deep: true })
-
+// 데이터 조회
 const fetchOrganizations = async () => {
   try {
-    // 팁: DTO의 code와 name에 keyword를 지능적으로 배분 조절
-    // 사용자가 입력한 키워드가 영문+숫자 위주면 code로, 아니면 name으로 시도하거나 둘 다 검색
-    const isCode = /^[A-Z0-9]+$/i.test(filters.keyword)
-    
+    const kw = filters.keyword?.trim() || null
+    const sub = filters.subKeyword?.trim() || null
     const params = {
       page: currentPage.value,
       size: pageSize.value,
-      status: filters.status === 'all' ? null : filters.status,
-      region: filters.region === 'all' ? null : filters.region,
-      code: isCode ? filters.keyword || null : null,
-      name: !isCode ? filters.keyword || null : null,
-      representativeName: (filters.subKeyword && isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
-      businessNumber: (filters.subKeyword && !isNaN(filters.subKeyword.replace(/-/g,''))) ? filters.subKeyword : null,
-      operatingDays: filters.selectedDays.length > 0 ? filters.selectedDays.join(',') : null,
-      isReturnBlocked: filters.isReturnBlocked
+      name: kw,
+      code: kw,
+      representativeName: sub,
+      businessNumber: sub,
+      status: filters.status !== 'all' ? filters.status : null,
+      region: filters.region !== 'all' ? filters.region : null,
+      isReturnBlocked: filters.isReturnBlocked,
+      operatingDays: filters.selectedDays.length > 0 ? filters.selectedDays.join(',') : null
     }
-    
-    const response = await api.get('/hq/business-units/FRANCHISE', { params })
+
+    const response = await api.get('/hq/business-units/franchise', { params })
     if (response.data.success) {
       organizations.value = response.data.data.content
       totalElements.value = response.data.data.totalElements
@@ -321,6 +293,19 @@ const fetchOrganizations = async () => {
     console.error('가맹점 목록 조회 실패:', error)
   }
 }
+
+// 필터 변경 시 자동 조회 (디바운스 적용)
+let fetchTimeout = null
+watch(filters, () => {
+  if (fetchTimeout) clearTimeout(fetchTimeout)
+  fetchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchOrganizations()
+  }, 400)
+}, { deep: true })
+
+onMounted(fetchOrganizations)
+
 
 const changePage = async (page) => {
   currentPage.value = page

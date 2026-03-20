@@ -115,8 +115,10 @@ import api from '@/api/index'
 
 const router = useRouter()
 const route = useRoute()
-const userRole = sessionStorage.getItem('userRole')
-const isAdmin = computed(() => userRole === 'admin' || userRole === 'headOffice')
+import { useAuthStore } from '@/stores/auth'
+const authStore = useAuthStore()
+const userRole = computed(() => authStore.userRole?.toLowerCase())
+const isAdmin = computed(() => ['admin', 'headoffice', 'hq'].includes(userRole.value))
 
 const notice = ref(null)
 

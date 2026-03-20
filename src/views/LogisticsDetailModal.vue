@@ -46,8 +46,8 @@
               <span class="value">{{ data.ownedVehicles }}대</span>
             </div>
             <div class="info-item">
-              <span class="label">운송 단가</span>
-              <span class="value">{{ data.unitPrice?.toLocaleString() }} 원/km</span>
+              <span class="label">운송 단가 (원)</span>
+              <span class="value">{{ data.unitPrice?.toLocaleString() }}</span>
             </div>
             <div class="info-item">
               <span class="label">계약 시작일</span>
@@ -74,8 +74,8 @@
               <span class="value">{{ getVehicleTypeText(data.vehicleType) }}</span>
             </div>
             <div class="info-item">
-              <span class="label">최대 적재량</span>
-              <span class="value">{{ data.maxLoad }}</span>
+              <span class="label">최대 적재량(kg)</span>
+              <span class="value">{{ data.maxLoad }}kg</span>
             </div>
             <div class="info-item">
               <span class="label">운전자명</span>
@@ -106,13 +106,20 @@
             <div class="form-group full-width">
               <label>사업장 주소 <span class="required">*</span></label>
               <div class="address-input-group">
-                <input type="text" v-model="formData.address" required readonly>
-                <button type="button" @click="openPostcode" class="btn-address">주소 검색</button>
+                <input type="text" v-model="formData.address" required placeholder="주소를 직접 입력하거나 검색하세요" @click="isEditMode && openPostcode()">
+                <button v-if="isEditMode" type="button" @click="openPostcode" class="btn-address">주소 검색</button>
               </div>
+              <input 
+                v-if="isEditMode"
+                type="text" 
+                v-model="formData.detailAddress" 
+                placeholder="상세 주소를 입력하세요" 
+                class="detail-address-input"
+              >
             </div>
             <div class="form-group">
               <label>담당자 이름 <span class="required">*</span></label>
-              <input type="text" v-model="formData.manager" required>
+              <input type="text" v-model="formData.manager" @input="formData.manager = formData.manager.replace(/[0-9]/g, '')" required>
             </div>
             <div class="form-group">
               <label>주력 운송 지역 <span class="required">*</span></label>
@@ -141,7 +148,7 @@
               <input type="number" v-model="formData.ownedVehicles" required>
             </div>
             <div class="form-group">
-              <label>운송 단가 (원/km) <span class="required">*</span></label>
+              <label>운송 단가 (원) <span class="required">*</span></label>
               <input type="number" v-model="formData.unitPrice" required>
             </div>
             <div class="form-group">
@@ -181,12 +188,12 @@
               </select>
             </div>
             <div class="form-group">
-              <label>최대 적재량 (카) <span class="required">*</span></label>
+              <label>최대 적재량 (kg) <span class="required">*</span></label>
               <input type="number" v-model.number="formData.maxLoad" min="0" required>
             </div>
             <div class="form-group">
               <label>운전자 이름 <span class="required">*</span></label>
-              <input type="text" v-model="formData.driverName" required>
+              <input type="text" v-model="formData.driverName" @input="formData.driverName = formData.driverName.replace(/[0-9]/g, '')" required>
             </div>
             <div class="form-group">
               <label>기사 연락처 <span class="required">*</span></label>
@@ -253,7 +260,7 @@ watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     isEditMode.value = false // 열릴 때는 항상 조회 모드
     if (props.data) {
-      formData.value = { ...props.data }
+      formData.value = { ...props.data, detailAddress: '' }
     }
   }
 })
@@ -378,7 +385,12 @@ const save = () => {
     }
   }
 
-  emit('save', { type: props.type, data: formData.value })
+  const finalData = { ...formData.value }
+  if (props.type === 'company' && formData.value.detailAddress) {
+    finalData.address = `${formData.value.address} ${formData.value.detailAddress}`
+  }
+
+  emit('save', { type: props.type, data: finalData })
   isEditMode.value = false
 }
 
@@ -513,6 +525,11 @@ const confirmDelete = () => {
   white-space: nowrap; transition: all 0.2s;
 }
 .btn-address:hover { background: #e2e8f0; }
+
+.detail-address-input {
+  width: 100%;
+  margin-top: -0.25rem;
+}
 
 .modal-footer {
   padding: 1.5rem 2rem; border-top: 1px solid #f1f5f9;

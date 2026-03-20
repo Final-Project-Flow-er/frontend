@@ -83,11 +83,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const productCode = ref(route.params.productCode)
-const userRole = sessionStorage.getItem('userRole')
+const userRole = computed(() => authStore.userRole?.toLowerCase())
 
 const filter = ref({
   expireDate: '',

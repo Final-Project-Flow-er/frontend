@@ -20,6 +20,7 @@ import FactoryOrderListView from '../views/factory/OrderListView.vue'
 import FactoryOrderRequestView from '../views/factory/OrderRequestView.vue'
 import FactoryInboundView from '../views/factory/InboundView.vue'
 import FactoryOutboundView from '../views/factory/OutboundView.vue'
+import FactoryInventoryView from '../views/factory/InventoryView.vue'
 import HeadOfficeVehicleAssignmentView from '../views/head-office/VehicleAssignmentView.vue'
 import HeadOfficeReturnVehicleAssignmentView from '../views/head-office/ReturnVehicleAssignmentView.vue'
 import MyPageView from '../views/MyPageView.vue'
@@ -300,6 +301,11 @@ const router = createRouter({
             component: FactoryOutboundView
         },
         {
+            path: '/factory/inventory',
+            name: 'factory-inventory',
+            component: FactoryInventoryView
+        },
+        {
             path: '/factory/orders/request',
             name: 'factory-order-request',
             component: FactoryOrderRequestView
@@ -395,11 +401,6 @@ const router = createRouter({
             component: () => import('../views/HQFranchiseInventoryView.vue')
         },
         {
-            path: '/hq/inventory/logs/hq',
-            name: 'hq-log-hq',
-            component: () => import('../views/HQInventoryLogView.vue')
-        },
-        {
             path: '/hq/inventory/logs/franchise',
             name: 'hq-log-franchise',
             component: () => import('../views/HQFranchiseInventoryLogView.vue')
@@ -410,6 +411,43 @@ const router = createRouter({
             component: () => import('../views/HQFactoryInventoryLogView.vue')
         }
     ]
+})
+
+router.beforeEach((to, from, next) => {
+    const accessToken = localStorage.getItem('accessToken')
+
+    // Check if token exists and is not a "null"/"undefined" string
+    const isAuthenticated = accessToken && accessToken !== 'null' && accessToken !== 'undefined'
+
+    // If it's an invalid string, clear it automatically to prevent "cache" issues
+    if (accessToken && !isAuthenticated) {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('userRole')
+    }
+
+    // 1. If not authenticated
+    if (!isAuthenticated) {
+        // Allow access to Login and Account Support pages
+        if (to.name === 'Login' || to.name === 'AccountSupport') {
+            next()
+        }
+        // Redirect any other attempt to Login
+        else {
+            next({ name: 'Login' })
+        }
+    }
+    // 2. If authenticated
+    else {
+        // If logged in and trying to go to Login, redirect to Home
+        if (to.name === 'Login') {
+            next({ name: 'Home' })
+        }
+        // Otherwise allow navigation
+        else {
+            next()
+        }
+    }
 })
 
 export default router

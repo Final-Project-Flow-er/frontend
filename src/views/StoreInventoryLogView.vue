@@ -47,14 +47,6 @@
           <input type="radio" v-model="activeLogType" value="LOGISTICS" />
           입출고 로그
         </label>
-        <label :class="{ active: activeLogType === 'RETURN_IN' }">
-          <input type="radio" v-model="activeLogType" value="RETURN_IN" />
-          반품 입고 내역
-        </label>
-        <label :class="{ active: activeLogType === 'RETURN_OUT' }">
-          <input type="radio" v-model="activeLogType" value="RETURN_OUT" />
-          반품 출고 내역
-        </label>
         <label :class="{ active: activeLogType === 'DISPOSAL' }">
           <input type="radio" v-model="activeLogType" value="DISPOSAL" />
           폐기 내역
@@ -197,6 +189,8 @@ const toggleRow = async (id) => {
                 const params = { transactionCode: log.orderCode }
                 const date = toApiDate(log.arrivalTime)
                 if (date) params.date = date
+                if (log.name) params.productName = log.name
+                if (log.logType) params.logType = log.logType
                 const res = await api.get('/hq/log/boxes', { params })
                 if (res.data && res.data.success) {
                     boxCodesMap.value[id] = res.data.data || []

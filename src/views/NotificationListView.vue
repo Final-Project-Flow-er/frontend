@@ -134,10 +134,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '../stores/notification'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const authStore = useAuthStore()
+
 const activeTab = computed(() => notificationStore.activeTab)
+const userRole = computed(() => authStore.userRole?.toLowerCase())
+
+const FACTORY_STOCK_ALERT_TARGET_BASE = 2000000000
+const FRANCHISE_STOCK_ALERT_TARGET_BASE = 3000000000
 
 const tabs = [
   { id: 'all', name: '전체' },
@@ -213,6 +220,36 @@ const formatTime = (dateStr) => {
   return date.toLocaleDateString()
 }
 
+const resolveStockNotificationRoute = (notif) => {
+  const targetId = Number(notif?.targetId || 0)
+  const role = userRole.value
+
+  if (role === 'franchise') {
+    return '/store/inventory'
+  }
+
+  if (role === 'headoffice' || role === 'hq') {
+    if (targetId >= FRANCHISE_STOCK_ALERT_TARGET_BASE) {
+      return '/hq/inventory/franchise'
+    }
+    return '/hq/inventory/factory'
+  }
+
+  if (role === 'factory') {
+    return '/factory/inventory'
+  }
+
+  if (targetId >= FRANCHISE_STOCK_ALERT_TARGET_BASE) {
+    return '/hq/inventory/franchise'
+  }
+
+  if (targetId >= FACTORY_STOCK_ALERT_TARGET_BASE) {
+    return '/hq/inventory/factory'
+  }
+
+  return '/store/inventory'
+}
+
 const handleNotifClick = async (notif) => {
   if (!notif.read) {
     await notificationStore.readNotification(notif.notificationId)
@@ -222,7 +259,7 @@ const handleNotifClick = async (notif) => {
   if (notif.type === 'NOTICE') {
     router.push(`/notice/${notif.targetId}`)
   } else if (notif.type === 'STOCK') {
-    router.push('/store/inventory')
+    router.push(resolveStockNotificationRoute(notif))
   } else if (notif.type === 'SYSTEM') {
     router.push('/mypage')
   }

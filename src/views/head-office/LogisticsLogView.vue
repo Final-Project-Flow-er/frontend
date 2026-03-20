@@ -51,7 +51,7 @@ const vehicleTypes = [
 
 const filteredLogs = computed(() => {
   return logs.value.filter(log => {
-    const logDate = log.createAt ? log.createAt.split('T')[0] : ''
+    const logDate = log.createdAt ? log.createdAt.split('T')[0] : ''
     return (!filter.value.date || logDate === filter.value.date) &&
            (!filter.value.status || log.deliverStatus === filter.value.status) &&
            (!filter.value.company || log.franchiseName === filter.value.company) &&
@@ -164,9 +164,8 @@ const getVehicleTypeLabel = (type) => {
         <table class="data-table">
           <thead>
             <tr>
-              <th>로그 시각</th>
-              <th>가맹점명</th>
               <th>일시</th>
+              <th>가맹점명</th>
               <th>배송 상태</th>
               <th>발주 번호</th>
               <th>반품 번호</th>
@@ -179,12 +178,8 @@ const getVehicleTypeLabel = (type) => {
           </thead>
           <tbody>
             <tr v-for="log in paginatedLogs" :key="log.transportLogId">
-              <td class="time-cell">
-                {{ formatDate(log.createAt).time }}
-                <span class="date-sub">{{ formatDate(log.createAt).date }}</span>
-              </td>
+              <td>{{ formatDate(log.createdAt).date }} {{ formatDate(log.createdAt).time }}</td>
               <td class="name-cell">{{ log.franchiseName }}</td>
-              <td>{{ formatDate(log.createAt).date }} {{ formatDate(log.createAt).time }}</td>
               <td>
                 <span class="status-badge" :class="getStatusClass(log.deliverStatus)">
                   {{ getStatusLabel(log.deliverStatus) }}
@@ -199,7 +194,7 @@ const getVehicleTypeLabel = (type) => {
               <td>{{ (log.weight || 0).toLocaleString() }}</td>
             </tr>
             <tr v-if="filteredLogs.length === 0">
-              <td colspan="11" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
+              <td colspan="10" class="empty-state">조건에 맞는 로그 내역이 없습니다.</td>
             </tr>
           </tbody>
         </table>

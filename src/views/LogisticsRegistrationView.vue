@@ -2,7 +2,6 @@
   <div class="logistics-registration-container">
     <div class="registration-header">
       <h1>업체 및 차량 등록</h1>
-      <p class="subtitle">새로운 물류 파트너 및 배송 차량을 시스템에 등록합니다</p>
     </div>
 
     <!-- 등록 타입 선택 -->
@@ -40,7 +39,7 @@
                   type="tel"
                   v-model="companyData.officePhone"
                   @input="handlePhoneInput"
-                  placeholder="02-000-0000"
+                  placeholder="연락처를 입력하세요"
                   maxlength="13"
                   required
                 >
@@ -51,16 +50,21 @@
                   <input
                     type="text"
                     v-model="companyData.address"
-                    placeholder="주소를 검색하세요"
-                    readonly
+                    placeholder="주소를 검색하거나 직접 입력하세요"
                     @click="openPostcode"
                   >
                   <button type="button" @click="openPostcode" class="btn-address-search">주소 검색</button>
                 </div>
+                <input 
+                  type="text" 
+                  v-model="companyData.detailAddress" 
+                  placeholder="상세 주소를 입력하세요" 
+                  class="detail-address-input"
+                >
               </div>
               <div class="form-group">
                 <label>담당자 이름 <span class="required">*</span></label>
-                <input type="text" v-model="companyData.manager" placeholder="담당자 성함을 입력하세요" required>
+                <input type="text" v-model="companyData.manager" @input="companyData.manager = companyData.manager.replace(/[0-9]/g, '')" placeholder="담당자 성함을 입력하세요" required>
               </div>
               <div class="form-group">
                 <label>주력 운송 지역 <span class="required">*</span></label>
@@ -96,18 +100,18 @@
                 <input
                   type="number"
                   v-model.number="companyData.ownedVehicles"
-                  placeholder="대"
+                  placeholder="보유 차량 대수를 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
                 >
               </div>
               <div class="form-group">
-                <label>운송 단가 (원/km) <span class="required">*</span></label>
+                <label>운송 단가 (원) <span class="required">*</span></label>
                 <input
                   type="number"
                   v-model.number="companyData.unitPrice"
-                  placeholder="원/km"
+                  placeholder="운송 단가를 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -155,7 +159,7 @@
                   type="text"
                   v-model="vehicleData.vehicleNumber"
                   @input="handleVehicleNumberInput"
-                  placeholder="ex. 12가 3456"
+                  placeholder="차량 번호를 입력하세요"
                   maxlength="9"
                   required
                 >
@@ -190,11 +194,11 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>최대 적재량 (톤 단위) <span class="required">*</span></label>
+                <label>최대 적재량 (kg 단위) <span class="required">*</span></label>
                 <input
                   type="number"
                   v-model.number="vehicleData.maxLoad"
-                  placeholder="ex. 1"
+                  placeholder="최대 적재 중량(kg)을 입력하세요"
                   min="0"
                   @keypress="onlyNumber"
                   required
@@ -208,7 +212,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>운전자 성함 <span class="required">*</span></label>
-                <input type="text" v-model="vehicleData.driverName" placeholder="실명을 입력하세요" required>
+                <input type="text" v-model="vehicleData.driverName" @input="vehicleData.driverName = vehicleData.driverName.replace(/[0-9]/g, '')" placeholder="실명을 입력하세요" required>
               </div>
               <div class="form-group">
                 <label>운전자 연락처 <span class="required">*</span></label>
@@ -216,7 +220,7 @@
                   type="tel"
                   v-model="vehicleData.driverPhone"
                   @input="handleDriverPhoneInput"
-                  placeholder="010-0000-0000"
+                  placeholder="연락처를 입력하세요"
                   maxlength="13"
                   required
                 >
@@ -244,17 +248,21 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import TransportSelectionModal from './TransportSelectionModal.vue'
 import api from '@/api/index'
 
 const router = useRouter()
+const route = useRoute()
 const registrationType = ref('company')
 const dateError = ref('')
 
 const companies = ref([])
 
 onMounted(async () => {
+  if (route.query.type) {
+    registrationType.value = route.query.type
+  }
   await fetchCompanies()
 })
 
@@ -288,6 +296,7 @@ const companyData = reactive({
   companyName: '',
   officePhone: '',
   address: '',
+  detailAddress: '',
   manager: '',
   usableRegion: '',
   ownedVehicles: null,
@@ -407,6 +416,7 @@ const resetForm = (type) => {
     companyData.companyName = ''
     companyData.officePhone = ''
     companyData.address = ''
+    companyData.detailAddress = ''
     companyData.manager = ''
     companyData.usableRegion = ''
     companyData.ownedVehicles = null
@@ -449,7 +459,11 @@ const registerCompany = async () => {
     return
   }
   try {
-    const res = await api.post('/transport/vendors', companyData)
+    const payload = {
+      ...companyData,
+      address: companyData.detailAddress ? `${companyData.address} ${companyData.detailAddress}` : companyData.address
+    }
+    const res = await api.post('/transport/vendors', payload)
     if (res.data.success) {
       alert('업체 등록이 완료되었습니다.')
       router.push('/admin/logistics')
@@ -560,7 +574,7 @@ const registerVehicle = async () => {
 .form-group input:focus,
 .form-group select:focus { border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1); }
 
-.address-input-group { display: flex; gap: 0.5rem; }
+.address-input-group { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; }
 .address-input-group input { flex: 1; cursor: pointer; }
 
 .btn-address-search {
@@ -576,6 +590,10 @@ const registerVehicle = async () => {
   transition: all 0.2s;
 }
 .btn-address-search:hover { background: #e2e8f0; }
+
+.detail-address-input {
+  margin-top: -0.25rem;
+}
 
 .search-select-group { display: flex; gap: 0.5rem; }
 .search-select-group input { flex: 1; cursor: pointer; background: #f8fafc; }

@@ -5,8 +5,8 @@ export const useAuthStore = defineStore('auth', {
     state: () => ({
         userRole: localStorage.getItem('userRole') || null,
         isLoggedIn: !!localStorage.getItem('accessToken'),
-        userName: sessionStorage.getItem('userName') || '사용자',
-        userPhoto: sessionStorage.getItem('userPhoto') || null
+        userName: localStorage.getItem('userName') || sessionStorage.getItem('userName') || '사용자',
+        userPhoto: localStorage.getItem('userPhoto') || sessionStorage.getItem('userPhoto') || null
     }),
     actions: {
         async login(loginId, password) {
@@ -44,6 +44,7 @@ export const useAuthStore = defineStore('auth', {
                     }
                     this.userName = nameMap[userRole] || '사용자'
                     sessionStorage.setItem('userName', this.userName)
+                    localStorage.setItem('userName', this.userName)
 
                     // Fetch actual user info (profile photo, username) immediately
                     try {
@@ -71,9 +72,12 @@ export const useAuthStore = defineStore('auth', {
                 localStorage.removeItem('accessToken')
                 localStorage.removeItem('refreshToken')
                 localStorage.removeItem('userRole')
+                localStorage.removeItem('userName')
+                localStorage.removeItem('userPhoto')
                 sessionStorage.removeItem('isLoggedIn')
                 sessionStorage.removeItem('userRole')
                 sessionStorage.removeItem('userName')
+                sessionStorage.removeItem('userPhoto')
 
                 this.userRole = null
                 this.isLoggedIn = false
@@ -102,7 +106,11 @@ export const useAuthStore = defineStore('auth', {
                     this.userName = data.username
                     this.userPhoto = data.profileImageUrl
                     sessionStorage.setItem('userName', this.userName)
-                    if (this.userPhoto) sessionStorage.setItem('userPhoto', this.userPhoto)
+                    localStorage.setItem('userName', this.userName)
+                    if (this.userPhoto) {
+                        sessionStorage.setItem('userPhoto', this.userPhoto)
+                        localStorage.setItem('userPhoto', this.userPhoto)
+                    }
                     return data
                 }
             } catch (error) {
@@ -124,7 +132,11 @@ export const useAuthStore = defineStore('auth', {
                     this.userName = response.data.data.username
                     this.userPhoto = response.data.data.profileImageUrl
                     sessionStorage.setItem('userName', this.userName)
-                    if (this.userPhoto) sessionStorage.setItem('userPhoto', this.userPhoto)
+                    localStorage.setItem('userName', this.userName)
+                    if (this.userPhoto) {
+                        sessionStorage.setItem('userPhoto', this.userPhoto)
+                        localStorage.setItem('userPhoto', this.userPhoto)
+                    }
                     return response.data.data
                 }
             } catch (error) {

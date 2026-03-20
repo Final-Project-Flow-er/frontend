@@ -2,7 +2,6 @@
   <div class="registration-container">
     <div class="registration-header">
       <h1>회원 등록</h1>
-      <p class="subtitle">새로운 회원을 시스템에 등록합니다</p>
     </div>
 
     <!-- 권한(본사/가맹점/공장) 선택 버튼 -->
@@ -81,7 +80,7 @@
               <!-- 공통 필드 -->
               <div class="form-group">
                 <label>이름 <span class="required">*</span></label>
-                <input type="text" v-model="formData.name" placeholder="이름을 입력하세요" required>
+                <input type="text" v-model="formData.name" @input="formData.name = formData.name.replace(/[0-9]/g, '')" placeholder="이름을 입력하세요" required>
               </div>
 
               <div class="form-group">
@@ -103,27 +102,14 @@
 
               <div class="form-group">
                 <label>생년월일 <span class="required">*</span></label>
-                <input type="date" v-model="formData.birthdate" required>
+                <input type="date" v-model="formData.birthdate" :max="today" required>
               </div>
 
               <!-- 본사 전용 -->
               <template v-if="selectedRole === 'HQ'">
                 <div class="form-group">
                   <label>본사 소속 <span class="required">*</span></label>
-                  <div class="search-select-group">
-                    <input 
-                      type="text" 
-                      v-model="formData.orgName" 
-                      placeholder="본사를 검색하여 선택하세요" 
-                      readonly 
-                      @click="openUnitModal"
-                      required
-                    >
-                    <button type="button" @click="openUnitModal" class="btn-search-trigger">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                      검색
-                    </button>
-                  </div>
+                  <input type="text" v-model="formData.orgName" placeholder="자동 입력됨" disabled class="input-disabled">
                 </div>
                 <div class="form-group">
                   <label>본사 코드</label>
@@ -244,6 +230,7 @@ import { useUserManagementStore } from '../stores/userManagement'
 import BusinessUnitSelectionModal from './BusinessUnitSelectionModal.vue'
 
 const userManagementStore = useUserManagementStore()
+const today = new Date().toISOString().split('T')[0]
 
 const roles = [
   { label: '본사', value: 'HQ' },
@@ -320,7 +307,17 @@ onMounted(async () => {
     userManagementStore.fetchBusinessUnits('franchise'),
     userManagementStore.fetchBusinessUnits('factory')
   ])
+  autoSelectHQ()
 })
+
+const autoSelectHQ = () => {
+  if (selectedRole.value === 'HQ' && hqOptions.value.length > 0) {
+    const hq = hqOptions.value[0]
+    formData.orgName = hq.name
+    formData.orgCode = hq.businessNumber || hq.code || ''
+    formData.businessUnitId = hq.id
+  }
+}
 
 // 권한 타입 변경 시 초기화
 watch(selectedRole, () => {
@@ -328,6 +325,7 @@ watch(selectedRole, () => {
   formData.orgName = ''
   formData.orgCode = ''
   formData.businessUnitId = null
+  autoSelectHQ()
 })
 
 const triggerPhotoUpload = () => {
@@ -550,7 +548,7 @@ const closeModal = () => {
   display: flex; align-items: center; gap: 0.4rem;
   padding: 0 1rem; background: #0f172a; border: none;
   border-radius: 8px; font-size: 0.85rem; font-weight: 600;
-  color: white; cursor: pointer; transition: all 0.2s;
+  color: white; cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
 .btn-search-trigger:hover { background: #1e293b; transform: translateY(-1px); }
 
