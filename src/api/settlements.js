@@ -18,11 +18,11 @@ export const settlementsApi = {
     getDailyFranchiseSummary: (franchiseId, date) => request(`${BASE}/daily/franchises/${franchiseId}/summary?date=${date}`),
     getMonthlyFranchiseSummary: (franchiseId, month) => request(`${BASE}/monthly/franchises/${franchiseId}/summary?month=${month}`),
 
-    // 가맹점 상세 부가 내역 (상품/발주/그래프)
-    getDailyFranchiseSalesItems: (franchiseId, date, limit = 5) => request(`${BASE}/daily/franchises/${franchiseId}/sales-items?date=${date}&limit=${limit}`),
-    getDailyFranchiseOrderItems: (franchiseId, date, limit = 5) => request(`${BASE}/daily/franchises/${franchiseId}/order-items?date=${date}&limit=${limit}`),
-    getMonthlyFranchiseSalesItems: (franchiseId, month, limit = 5) => request(`${BASE}/monthly/franchises/${franchiseId}/sales-items?month=${month}&limit=${limit}`),
-    getMonthlyFranchiseOrderItems: (franchiseId, month, limit = 5) => request(`${BASE}/monthly/franchises/${franchiseId}/order-items?month=${month}&limit=${limit}`),
+    // 가맹점 상세 연동용 (매출/발주 상세)
+    getDailyFranchiseSalesItems: (franchiseId, date, limit) => request(`${BASE}/daily/franchises/${franchiseId}/sales-items?date=${date}${limit ? `&limit=${limit}` : ''}`),
+    getDailyFranchiseOrderItems: (franchiseId, date, limit) => request(`${BASE}/daily/franchises/${franchiseId}/order-items?date=${date}${limit ? `&limit=${limit}` : ''}`),
+    getMonthlyFranchiseSalesItems: (franchiseId, month, limit) => request(`${BASE}/monthly/franchises/${franchiseId}/sales-items?month=${month}${limit ? `&limit=${limit}` : ''}`),
+    getMonthlyFranchiseOrderItems: (franchiseId, month, limit) => request(`${BASE}/monthly/franchises/${franchiseId}/order-items?month=${month}${limit ? `&limit=${limit}` : ''}`),
     getMonthlyFranchiseSalesTrend: (franchiseId, month) => request(`${BASE}/monthly/franchises/${franchiseId}/sales-graph?month=${month}`),
 
     // 월별

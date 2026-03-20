@@ -24,13 +24,23 @@ const hqSummary = ref({
   commissionFee: 0,
   deliveryFee: 0,
   refundAmount: 0,
-  lossAmount: 0
+  lossAmount: 0,
+  adjustmentAmount: 0
 })
 const franchiseList = ref([])
 const trendDataList = ref([])
+const isSearchFocused = ref(false)
+
+const hideDropdown = () => {
+  setTimeout(() => { isSearchFocused.value = false }, 200)
+}
 
 /* ── 가맹점 필터 ── */
 const searchStore = ref('')
+const selectStoreFromDropdown = (name) => {
+  searchStore.value = name
+  isSearchFocused.value = false
+}
 
 const fetchData = async () => {
   isLoading.value = true
@@ -83,6 +93,7 @@ const totals = computed(() => ({
   commission: hqSummary.value.commissionFee || 0,
   refund: hqSummary.value.refundAmount || 0,
   loss: hqSummary.value.lossAmount || 0,
+  adjustment: hqSummary.value.adjustmentAmount || 0,
 }))
 const totalFinal = computed(() => hqSummary.value.finalAmount || 0)
 
@@ -123,7 +134,8 @@ const downloadBatchPDF = async () => {
   }
 }
 
-/* ── 상세 이동 ── */
+/* ── 상세 이동 제거 ── */
+/* 
 const goToSummaryDetail = (type) => {
   router.push({
     path: '/hq/settlement/summary-detail',
@@ -134,10 +146,12 @@ const goToSummaryDetail = (type) => {
 const goToDetail = (storeId) => {
   router.push({ path: `/hq/settlement/detail/${storeId}`, query: { date: selectedDate.value, month: selectedMonth.value, tab: activeTab.value } })
 }
+*/
 
 const getStatusLabel = (status) => {
   if (activeTab.value === 'daily') return '정산완료'
   const mapping = {
+    'DRAFT': '대기',
     'CALCULATED': '대기',
     'CONFIRM_REQUESTED': '승인요청',
     'CONFIRMED': '확정'
@@ -157,10 +171,19 @@ const getStatusClass = (status) => {
 
 /* ── 추이 그래프 데이터 ── */
 const trendData = computed(() => {
-  return trendDataList.value.map(item => ({
-    label: item.periodLabel || item.label || '',
-    value: item.amount || 0
-  }))
+  if (activeTab.value === 'daily') {
+    // 일별 탭: 가맹점별 매출 비교
+    return franchiseList.value.map(s => ({
+      label: s.franchiseName,
+      value: s.totalSaleAmount || 0
+    }))
+  } else {
+    // 월별 탭: 날짜별 추이
+    return trendDataList.value.map(item => ({
+      label: item.periodLabel || item.label || '',
+      value: item.amount || 0
+    }))
+  }
 })
 
 /* ── 엑셀 다운로드 ── */
@@ -216,40 +239,60 @@ const downloadExcel = async () => {
     </div>
 
     <!-- 가맹점 검색 -->
-    <div class="search-bar">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" v-model="searchStore" placeholder="가맹점 검색..." class="search-input" />
+    <div class="search-container">
+      <div class="search-bar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input 
+          type="text" 
+          v-model="searchStore" 
+          placeholder="가맹점 검색..." 
+          class="search-input"
+          @focus="isSearchFocused = true"
+          @blur="hideDropdown"
+        />
+      </div>
+      <!-- 자동완성 드롭다운 -->
+      <ul v-if="isSearchFocused && filteredStores.length > 0" class="search-dropdown">
+        <li v-for="s in filteredStores" :key="s.franchiseId" @click="selectStoreFromDropdown(s.franchiseName)">
+          <span class="drop-name">{{ s.franchiseName }}</span>
+          <span class="drop-status">{{ getStatusLabel(s.status) }}</span>
+        </li>
+      </ul>
     </div>
 
     <!-- 최종 합계 (상단) -->
     <div class="final-card" v-if="!isLoading">
       <div class="fc-left">
         <span class="fc-label">최종 정산 금액</span>
-        <span class="fc-formula">발주 대금 + 수수료 + 배송비 - 반품 차감액 - 본사 부담 손실</span>
+        <span class="fc-formula">발주 대금 + 수수료 - 배송비 - 반품 차감액 - 본사 부담 손실 + 기타 조정</span>
       </div>
       <p class="fc-amount">₩ {{ fmt(totalFinal) }}</p>
     </div>
 
     <section class="summary-grid" v-if="!isLoading">
-      <div class="summary-card clickable" @click="goToSummaryDetail('orderCost')">
+      <div class="summary-card">
         <span class="s-label">발주 매출</span>
         <p class="s-value positive">₩ {{ fmt(totals.orderCost) }}</p>
       </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('commission')">
+      <div class="summary-card">
         <span class="s-label">수수료 수익</span>
         <p class="s-value positive">₩ {{ fmt(totals.commission) }}</p>
       </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('shipping')">
-        <span class="s-label">배송 수익</span>
-        <p class="s-value positive">₩ {{ fmt(totals.shipping) }}</p>
+      <div class="summary-card">
+        <span class="s-label">배송비</span>
+        <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
       </div>
-      <div class="summary-card refund-card clickable" @click="goToSummaryDetail('refund')">
+      <div class="summary-card refund-card">
         <span class="s-label">반품 차감액</span>
         <p class="s-value negative">₩ {{ fmt(totals.refund) }}</p>
       </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('loss')">
+      <div class="summary-card">
         <span class="s-label">본사 손실</span>
         <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
+      </div>
+      <div class="summary-card">
+        <span class="s-label">기타 조정</span>
+        <p class="s-value" :class="totals.adjustment >= 0 ? 'positive' : 'negative'">₩ {{ fmt(totals.adjustment) }}</p>
       </div>
     </section>
 
@@ -275,10 +318,10 @@ const downloadExcel = async () => {
             <th class="text-right">수수료</th>
             <th class="text-right">반품 환급</th>
             <th class="text-right">손실</th>
+            <th class="text-right">조정</th>
             <th class="text-right">최종 정산</th>
             <th class="text-center">상태</th>
             <th class="text-center">영수증</th>
-            <th class="text-center">상세</th>
           </tr>
         </thead>
         <tbody>
@@ -296,26 +339,27 @@ const downloadExcel = async () => {
             <td class="text-right negative">₩ {{ fmt(s.commissionFee) }}</td>
             <td class="text-right primary-color">₩ {{ fmt(s.refundAmount) }}</td>
             <td class="text-right negative">₩ {{ fmt(s.lossAmount) }}</td>
+            <td class="text-right" :class="s.adjustmentAmount >= 0 ? 'primary-color' : 'negative'">₩ {{ (s.adjustmentAmount >= 0 ? '+' : '') + fmt(s.adjustmentAmount) }}</td>
             <td class="text-right primary-color final-cell">₩ {{ fmt(s.finalAmount) }}</td>
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ getStatusLabel(s.status) }}</span></td>
             <td class="text-center">
               <button class="row-receipt-btn" @click="downloadStorePDF(s)">PDF</button>
-            </td>
-            <td class="text-center">
-              <button class="detail-btn" @click="goToDetail(s.franchiseId)">상세</button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 추이 그래프 -->
-    <div class="trend-section">
+    <div class="trend-section" v-if="!isLoading">
       <div class="section-header">
-        <h3>전체 가맹점 정산 추이</h3>
+        <h3>{{ activeTab === 'daily' ? '가맹점별 매출 비교' : '전체 가맹점 정산 추이' }}</h3>
       </div>
       <div class="chart-wrapper">
-        <SettlementTrendChart :data="trendData" :height="240" />
+        <SettlementTrendChart 
+          :data="trendData" 
+          :height="240" 
+          :type="activeTab === 'daily' ? 'bar' : 'line'" 
+        />
       </div>
     </div>
   </div>
@@ -346,12 +390,39 @@ const downloadExcel = async () => {
 .cal-icon { color: #475569; pointer-events: none; flex-shrink: 0; }
 .date-label { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); pointer-events: none; white-space: nowrap; }
 .date-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; }
-.search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); margin-bottom: 1.25rem; max-width: 300px; }
+.search-container { position: relative; margin-bottom: 1.25rem; max-width: 300px; z-index: 50; }
+.search-bar { display: flex; align-items: center; gap: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.55rem 1rem; color: var(--text-light); }
 .search-input { border: none; outline: none; font-size: 0.9rem; width: 100%; color: var(--text-dark); }
 
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  max-height: 250px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+.search-dropdown li {
+  padding: 0.7rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.search-dropdown li:hover { background: #f1f5f9; }
+.drop-name { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
+.drop-status { font-size: 0.75rem; color: var(--text-light); background: #f8fafc; padding: 2px 8px; border-radius: 4px; }
+
 .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-bottom: 1rem; }
-.summary-grid .summary-card:nth-child(-n+3) { grid-column: span 2; }
-.summary-grid .summary-card:nth-child(n+4) { grid-column: span 3; }
+.summary-grid .summary-card { grid-column: span 2; }
 .summary-card { background: white; padding: 1.15rem 1.4rem; border-radius: 14px; border: 1px solid var(--border-color); transition: transform 0.15s, box-shadow 0.15s; }
 .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .summary-card.clickable { cursor: pointer; }

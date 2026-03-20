@@ -8,21 +8,30 @@ const storeOptions = ref([])
 /* ── 폼 ── */
 const form = ref({
   storeId: '',
-  type: 'ADJUST',
+  type: 'ADJUSTMENT',
   description: '',
   amount: '',
-  isDeduction: false,
+  direction: 'INCREASE', // ⭐️ 변경: isDeduction 대신 direction
+  returnType: '', // ⭐️ 추가: 반품 사유
   date: new Date().toISOString().split('T')[0],
+  settlementMonth: new Date().toISOString().substring(0, 7), // ⭐️ 추가: 현재 월을 기본값으로
 })
 
 const typeOptions = [
-  { key: 'ADJUST', label: '기타 조정' },
-  { key: 'SALES_ADJUST', label: '판매 대금 보정' },
-  { key: 'ORDER_ADJUST', label: '발주 대금 보정' },
-  { key: 'SHIPPING_ADJUST', label: '배송비 보정' },
-  { key: 'COMMISSION_ADJUST', label: '수수료 보정' },
-  { key: 'REFUND_ADJUST', label: '반품 환급 보정' },
-  { key: 'LOSS_ADJUST', label: '손실 보정' },
+  { value: 'ADJUSTMENT', label: '기타 조정' },
+  { value: 'RETURN', label: '반품' }, // ⭐️ 추가: 반품 유형
+  { value: 'SALES', label: '판매 대금 보정' },
+  { value: 'ORDER', label: '발주 대금 보정' },
+  { value: 'DELIVERY', label: '배송비 보정' },
+  { value: 'COMMISSION', label: '수수료 보정' },
+  { value: 'REFUND', label: '반품 환급 보정' },
+  { value: 'LOSS', label: '손실 보정' },
+]
+
+/* ── 반품 사유 옵션 ── */
+const returnTypeOptions = [
+  { value: 'MISORDER', label: '오배송 (가맹점 차감)' },
+  { value: 'PRODUCT_DEFECT', label: '상품하자 (본사 보전)' },
 ]
 
 /* ── 기등록 전표 상태 ── */
@@ -54,29 +63,52 @@ onMounted(fetchData)
 
 const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.abs(n))
 
+// ⭐️ 전표 유형이나 반품 사유 변경 시 처리 방식 자동 매핑
+watch(() => [form.value.type, form.value.returnType], ([type, returnType]) => {
+  if (type === 'RETURN') {
+    if (returnType === 'MISORDER') {
+      form.value.direction = 'DECREASE'
+    } else if (returnType === 'PRODUCT_DEFECT') {
+      form.value.direction = 'INCREASE'
+    }
+  }
+})
+
 /* ── 등록 ── */
 const submitVoucher = async () => {
   if (!form.value.storeId) { alert('가맹점을 선택해주세요.'); return }
   if (!form.value.description) { alert('내역을 입력해주세요.'); return }
   if (!form.value.amount || isNaN(form.value.amount)) { alert('금액을 입력해주세요.'); return }
+  if (form.value.type === 'RETURN' && !form.value.returnType) { alert('반품 사유를 선택해주세요.'); return }
+
 
   try {
       await settlementsApi.createAdjustment({
           franchiseId: form.value.storeId,
           type: form.value.type,
-          occurredAt: form.value.date + 'T00:00:00',
+          occurredAt: form.value.date, // ⭐️ 수정: 시간 정보 제거 (LocalDate 규격)
           amount: Number(form.value.amount),
-          isMinus: form.value.isDeduction,
-          reason: form.value.description
+          direction: form.value.direction,
+          returnType: form.value.type === 'RETURN' ? form.value.returnType : null,
+          reason: form.value.description,
+          settlementMonth: form.value.settlementMonth
       })
       
       alert('조정 전표가 등록되었습니다.')
       
       // 초기화 및 리프레시
-      form.value = { storeId: '', type: 'ADJUST', description: '', amount: '', isDeduction: false, date: new Date().toISOString().split('T')[0] }
+      form.value = { 
+        storeId: '', type: 'ADJUSTMENT', description: '', amount: '', 
+        direction: 'INCREASE', // ⭐️ 변경: isDeduction 대신 direction
+        returnType: '', // ⭐️ 추가: 반품 사유 초기화
+        date: new Date().toISOString().split('T')[0],
+        settlementMonth: new Date().toISOString().substring(0, 7)
+      }
       fetchData()
   } catch (err) {
-      alert('전표 등록에 실패했습니다: ' + err.message)
+      // ⭐️ 상세 에러 메시지 표시 (백엔드 INVALID_INPUT 등)
+      const errorMsg = err.response?.data?.message || err.message
+      alert('전표 등록에 실패했습니다: ' + errorMsg)
   }
 }
 </script>
@@ -108,9 +140,16 @@ const submitVoucher = async () => {
           </select>
         </div>
         <div class="form-group">
-          <label>전표 유형</label>
+          <label>전표 유형 <span class="required">*</span></label>
           <select v-model="form.type" class="form-select">
-            <option v-for="t in typeOptions" :key="t.key" :value="t.key">{{ t.label }}</option>
+            <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+        <div v-if="form.type && form.type.includes('RETURN')" class="form-group">
+          <label>반품 사유 <span class="required">*</span></label>
+          <select v-model="form.returnType" class="form-select">
+            <option value="">사유를 선택하세요</option>
+            <option v-for="opt in returnTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
         </div>
         <div class="form-group">
@@ -118,18 +157,30 @@ const submitVoucher = async () => {
           <input type="date" v-model="form.date" class="form-input" />
         </div>
         <div class="form-group">
+          <label>반영 정산월 <span class="required">*</span></label>
+          <input type="month" v-model="form.settlementMonth" class="form-input" />
+        </div>
+        <div class="form-group">
           <label>금액 (원) <span class="required">*</span></label>
           <input type="number" v-model="form.amount" class="form-input" placeholder="0" />
         </div>
         <div class="form-group wide">
-          <label>내역 <span class="required">*</span></label>
+          <label>내역 (상세 사유) <span class="required">*</span></label>
           <input type="text" v-model="form.description" class="form-input" placeholder="조정 사유를 입력하세요" />
         </div>
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="form.isDeduction" />
-            <span>차감 처리 (마이너스)</span>
-          </label>
+        <div class="form-group wide">
+          <label>처리 방식 <span class="required">*</span></label>
+          <div class="radio-group" :class="{ 'disabled-overlay': form.type === 'RETURN' }">
+            <label class="radio-label">
+              <input type="radio" v-model="form.direction" value="INCREASE" :disabled="form.type === 'RETURN'" />
+              <span class="radio-text">증가 (+)</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" v-model="form.direction" value="DECREASE" :disabled="form.type === 'RETURN'" />
+              <span class="radio-text">차감 (-)</span>
+            </label>
+          </div>
+          <p v-if="form.type === 'RETURN'" class="helper-text"> 반품 사유에 따라 자동 설정됩니다. </p>
         </div>
       </div>
       <div class="form-actions">
@@ -154,25 +205,32 @@ const submitVoucher = async () => {
       </div>
       <table class="data-table">
         <thead>
-          <tr><th>전표번호</th><th>가맹점</th><th>유형</th><th>내역</th><th class="text-right">금액</th><th>발생일</th><th>등록자</th></tr>
+          <tr><th>전표번호</th><th>가맹점</th><th>유형</th><th>사유</th><th>내역</th><th class="text-right">금액</th><th>발생일</th><th>정산월</th><th>등록자</th></tr>
         </thead>
         <tbody>
           <tr v-if="isLoading">
-            <td colspan="7" class="text-center" style="padding: 2rem;">데이터를 불러오는 중입니다...</td>
+            <td colspan="9" class="text-center" style="padding: 2rem;">데이터를 불러오는 중입니다...</td>
           </tr>
           <tr v-else-if="registeredVouchers.length === 0">
-            <td colspan="7" class="text-center" style="padding: 2rem;">등록된 조정 전표가 없습니다.</td>
+            <td colspan="9" class="text-center" style="padding: 2rem;">등록된 조정 전표가 없습니다.</td>
           </tr>
           <tr v-for="v in registeredVouchers" :key="v.adjustmentId" v-else>
             <td class="id-cell">#{{ v.adjustmentId }}</td>
             <td class="fw600">{{ v.franchiseName }}</td>
-            <td><span class="type-tag">{{ v.type }}</span></td>
-            <td>{{ v.reason }}</td>
-            <td class="text-right" :class="v.amount < 0 ? 'negative' : 'positive'">
-              {{ v.amount < 0 ? '−' : '+' }}₩ {{ fmt(v.amount) }}
+            <td>
+              <span class="type-tag">{{ v.type === 'RETURN' ? '반품' : '조정' }}</span>
+            </td>
+            <td>
+              <span v-if="v.returnType" class="reason-tag" :class="v.returnType">{{ v.returnType === 'PRODUCT_DEFECT' ? '상품하자' : '오배송' }}</span>
+              <span v-else>-</span>
+            </td>
+            <td class="text-left fw600">{{ v.reason }}</td>
+            <td class="text-right" :class="v.direction === 'DECREASE' ? 'negative' : 'positive'">
+              {{ v.direction === 'DECREASE' ? '−' : '+' }}₩ {{ fmt(v.amount) }}
             </td>
             <td class="time-cell">{{ v.occurredAt }}</td>
-            <td>관리자</td>
+            <td class="month-cell">{{ v.settlementMonth }}</td>
+            <td> 관리자 </td>
           </tr>
         </tbody>
       </table>
@@ -198,9 +256,14 @@ const submitVoucher = async () => {
 .required { color: #ef4444; }
 .form-select, .form-input { width: 100%; padding: 0.6rem 0.9rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.9rem; color: var(--text-dark); background: white; outline: none; }
 .form-select:focus, .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-.checkbox-group { display: flex; align-items: flex-end; }
-.checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; color: var(--text-dark); }
-.checkbox-label input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+.radio-group { display: flex; gap: 1.5rem; padding-top: 0.3rem; }
+.radio-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.radio-label input { width: 18px; height: 18px; accent-color: var(--primary); }
+.radio-text { font-size: 0.95rem; font-weight: 600; color: var(--text-dark); }
+.disabled-overlay { opacity: 0.6; pointer-events: none; }
+.helper-text { font-size: 0.8rem; color: var(--primary); margin-top: 4px; font-weight: 500; }
+
 .form-actions { display: flex; justify-content: flex-end; }
 .submit-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.5rem; border-radius: 10px; border: none; background: var(--primary); color: white; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
 .submit-btn:hover { background: #4f46e5; transform: translateY(-1px); }
@@ -216,10 +279,17 @@ const submitVoucher = async () => {
 .data-table td { padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
 .data-table tbody tr:hover { background: #f8fafc; }
 .text-right { text-align: right; }
+.text-left { text-align: left; } /* Added for reason column */
 .id-cell { color: var(--primary); font-weight: 600; font-size: 0.8rem; }
 .fw600 { font-weight: 600; }
 .time-cell { color: var(--text-light); font-size: 0.85rem; }
 .type-tag { padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; color: #475569; }
+.month-cell { font-family: monospace; font-weight: 600; color: var(--primary); }
 .negative { color: #ef4444; font-weight: 700; }
 .positive { color: #3b82f6; font-weight: 700; }
+
+.reason-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+.reason-tag.PRODUCT_DEFECT { background: #dcfce7; color: #166534; }
+.reason-tag.MISORDER { background: #fee2e2; color: #991b1b; }
 </style>
+```
