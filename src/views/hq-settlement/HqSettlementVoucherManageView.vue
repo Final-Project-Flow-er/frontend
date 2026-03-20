@@ -86,12 +86,12 @@ const submitVoucher = async () => {
       await settlementsApi.createAdjustment({
           franchiseId: form.value.storeId,
           type: form.value.type,
-          occurredAt: form.value.date + 'T00:00:00',
+          occurredAt: form.value.date, // ⭐️ 수정: 시간 정보 제거 (LocalDate 규격)
           amount: Number(form.value.amount),
-          direction: form.value.direction, // ⭐️ 변경: isMinus 대신 direction
-          returnType: form.value.type === 'RETURN' ? form.value.returnType : null, // ⭐️ 반품 사유 추가
+          direction: form.value.direction,
+          returnType: form.value.type === 'RETURN' ? form.value.returnType : null,
           reason: form.value.description,
-          settlementMonth: form.value.settlementMonth // ⭐️ 추가: 정산 반영월 전송
+          settlementMonth: form.value.settlementMonth
       })
       
       alert('조정 전표가 등록되었습니다.')
@@ -106,7 +106,9 @@ const submitVoucher = async () => {
       }
       fetchData()
   } catch (err) {
-      alert('전표 등록에 실패했습니다: ' + err.message)
+      // ⭐️ 상세 에러 메시지 표시 (백엔드 INVALID_INPUT 등)
+      const errorMsg = err.response?.data?.message || err.message
+      alert('전표 등록에 실패했습니다: ' + errorMsg)
   }
 }
 </script>

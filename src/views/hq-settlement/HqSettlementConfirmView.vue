@@ -10,20 +10,19 @@ const selectedMonth = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}`)
 /* ── 데이터 상태 ── */
 const isLoading = ref(false)
 const stores = ref([])
-const statusCounts = ref({
-  draftCount: 0,
-  requestedCount: 0,
-  confirmedCount: 0
+const statusCounts = computed(() => {
+  return stores.value.reduce((acc, s) => {
+    if (s.status === 'CALCULATED') acc.draftCount++
+    else if (s.status === 'CONFIRM_REQUESTED') acc.requestedCount++
+    else if (s.status === 'CONFIRMED') acc.confirmedCount++
+    return acc
+  }, { draftCount: 0, requestedCount: 0, confirmedCount: 0 })
 })
 
 const fetchData = async () => {
   isLoading.value = true
   try {
-    const [countsRes, listRes] = await Promise.all([
-      settlementsApi.getConfirmStatusCounts(selectedMonth.value),
-      settlementsApi.getConfirmFranchises({ month: selectedMonth.value, size: 100 })
-    ])
-    statusCounts.value = countsRes
+    const listRes = await settlementsApi.getConfirmFranchises({ month: selectedMonth.value, size: 100 })
     stores.value = listRes.content
   } catch (error) {
     console.error('Failed to fetch confirm data:', error)

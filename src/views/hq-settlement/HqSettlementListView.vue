@@ -134,7 +134,8 @@ const downloadBatchPDF = async () => {
   }
 }
 
-/* ── 상세 이동 ── */
+/* ── 상세 이동 제거 ── */
+/* 
 const goToSummaryDetail = (type) => {
   router.push({
     path: '/hq/settlement/summary-detail',
@@ -145,10 +146,12 @@ const goToSummaryDetail = (type) => {
 const goToDetail = (storeId) => {
   router.push({ path: `/hq/settlement/detail/${storeId}`, query: { date: selectedDate.value, month: selectedMonth.value, tab: activeTab.value } })
 }
+*/
 
 const getStatusLabel = (status) => {
   if (activeTab.value === 'daily') return '정산완료'
   const mapping = {
+    'DRAFT': '대기',
     'CALCULATED': '대기',
     'CONFIRM_REQUESTED': '승인요청',
     'CONFIRMED': '확정'
@@ -267,27 +270,27 @@ const downloadExcel = async () => {
     </div>
 
     <section class="summary-grid" v-if="!isLoading">
-      <div class="summary-card clickable" @click="goToSummaryDetail('orderCost')">
+      <div class="summary-card">
         <span class="s-label">발주 매출</span>
         <p class="s-value positive">₩ {{ fmt(totals.orderCost) }}</p>
       </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('commission')">
+      <div class="summary-card">
         <span class="s-label">수수료 수익</span>
         <p class="s-value positive">₩ {{ fmt(totals.commission) }}</p>
       </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('shipping')">
+      <div class="summary-card">
         <span class="s-label">배송비</span>
         <p class="s-value negative">₩ {{ fmt(totals.shipping) }}</p>
       </div>
-      <div class="summary-card refund-card clickable" @click="goToSummaryDetail('refund')">
+      <div class="summary-card refund-card">
         <span class="s-label">반품 차감액</span>
         <p class="s-value negative">₩ {{ fmt(totals.refund) }}</p>
       </div>
-      <div class="summary-card clickable" @click="goToSummaryDetail('loss')">
+      <div class="summary-card">
         <span class="s-label">본사 손실</span>
         <p class="s-value negative">₩ {{ fmt(totals.loss) }}</p>
       </div>
-      <div class="summary-card clickable">
+      <div class="summary-card">
         <span class="s-label">기타 조정</span>
         <p class="s-value" :class="totals.adjustment >= 0 ? 'positive' : 'negative'">₩ {{ fmt(totals.adjustment) }}</p>
       </div>
@@ -319,7 +322,6 @@ const downloadExcel = async () => {
             <th class="text-right">최종 정산</th>
             <th class="text-center">상태</th>
             <th class="text-center">영수증</th>
-            <th class="text-center">상세</th>
           </tr>
         </thead>
         <tbody>
@@ -342,9 +344,6 @@ const downloadExcel = async () => {
             <td class="text-center"><span :class="['status-tag', getStatusClass(s.status)]">{{ getStatusLabel(s.status) }}</span></td>
             <td class="text-center">
               <button class="row-receipt-btn" @click="downloadStorePDF(s)">PDF</button>
-            </td>
-            <td class="text-center">
-              <button class="detail-btn" @click="goToDetail(s.franchiseId)">상세</button>
             </td>
           </tr>
         </tbody>
