@@ -37,16 +37,19 @@ const groupedProducts = computed(() => {
         productCode: p.productCode,
         productName: p.productName,
         quantity: 0,
-        unitPrice: p.unitPrice,
+        unitPrice: Number(p.unitPrice),
         totalPrice: 0,
         lots: []
       }
     }
-    map[p.productCode].quantity += p.quantity
-    map[p.productCode].totalPrice += Number(p.totalPrice)
+    // 수량은 API quantity 값이 아닌, 같은 productCode 객체(행) 개수 기준으로 집계
+    map[p.productCode].quantity += 1
     map[p.productCode].lots.push(p.lot)
   }
-  return Object.values(map)
+  return Object.values(map).map(product => ({
+    ...product,
+    totalPrice: product.quantity * product.unitPrice
+  }))
 })
 
 const grandTotal = computed(() =>
